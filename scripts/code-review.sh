@@ -426,6 +426,33 @@ EOF
 }
 
 # =============================================================================
+# Step 3.5: Enforce decision consistency with thresholds
+# =============================================================================
+enforce_decision() {
+  local FAILING_METRICS=()
+
+  if [[ "${ARCH_SCORE}" != "N/A" ]] && [[ "${ARCH_SCORE}" -lt "${ARCH_THRESHOLD}" ]]; then
+    FAILING_METRICS+=("Architecture: ${ARCH_SCORE}/10 (required: >= ${ARCH_THRESHOLD}/10)")
+  fi
+
+  if [[ "${QUALITY_SCORE}" != "N/A" ]] && [[ "${QUALITY_SCORE}" -lt "${QUALITY_THRESHOLD}" ]]; then
+    FAILING_METRICS+=("Code Quality: ${QUALITY_SCORE}/10 (required: >= ${QUALITY_THRESHOLD}/10)")
+  fi
+
+  if [[ "${TEST_SCORE}" != "N/A" ]] && [[ "${TEST_SCORE}" -lt "${TEST_THRESHOLD}" ]]; then
+    FAILING_METRICS+=("Testing: ${TEST_SCORE}/10 (required: >= ${TEST_THRESHOLD}/10)")
+  fi
+
+  if [[ ${#FAILING_METRICS[@]} -gt 0 ]] && [[ "${DECISION}" != "REQUEST_CHANGES" ]]; then
+    echo "Decision overridden: ${DECISION} -> REQUEST_CHANGES (scores below thresholds)"
+    for metric in "${FAILING_METRICS[@]}"; do
+      echo "  - ${metric}"
+    done
+    DECISION="REQUEST_CHANGES"
+  fi
+}
+
+# =============================================================================
 # Step 4: Post review comment
 # =============================================================================
 post_review_comment() {
@@ -675,6 +702,7 @@ main() {
   get_previous_reviews
   get_changes
   call_claude_api
+  enforce_decision
   post_review_comment
   create_check_run
   generate_summary
