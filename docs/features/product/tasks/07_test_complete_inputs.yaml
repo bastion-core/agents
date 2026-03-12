@@ -1,0 +1,37 @@
+# tasks/07_test_complete_inputs.yaml
+task: test_agent_with_complete_inputs
+phase: 3 - Testing & Validation
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Validar que el agente product genera un feature.yaml completo y correcto
+  cuando recibe insumos con toda la informacion necesaria. Probar con un
+  documento de requisitos que contenga toda la informacion para llenar
+  todos los campos obligatorios.
+
+test_scenarios:
+  - complete_document:
+      input: documento de requisitos completo con rol de usuario, funcionalidad, reglas de negocio, entradas, salidas y casos de prueba
+      expected: archivo feature.yaml generado con todos los campos llenos y valores concretos
+  - multiple_sources:
+      input: documento de requisitos + imagen de mockup + texto verbal complementario
+      expected: archivo feature.yaml consolidado con informacion de todas las fuentes
+
+validations:
+  - archivo generado contiene todos los campos obligatorios
+  - campo feature esta en snake_case
+  - campo description inicia con "Como [rol de usuario]"
+  - campo acceptance_criteria tiene al menos 3 criterios verificables
+  - campo business_rules tiene valores concretos (limites, enums, codigos)
+  - campo inputs tiene tipo de dato y valores permitidos por cada entrada
+  - campo outputs tiene tipo de dato y descripcion por cada salida
+  - campo tests_scope tiene al menos un caso exitoso, un error de validacion y un caso limite
+  - todo el contenido esta en espanol
+  - no hay jerga tecnica en description ni acceptance_criteria
+
+context_files:
+  - docs/features/product/feature.yaml  # criterios de aceptacion y business_rules
+  - docs/features/product/technical.yaml  # writing_rules y validations
+  - plugins/general/agents/product.md  # agente a probar

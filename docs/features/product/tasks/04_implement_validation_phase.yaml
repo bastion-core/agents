@@ -1,0 +1,39 @@
+# tasks/04_implement_validation_phase.yaml
+task: implement_validation_phase
+phase: 2 - Agent Pipeline
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar la Fase 2 (ValidationPhase) dentro del prompt del agente
+  product.md. Esta fase define como el agente verifica que los datos
+  extraidos son suficientes, concretos y accionables para cada campo
+  obligatorio. Si algun campo esta faltante, incompleto o ambiguo,
+  el agente debe detenerse y reportar los faltantes.
+
+files_to_modify:
+  - plugins/general/agents/product.md
+
+patterns:
+  - field_checklist: incluir lista de validacion por campo con criterios concretos
+  - validation_rules:
+      feature: tiene nombre claro en snake_case
+      description: identifica rol de usuario y accion que ejecuta
+      acceptance_criteria: al menos 3 criterios verificables objetivamente
+      business_rules: valores concretos (limites numericos, enums, codigos de error)
+      inputs: cada entrada tiene nombre, tipo de dato y valores permitidos
+      outputs: cada salida tiene nombre, tipo de dato y descripcion
+      tests_scope: al menos un caso exitoso, un error de validacion y un caso limite
+  - decision_gate: si TODOS los campos pasan validacion -> continuar a Fase 3, si alguno falla -> ejecutar flujo de datos faltantes
+
+acceptance:
+  - prompt incluye checklist de validacion con criterios concretos por campo
+  - prompt define claramente cuando un campo es "faltante", "incompleto" o "ambiguo"
+  - prompt incluye punto de decision explicito (completo vs incompleto)
+  - prompt indica que NUNCA debe generar un archivo parcial si falta informacion
+
+context_files:
+  - docs/features/product/technical.yaml  # pipeline.phase_2_validation
+  - docs/features/product/feature.yaml  # business_rules sobre campos obligatorios
+  - plugins/general/agents/product.md  # archivo a modificar

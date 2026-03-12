@@ -1,0 +1,32 @@
+# tasks/03_implement_extraction_phase.yaml
+task: implement_extraction_phase
+phase: 2 - Agent Pipeline
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar la Fase 1 (ExtractionPhase) dentro del prompt del agente
+  product.md. Esta fase define como el agente debe leer y analizar los
+  insumos proporcionados por el usuario (documentos, imagenes, texto libre)
+  y extraer los datos relevantes para cada campo obligatorio del feature.yaml.
+
+files_to_modify:
+  - plugins/general/agents/product.md
+
+patterns:
+  - tools_usage: indicar al agente que use Read para leer documentos/PDFs/imagenes, Glob para buscar archivos referenciados, Grep para buscar patrones en documentos existentes
+  - input_types: documentar como procesar cada tipo de insumo (documentos de texto, imagenes/mockups, texto verbal, restricciones)
+  - extraction_mapping: para cada insumo, extraer datos mapeados a los campos obligatorios (feature, description, acceptance_criteria, business_rules, inputs, outputs, tests_scope)
+  - consolidation: cuando hay multiples fuentes, consolidar informacion sin duplicar ni contradecir
+
+acceptance:
+  - prompt incluye instrucciones claras para leer cada tipo de insumo
+  - prompt indica que herramientas usar para cada tipo de insumo
+  - prompt define como mapear la informacion extraida a cada campo del feature.yaml
+  - prompt explica como consolidar informacion de multiples fuentes
+
+context_files:
+  - docs/features/product/technical.yaml  # pipeline.phase_1_extraction
+  - docs/features/product/feature.yaml  # inputs y outputs esperados
+  - plugins/general/agents/product.md  # archivo a modificar

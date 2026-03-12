@@ -1,0 +1,107 @@
+# feature.yaml
+feature: product_specification_generator
+owner: product_owner
+version: 1.0
+
+description: |
+  Como Product Owner o Product Manager,
+  puedo proporcionarle al agente documentos, imagenes y contexto de negocio
+  para que analice los insumos y genere un archivo de especificacion de
+  caracteristica (feature.yaml) con formato estandarizado, el cual sirve
+  como Definition of Ready (DoR) a nivel de producto para el area de ingenieria.
+  Si los insumos proporcionados no contienen informacion suficiente para
+  completar todos los campos requeridos, el agente debe responder con la
+  lista de puntos faltantes antes de generar el archivo.
+
+acceptance_criteria:
+  - Agente recibe documentos, imagenes o texto como insumo de entrada
+  - Agente analiza los insumos e identifica feature, descripcion, criterios de aceptacion, reglas de negocio, inputs y alcance de pruebas
+  - Agente genera un archivo feature.yaml con el formato estandarizado completo
+  - Si los insumos son insuficientes, agente responde con lista detallada de puntos faltantes en lugar de generar un archivo incompleto
+  - El archivo generado es claro, completo y accionable como DoR para ingenieria
+  - Descripcion incluye el rol de usuario que ejecuta la accion
+  - Criterios de aceptacion estan escritos en lenguaje de negocio, no tecnico
+  - Reglas de negocio incluyen valores concretos, limites y comportamientos esperados ante errores
+  - Inputs estan tipados y con valores posibles definidos
+  - Alcance de pruebas cubre camino feliz, errores de validacion y casos limite
+
+business_rules:
+  - formato_salida: archivo feature.yaml con estructura estandarizada
+  - idioma: especificaciones generadas en espanol
+  - campos_obligatorios: [feature, owner, version, description, acceptance_criteria, business_rules, inputs, outputs, tests_scope]
+  - insumos_insuficientes: no generar archivo parcial, responder con lista de datos faltantes
+  - descripcion_rol: el campo description debe iniciar con "Como [rol de usuario]"
+  - criterios_medibles: cada criterio de aceptacion debe ser verificable objetivamente
+  - reglas_con_valores: las reglas de negocio deben incluir valores concretos (limites, enums, codigos de error)
+  - inputs_tipados: cada input debe especificar su tipo de dato y valores permitidos
+  - tests_scope_completo: debe cubrir al menos un caso exitoso, un error de validacion y un caso limite
+
+inputs:
+  - documentos: archivos de texto, PDFs, documentos de requisitos o historias de usuario
+  - imagenes: capturas de pantalla, mockups, diagramas de flujo o wireframes
+  - contexto_verbal: descripcion en texto libre proporcionada por el usuario sobre la funcionalidad deseada
+  - restricciones: limitaciones tecnicas o de negocio que el usuario quiera comunicar (opcional)
+
+outputs:
+  archivo: feature.yaml
+  campos:
+    - feature: |
+        Nombre corto y unico de la funcionalidad en snake_case.
+        Identifica la caracteristica dentro del sistema.
+        Ejemplo: "create_trip", "reset_password", "generate_invoice"
+
+    - owner: |
+        Rol responsable de la definicion de esta funcionalidad.
+        Indica quien tiene la autoridad sobre los criterios de aceptacion y prioridad.
+        Valores comunes: product_owner, product_manager, tech_lead
+
+    - version: |
+        Version del documento de especificacion.
+        Permite rastrear cambios y evoluciones en la definicion de la funcionalidad.
+        Formato: numerico incremental (1.0, 1.1, 2.0)
+
+    - description: |
+        Descripcion funcional de la caracteristica en lenguaje de negocio.
+        Debe iniciar con "Como [rol de usuario]" para dejar claro quien ejecuta la accion.
+        Explica que puede hacer el usuario y que debe hacer el sistema en respuesta.
+        No debe incluir detalles tecnicos de implementacion.
+
+    - acceptance_criteria: |
+        Lista de condiciones verificables que deben cumplirse para considerar
+        la funcionalidad como terminada. Cada criterio debe ser objetivo y medible.
+        Escritos desde la perspectiva del usuario o del comportamiento del sistema.
+        No deben mencionar tecnologias, frameworks ni detalles de implementacion.
+
+    - business_rules: |
+        Reglas de negocio con valores concretos que restringen o definen el
+        comportamiento de la funcionalidad. Incluyen limites numericos, enumeraciones
+        de valores permitidos, comportamientos esperados ante errores y requisitos
+        de autenticacion o autorizacion. Cada regla debe tener un nombre clave
+        y un valor o descripcion precisa.
+
+    - inputs: |
+        Datos que el usuario o sistema externo debe proporcionar para ejecutar
+        la funcionalidad. Cada input debe especificar su nombre, tipo de dato
+        y valores permitidos (enums, rangos, formatos). Define el contrato de
+        entrada desde la perspectiva de producto, no la estructura tecnica del API.
+
+    - outputs: |
+        Datos que el sistema devuelve como resultado de ejecutar la funcionalidad.
+        Cada output debe especificar su nombre, tipo de dato y descripcion.
+        Define lo que el usuario o sistema consumidor recibe como respuesta,
+        incluyendo respuestas exitosas y respuestas de error con sus codigos.
+
+    - tests_scope: |
+        Escenarios de prueba que cubren el alcance funcional de la caracteristica.
+        Cada escenario tiene un nombre clave y una descripcion breve del caso
+        con su resultado esperado. Debe incluir al menos: un caso exitoso
+        (camino feliz), un error de validacion y un caso limite.
+        Sirve como guia para que ingenieria defina los tests tecnicos detallados.
+
+tests_scope:
+  - insumos_completos: documentos con toda la informacion necesaria -> genera feature.yaml completo
+  - insumos_parciales: documentos sin reglas de negocio claras -> responde con lista de datos faltantes
+  - solo_imagenes: mockups sin contexto textual -> solicita informacion complementaria
+  - multiples_fuentes: combina informacion de documentos + imagenes + contexto verbal -> genera feature.yaml consolidado
+  - formato_invalido: insumos sin relacion con una funcionalidad de producto -> indica que no puede generar especificacion
+  - validacion_campos: archivo generado contiene todos los campos obligatorios con valores concretos

@@ -1,0 +1,31 @@
+# tasks/02_register_agent_in_plugin.yaml
+task: register_product_agent_in_plugin
+phase: 1 - Agent Foundation
+level: L1
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Registrar el nuevo agente product en el plugin general. Actualizar
+  plugin.json con nueva version y actualizar README.md para documentar
+  el agente product junto al agente architect existente.
+
+files_to_modify:
+  - plugins/general/.claude-plugin/plugin.json
+  - plugins/general/README.md
+
+patterns:
+  - plugin_json: incrementar version (1.1.0 -> 1.2.0), actualizar description para incluir "product specification"
+  - readme: agregar seccion "Product Specification" bajo "Available Agents" con descripcion del agente product
+  - readme: agregar caso de uso "Generating product specifications from requirements" en "When to Use General Agents"
+
+acceptance:
+  - plugin.json tiene version 1.2.0
+  - plugin.json description menciona product specification
+  - README.md lista el agente product.md con descripcion clara
+  - README.md incluye caso de uso para generacion de especificaciones de producto
+
+context_files:
+  - plugins/general/.claude-plugin/plugin.json
+  - plugins/general/README.md
+  - plugins/general/agents/architect.md  # referencia de como esta documentado el agente existente

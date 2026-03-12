@@ -1,0 +1,39 @@
+# tasks/08_test_insufficient_inputs.yaml
+task: test_agent_with_insufficient_inputs
+phase: 3 - Testing & Validation
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Validar que el agente product NO genera un archivo parcial cuando los
+  insumos son insuficientes. En su lugar, debe responder con la lista
+  estructurada de datos faltantes con preguntas sugeridas para el usuario.
+
+test_scenarios:
+  - missing_business_rules:
+      input: documento que describe funcionalidad y rol pero sin reglas de negocio ni limites
+      expected: lista de faltantes indicando que business_rules esta incompleto, con preguntas sobre limites y valores permitidos
+  - missing_inputs:
+      input: documento con descripcion general pero sin definicion de entradas ni tipos de dato
+      expected: lista de faltantes indicando que inputs esta incompleto, con preguntas sobre datos de entrada y tipos
+  - only_images:
+      input: mockups/wireframes sin ningun contexto textual
+      expected: lista de faltantes solicitando descripcion de funcionalidad, rol de usuario, reglas de negocio y definicion de entradas/salidas
+  - unrelated_content:
+      input: texto sin relacion a una funcionalidad de producto
+      expected: agente indica que no puede generar una especificacion con los insumos proporcionados
+  - ambiguous_criteria:
+      input: documento con criterios vagos como "debe ser rapido" o "debe ser facil de usar"
+      expected: lista de faltantes indicando que acceptance_criteria es ambiguo, con preguntas para obtener criterios medibles
+
+validations:
+  - agente NO genera archivo feature.yaml cuando los insumos son insuficientes
+  - respuesta incluye lista estructurada con campo, estado (missing/incomplete/ambiguous), detalle y pregunta sugerida
+  - cada pregunta sugerida es concreta y accionable para el PO
+  - despues de recibir datos complementarios, el agente re-ejecuta el pipeline completo
+
+context_files:
+  - docs/features/product/feature.yaml  # business_rules.insumos_insuficientes
+  - docs/features/product/technical.yaml  # agent_contract.insufficient_output
+  - plugins/general/agents/product.md  # agente a probar

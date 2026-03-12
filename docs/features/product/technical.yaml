@@ -1,0 +1,71 @@
+# technical.yaml
+feature: product_specification_generator
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "general:product"
+  agent_definition: plugins/general/agents/product.md
+  pipeline: ExtractionPhase -> ValidationPhase -> GenerationPhase | MissingDataRequest
+
+agent_contract:
+  invocation: Task tool subagent_type "general:product"
+  model: inherit
+  tools: [Read, Glob, Grep, Write, AskUserQuestion]
+  inputs:
+    documents: archivos de texto, PDFs, documentos de requisitos
+    images: mockups, wireframes, capturas, diagramas de flujo
+    verbal_context: texto libre del usuario describiendo la funcionalidad
+    constraints: limitaciones de negocio o tecnicas (opcional)
+  success_output:
+    file: feature.yaml
+    path: docs/features/[feature_name]/feature.yaml
+    fields: [feature, owner, version, description, acceptance_criteria, business_rules, inputs, outputs, tests_scope]
+  insufficient_output:
+    type: lista estructurada de datos faltantes
+    per_missing_item:
+      field: string
+      status: enum[missing, incomplete, ambiguous]
+      detail: string
+      suggested_question: string
+
+pipeline:
+  phase_1_extraction:
+    input: insumos del usuario (documentos, imagenes, texto)
+    process: leer y analizar cada insumo, extraer datos relevantes por campo obligatorio
+    output: mapa de datos extraidos por campo
+
+  phase_2_validation:
+    input: mapa de datos extraidos
+    process: verificar que cada campo obligatorio tiene informacion suficiente, concreta y accionable
+    validations:
+      feature: tiene nombre claro en snake_case
+      description: se identifica rol de usuario y accion que ejecuta
+      acceptance_criteria: al menos 3 criterios verificables objetivamente
+      business_rules: valores concretos (limites, enums, codigos de error)
+      inputs: cada entrada tiene nombre, tipo y valores permitidos
+      outputs: cada salida tiene nombre, tipo y descripcion
+      tests_scope: al menos un caso exitoso, un error de validacion y un caso limite
+    output_complete: continua a fase 3
+    output_incomplete: responde con lista de faltantes, no genera archivo parcial
+
+  phase_3_generation:
+    input: mapa de datos validados
+    process: construir feature.yaml en espanol, lenguaje de negocio, sin jerga tecnica
+    output: archivo feature.yaml escrito en disco
+
+writing_rules:
+  language: espanol
+  description: iniciar con "Como [rol de usuario]"
+  acceptance_criteria: verificables, sin mencionar tecnologias ni frameworks
+  business_rules: valores concretos, nunca genericos
+  inputs: tipados con valores permitidos explicitos
+  outputs: tipados con respuestas exitosas y de error
+  tests_scope: nombre_clave + descripcion breve con resultado esperado
+
+dependencies:
+  - Read: leer documentos, PDFs e imagenes proporcionados como insumo
+  - Glob: buscar archivos de contexto en el proyecto
+  - Grep: buscar patrones en documentos existentes
+  - Write: generar el archivo feature.yaml de salida
+  - AskUserQuestion: solicitar datos faltantes cuando los insumos son insuficientes

@@ -1,0 +1,33 @@
+# tasks/01_create_agent_definition.yaml
+task: create_product_agent_definition
+phase: 1 - Agent Foundation
+level: L1
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Crear el archivo de definicion del agente product.md con frontmatter YAML
+  y la seccion de rol y alcance. Este archivo es la base del agente y define
+  su identidad, proposito y limites. No incluir aun la logica del pipeline
+  ni el template de salida.
+
+files_to_create:
+  - plugins/general/agents/product.md
+
+patterns:
+  - frontmatter: YAML con name, description, model (inherit), color
+  - role_section: definir rol como "Product Specification Agent"
+  - scope_must_do: lista de responsabilidades del agente (analizar insumos, validar completitud, generar feature.yaml, solicitar datos faltantes)
+  - scope_must_not: lista de restricciones (no generar archivos parciales, no inventar datos, no incluir jerga tecnica, no generar codigo ni documentos tecnicos)
+  - language: todo el contenido generado por el agente debe estar en espanol
+
+acceptance:
+  - archivo product.md creado en plugins/general/agents/
+  - frontmatter contiene name, description, model y color
+  - seccion de rol define claramente que DEBE y que NO DEBE hacer el agente
+  - seccion de rol menciona que el archivo feature.yaml es el DoR para ingenieria
+
+context_files:
+  - plugins/general/agents/architect.md  # referencia de formato y estructura de agentes existentes
+  - docs/features/product/feature.yaml
+  - docs/features/product/technical.yaml
