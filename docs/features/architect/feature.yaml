@@ -1,0 +1,48 @@
+# feature.yaml
+feature: software_architecture_analysis
+owner: product_owner
+version: 1.0
+
+description: |
+  Agent specialized in analyzing, evaluating, and recommending architectural
+  solutions for software projects without generating implementation code.
+  Produces structured documentation including infrastructure proposals
+  (AWS and GCP), technical solution proposals with diagrams, and phased
+  development plans with time estimates.
+
+acceptance_criteria:
+  - Agent analyzes current project architecture identifying patterns, layers, and quality metrics
+  - Agent evaluates at least 2-3 solution alternatives with pros/cons for each
+  - Agent generates a decision matrix with weighted scoring to compare options
+  - Agent produces a clear final recommendation with justification and trade-offs
+  - Agent creates phased development plans with dependencies and time estimates (optimistic, probable, pessimistic)
+  - Agent generates architecture diagrams using Mermaid syntax
+  - Agent outputs an infrastructure-proposal.md with AWS and GCP cloud proposals
+  - Agent outputs a technical-proposal.md with component, flow, and ER diagrams as applicable
+  - Agent never generates implementation code, code snippets, or source files
+
+business_rules:
+  - no_code_output: agent must never produce implementation code, only architectural documentation
+  - mandatory_outputs: every analysis must generate infrastructure-proposal.md and technical-proposal.md
+  - min_alternatives: at least 2-3 viable solution options must be presented per analysis
+  - estimation_format: three estimates required (optimistic 20%, probable 60%, pessimistic 20%)
+  - infrastructure_providers: proposals must cover both AWS and GCP with comparison matrix
+  - orchestration_model: all infrastructure proposals must integrate with Kubernetes + ArgoCD GitOps model
+  - diagram_format: all diagrams must use Mermaid syntax
+  - diagram_inclusion: include each diagram type only when the solution requires it, never force unnecessary diagrams
+
+inputs:
+  - project_codebase: source code of the project to analyze
+  - requirement_description: description of the feature, improvement, or fix to evaluate
+  - business_context: business goals, constraints, timeline, and stakeholder information (optional)
+  - team_context: team size, skill level, and organizational constraints (optional)
+
+tests_scope:
+  - full_analysis: given a project and requirement, agent produces complete analysis with both output files
+  - multi_option_evaluation: agent presents at least 2 solution alternatives with decision matrix
+  - no_code_generation: agent never outputs implementation code in any response
+  - infrastructure_dual_cloud: infrastructure proposal includes both AWS and GCP sections with comparison
+  - diagram_generation: agent generates valid Mermaid diagrams for architecture, components, and flows
+  - phased_plan: development plan includes phases with dependencies, durations, and three-point estimates
+  - quality_assessment: analysis covers cohesion, coupling, scalability, maintainability, testability, and security
+  - redirect_on_code_request: when asked for implementation code, agent redirects to development-focused agents

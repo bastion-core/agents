@@ -1,0 +1,190 @@
+# technical.yaml
+feature: software_architecture_analysis
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "general:architect"
+  agent_definition: plugins/general/agents/architect.md
+  model: inherit  # Inherits model from parent conversation
+  tools_access: All tools
+
+methodology:
+  pipeline:
+    - phase_1: Project Architecture Analysis
+    - phase_2: Requirements Analysis
+    - phase_3: Development Planning
+    - phase_4: Infrastructure Architecture Proposal
+
+analysis_capabilities:
+  architectural_patterns_detected:
+    - Layered Architecture
+    - Hexagonal Architecture (Ports & Adapters)
+    - Clean Architecture
+    - Microservices
+    - Modular Monolith
+    - Event-Driven
+    - CQRS
+    - MVC/MVVM
+
+  layer_analysis:
+    - presentation: UI frameworks, routing, API endpoints, state management
+    - application: use cases/interactors, DTOs, cross-cutting concerns
+    - domain: entities, value objects, domain services, repository interfaces (ports), infrastructure service interfaces (ports)
+    - infrastructure: repository implementations, external integrations, file system, framework-specific code
+
+  design_patterns_detected:
+    creational: [Singleton, Factory, Abstract Factory, Builder, Prototype]
+    structural: [Adapter, Decorator, Facade, Proxy, Composite, Bridge]
+    behavioral: [Strategy, Observer, Command, Template Method, Chain of Responsibility, State, Mediator]
+    architectural: [Repository, Infrastructure Service Interface (Port), Unit of Work, Service Layer, Gateway, Mapper, Specification]
+
+  quality_metrics:
+    - cohesion
+    - coupling
+    - scalability
+    - maintainability
+    - testability
+    - performance
+    - security
+
+  technology_stack_assessment:
+    - core_technologies: languages, frameworks, build tools, package managers
+    - data_layer: databases, ORMs, migrations, caching
+    - infrastructure: web servers, message queues, containers, cloud services
+    - dev_operations: testing frameworks, CI/CD, monitoring, version control
+    - external_integrations: third-party APIs, auth providers, payment processors
+
+evaluation_framework:
+  solution_alternatives:
+    min_options: 2-3
+    per_option_analysis:
+      - description
+      - architecture_diagram (Mermaid)
+      - pros_cons
+      - complexity: [implementation, maintenance, learning_curve]
+      - impact_on_current_architecture
+      - technical_risks_with_mitigations
+      - cost_analysis: [development_time, infrastructure_cost, maintenance_cost]
+      - alignment_with_best_practices
+
+  decision_matrix:
+    weighted_criteria:
+      - implementation_complexity: 20%
+      - maintenance_cost: 25%
+      - scalability: 20%
+      - alignment_with_current_architecture: 15%
+      - time_to_market: 10%
+      - team_familiarity: 10%
+
+  time_estimation:
+    format: three-point estimate
+    estimates:
+      - optimistic: 20% probability
+      - probable: 60% probability
+      - pessimistic: 20% probability
+    confidence_levels:
+      - high: +/- 10%
+      - medium: +/- 25%
+      - low: +/- 50%
+    adjustment_factors:
+      - technical_complexity: +50-100%
+      - team_experience: +30-50%
+      - requirements_clarity: +40-80%
+      - technical_debt: +30-60%
+      - technical_risk: +40-100%
+      - testing_requirements: +30-40%
+      - integration_complexity: +20-40%
+
+infrastructure_proposal:
+  orchestration_model:
+    container_orchestration: Kubernetes (K8s)
+    continuous_delivery: ArgoCD (GitOps)
+    container_runtime: Docker
+    manifest_management: dedicated GitOps repository
+
+  cloud_providers:
+    aws:
+      compute: EKS
+      registry: ECR
+      load_balancing: ALB / NLB with Ingress Controller
+      database_sql: RDS (PostgreSQL, MySQL) / Aurora
+      database_nosql: DocumentDB / DynamoDB
+      cache: ElastiCache (Redis / Memcached)
+      object_storage: S3
+      message_queue: SQS / SNS / Amazon MQ
+      secrets: Secrets Manager / Parameter Store
+      monitoring: CloudWatch / Prometheus + Grafana on K8s
+      cdn: CloudFront
+      dns: Route 53
+      networking: VPC, Subnets, Security Groups, NAT Gateway
+
+    gcp:
+      compute: GKE
+      registry: Artifact Registry
+      load_balancing: Cloud Load Balancing with Ingress Controller
+      database_sql: Cloud SQL (PostgreSQL, MySQL) / AlloyDB
+      database_nosql: Firestore / MongoDB Atlas
+      cache: Memorystore (Redis / Memcached)
+      object_storage: Cloud Storage
+      message_queue: Pub/Sub / Cloud Tasks
+      secrets: Secret Manager
+      monitoring: Cloud Monitoring / Prometheus + Grafana on K8s
+      cdn: Cloud CDN
+      dns: Cloud DNS
+      networking: VPC, Subnets, Firewall Rules, Cloud NAT
+
+  comparison_criteria:
+    - k8s_management
+    - estimated_monthly_cost
+    - managed_services_maturity
+    - team_familiarity
+    - region_availability
+    - vendor_lock_in_risk
+
+mandatory_outputs:
+  - file: infrastructure-proposal.md
+    content: Cloud infrastructure architecture proposal with Mermaid diagrams for AWS and GCP, comparison matrix, cost estimates, and provider recommendation
+  - file: technical-proposal.md
+    content: Technical solution proposal with component diagrams, flow diagrams, and ER diagrams (included only when applicable)
+
+diagram_types:
+  format: Mermaid syntax
+  supported:
+    - architecture_overview: graph TB (layered view)
+    - component_diagram: graph LR (module interactions)
+    - sequence_diagram: sequenceDiagram (operation flows)
+    - data_flow_diagram: graph LR (input/output processing)
+    - class_diagram: classDiagram (conceptual entities)
+    - deployment_diagram: graph TB (infrastructure layout)
+    - gantt_chart: gantt (project timeline)
+    - state_machine: stateDiagram-v2 (state transitions)
+    - aws_infrastructure: graph TB (VPC, EKS, managed services)
+    - gcp_infrastructure: graph TB (VPC, GKE, managed services)
+    - cicd_gitops_flow: graph LR (code repo to K8s deployment)
+  inclusion_rule: include only when the diagram clarifies architectural design, never force unnecessary diagrams
+
+constraints:
+  - never_generates_implementation_code
+  - never_creates_source_code_files
+  - never_writes_code_snippets
+  - redirects_code_requests_to_development_agents
+
+guiding_principles:
+  - Simplicity First
+  - YAGNI (You Aren't Gonna Need It)
+  - DRY (Don't Repeat Yourself, Rule of Three)
+  - KISS (Keep It Simple)
+  - Separation of Concerns
+  - Open/Closed Principle
+  - Dependency Inversion (all infrastructure behind ports)
+  - Evolutionary Design
+  - You Build It You Run It
+  - Measure Don't Guess
+
+dependencies:
+  - Read tool: read project source files for analysis
+  - Glob tool: discover project structure and file patterns
+  - Grep tool: search for patterns, imports, and dependencies across codebase
+  - Write tool: generate infrastructure-proposal.md and technical-proposal.md output files
+  - Bash tool: inspect project configuration, dependencies, and build setup
