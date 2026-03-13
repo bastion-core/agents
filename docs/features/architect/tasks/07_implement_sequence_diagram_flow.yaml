@@ -1,0 +1,37 @@
+# tasks/07_implement_sequence_diagram_flow.yaml
+task: implement_sequence_diagram_flow
+phase: 3 - Conditional Diagrams
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar el flujo condicional de diagrama de secuencia dentro del
+  prompt del agente architect.md. Cuando el feature.yaml describe multiples
+  interacciones entre componentes (ej. llamadas entre servicios, flujos
+  asincrono, integraciones con sistemas externos), el agente debe preguntar
+  al usuario si desea generar un diagrama de secuencia para visualizar
+  el flujo de interacciones.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - detection: durante el analisis, detectar si el feature.yaml describe multiples interacciones entre componentes, servicios o sistemas
+  - ask_user: si detecta multiples interacciones, preguntar al usuario usando AskUserQuestion si desea generar un diagrama de secuencia
+  - generate_sequence: si el usuario acepta, generar diagrama sequenceDiagram en Mermaid mostrando participantes, mensajes y flujos
+  - include_flows: incluir flujo principal (happy path) y flujos de error relevantes
+  - mermaid_format: usar sintaxis sequenceDiagram de Mermaid con participant, ->> (sincrono), -->> (respuesta), -) (asincrono)
+  - inclusion_rule: solo generar si el usuario acepta y la solucion realmente tiene interacciones complejas
+
+acceptance:
+  - prompt detecta automaticamente cuando el feature.yaml implica multiples interacciones entre componentes
+  - prompt pregunta al usuario si desea generar diagrama de secuencia antes de crearlo
+  - prompt genera diagrama de secuencia en Mermaid valido cuando el usuario acepta
+  - diagrama incluye participantes relevantes, mensajes sincronos y asincronos
+  - prompt no fuerza diagramas innecesarios cuando la funcionalidad es simple
+
+context_files:
+  - docs/features/architect/feature.yaml  # business_rules.sequence_diagram_offer, outputs.conditional_diagrams.sequence_diagram
+  - docs/features/architect/technical.yaml  # diagram_types.supported.sequence_diagram
+  - plugins/general/agents/architect.md  # archivo a modificar

@@ -1,0 +1,42 @@
+# tasks/03_implement_validation_phase.yaml
+task: implement_validation_phase
+phase: 2 - Core Pipeline
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar la fase de validacion dentro del prompt del agente architect.md.
+  Despues de leer el feature.yaml, el agente debe verificar que contiene
+  informacion suficiente para generar un technical.yaml completo. Debe validar
+  que cada campo obligatorio tiene datos concretos y accionables para el
+  analisis arquitectonico. Si algun campo esta faltante, incompleto o ambiguo,
+  el agente debe detenerse y activar el flujo de datos faltantes.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - validation_checklist: incluir lista de validacion por campo del feature.yaml con criterios especificos para el analisis arquitectonico
+  - validation_rules:
+      feature: tiene nombre claro en snake_case
+      description: identifica rol de usuario, accion y objetivo funcional
+      acceptance_criteria: al menos 3 criterios que definan alcance tecnico verificable
+      business_rules: reglas concretas con valores, limites o restricciones que impacten la arquitectura
+      inputs: cada entrada tiene nombre, tipo de dato y contexto suficiente para definir contratos
+      outputs: cada salida tiene nombre, tipo de dato y formato esperado
+      tests_scope: al menos un escenario exitoso y uno de error que informe la estrategia de testing
+  - decision_gate: si TODOS los campos pasan validacion -> continuar a analisis arquitectonico, si alguno falla -> activar flujo de datos faltantes
+  - data_model_check: verificar si business_rules o inputs mencionan nuevas tablas, campos o entidades de datos
+
+acceptance:
+  - prompt incluye checklist de validacion con criterios concretos por campo del feature.yaml
+  - prompt define cuando un campo es "faltante", "incompleto" o "ambiguo" en contexto arquitectonico
+  - prompt incluye punto de decision explicito (feature.yaml completo vs incompleto)
+  - prompt detecta si la funcionalidad requiere cambios en el modelo de datos
+  - prompt indica que NUNCA debe generar un technical.yaml parcial si falta informacion
+
+context_files:
+  - docs/features/architect/technical.yaml  # methodology.pipeline
+  - docs/features/architect/feature.yaml  # business_rules.insufficient_input y acceptance_criteria
+  - plugins/general/agents/architect.md  # archivo a modificar

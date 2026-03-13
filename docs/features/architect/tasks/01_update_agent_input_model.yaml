@@ -1,0 +1,43 @@
+# tasks/01_update_agent_input_model.yaml
+task: update_agent_input_model
+phase: 1 - Foundation
+level: L1
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Reestructurar el prompt del agente architect.md para que acepte un archivo
+  feature.yaml como insumo principal de entrada. El agente debe leer el
+  feature.yaml proporcionado, extraer los campos estandarizados (feature,
+  owner, version, description, acceptance_criteria, business_rules, inputs,
+  outputs, tests_scope) y usarlos como base para todo el analisis arquitectonico.
+  Actualmente el agente hace analisis generico de proyectos; debe transformarse
+  para operar con el pipeline: feature.yaml (entrada) -> technical.yaml (salida).
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - primary_input: definir feature.yaml como insumo obligatorio con sus campos estandarizados
+  - extraction_mapping: mapear cada campo del feature.yaml a la informacion que el agente necesita para su analisis
+  - read_tool: usar Read tool para leer el archivo feature.yaml proporcionado por el usuario
+  - field_mapping:
+      feature: nombre de la funcionalidad a analizar
+      description: contexto funcional y rol de usuario
+      acceptance_criteria: criterios que definen el alcance tecnico
+      business_rules: restricciones y reglas que impactan la arquitectura
+      inputs: datos de entrada que definen contratos y validaciones
+      outputs: datos de salida que definen respuestas y formatos
+      tests_scope: escenarios que informan la estrategia de testing
+
+acceptance:
+  - prompt define feature.yaml como insumo principal obligatorio
+  - prompt incluye lista de campos esperados del feature.yaml con descripcion de como cada uno alimenta el analisis
+  - prompt indica usar Read tool para leer el archivo feature.yaml
+  - prompt mantiene la capacidad de analizar el codebase del proyecto como contexto opcional
+  - prompt redefine el flujo del agente como: leer feature.yaml -> validar completitud -> analizar -> generar technical.yaml
+
+context_files:
+  - docs/features/architect/feature.yaml  # inputs y primary_input
+  - docs/features/architect/technical.yaml  # architecture.entry y methodology.pipeline
+  - plugins/general/agents/architect.md  # archivo a modificar

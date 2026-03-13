@@ -1,0 +1,36 @@
+# tasks/04_implement_missing_data_flow.yaml
+task: implement_missing_data_flow
+phase: 2 - Core Pipeline
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar el flujo de datos faltantes dentro del prompt del agente
+  architect.md. Cuando la fase de validacion detecta campos faltantes,
+  incompletos o ambiguos en el feature.yaml, el agente debe responder con
+  una lista estructurada de los datos requeridos para completar el analisis
+  arquitectonico. Debe usar AskUserQuestion cuando sea posible para facilitar
+  la interaccion. El agente nunca debe generar un technical.yaml parcial.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - response_format: lista estructurada con campo, estado (missing/incomplete/ambiguous), detalle de que informacion especifica falta del feature.yaml, y pregunta sugerida para obtener el dato
+  - ask_user: usar herramienta AskUserQuestion para hacer preguntas concretas al usuario o PO
+  - no_partial_output: nunca generar technical.yaml parcial, siempre solicitar primero los datos faltantes
+  - iterative: despues de recibir respuestas, volver a ejecutar la validacion del feature.yaml con la nueva informacion
+  - context_questions: las preguntas deben ser especificas al contexto arquitectonico (ej. "que tipo de base de datos usa el proyecto?" en lugar de "falta informacion")
+
+acceptance:
+  - prompt define formato claro de respuesta para datos faltantes con campo, estado, detalle y pregunta sugerida
+  - prompt indica usar AskUserQuestion para solicitar datos al usuario
+  - prompt prohibe explicitamente generar archivos parciales
+  - prompt indica que tras recibir datos nuevos debe re-ejecutar la validacion completa
+  - cada pregunta sugerida es concreta y orientada al contexto arquitectonico
+
+context_files:
+  - docs/features/architect/feature.yaml  # outputs.insufficient_input_response
+  - docs/features/architect/technical.yaml  # methodology.pipeline
+  - plugins/general/agents/architect.md  # archivo a modificar

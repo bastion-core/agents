@@ -1,0 +1,40 @@
+# tasks/08_implement_infrastructure_diagram_flow.yaml
+task: implement_infrastructure_diagram_flow
+phase: 3 - Conditional Diagrams
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar el flujo condicional de diagrama de infraestructura dentro del
+  prompt del agente architect.md. El agente debe preguntar al usuario si desea
+  generar un diagrama de arquitectura de infraestructura para la funcionalidad.
+  Si acepta, preguntar si prefiere AWS o GCP (o ambos). Generar diagramas de
+  infraestructura en Mermaid integrando Kubernetes + ArgoCD como modelo de
+  orquestacion base, con los servicios gestionados del proveedor seleccionado.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - ask_user: preguntar al usuario usando AskUserQuestion si desea generar diagrama de infraestructura
+  - provider_selection: si acepta, preguntar si prefiere AWS, GCP o ambos
+  - orchestration_base: todos los diagramas deben integrar Kubernetes (EKS/GKE) + ArgoCD GitOps como modelo de orquestacion
+  - aws_services: usar catalogo de servicios AWS del technical.yaml (EKS, ECR, ALB, RDS, ElastiCache, S3, SQS, Secrets Manager, CloudWatch)
+  - gcp_services: usar catalogo de servicios GCP del technical.yaml (GKE, Artifact Registry, Cloud Load Balancing, Cloud SQL, Memorystore, Cloud Storage, Pub/Sub, Secret Manager)
+  - diagram_components: incluir K8s cluster con namespaces, ArgoCD, servicios gestionados, networking (VPC, subnets), flujo CI/CD GitOps
+  - mermaid_format: usar graph TB de Mermaid con subgraphs para cada capa (networking, compute, data, CI/CD)
+  - comparison: si se generan ambos, incluir matriz de comparacion AWS vs GCP con criterios ponderados
+
+acceptance:
+  - prompt pregunta al usuario si desea diagrama de infraestructura
+  - prompt permite al usuario elegir entre AWS, GCP o ambos
+  - diagramas generados integran Kubernetes + ArgoCD como base de orquestacion
+  - diagramas usan servicios gestionados del proveedor seleccionado segun catalogo del technical.yaml
+  - diagramas incluyen K8s cluster, namespaces, servicios gestionados, networking y flujo CI/CD
+  - si se generan ambos proveedores, se incluye matriz de comparacion
+
+context_files:
+  - docs/features/architect/feature.yaml  # business_rules.infrastructure_diagram_offer, outputs.conditional_diagrams.infrastructure_diagram
+  - docs/features/architect/technical.yaml  # infrastructure_proposal (aws, gcp, orchestration_model, comparison_criteria)
+  - plugins/general/agents/architect.md  # archivo a modificar (templates de AWS y GCP ya existen)

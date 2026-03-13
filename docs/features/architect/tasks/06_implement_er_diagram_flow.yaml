@@ -1,0 +1,39 @@
+# tasks/06_implement_er_diagram_flow.yaml
+task: implement_er_diagram_flow
+phase: 3 - Conditional Diagrams
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Implementar el flujo condicional de diagrama entidad-relacion dentro del
+  prompt del agente architect.md. Cuando el feature.yaml menciona nuevas
+  tablas, campos o entidades de datos, el agente debe preguntar al usuario
+  si existe un diagrama ER previo del proyecto. Si existe, usarlo como
+  contexto para el analisis. Si no existe, generar una propuesta de
+  normalizacion de datos con diagrama ER en Mermaid y diccionario de datos.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - detection: durante la validacion, detectar si el feature.yaml menciona nuevas tablas, campos, entidades o relaciones de datos
+  - ask_for_er: si detecta cambios en modelo de datos, preguntar al usuario usando AskUserQuestion si existe un diagrama ER previo del proyecto
+  - use_existing_er: si el usuario proporciona un diagrama ER existente, leerlo con Read tool y usarlo como contexto para el technical.yaml
+  - generate_er: si no existe diagrama ER previo, generar propuesta de normalizacion con diagrama erDiagram en Mermaid
+  - data_dictionary: incluir diccionario de datos con nombre de entidad, atributos, tipos de dato y relaciones
+  - include_in_technical: agregar el diagrama ER y diccionario de datos en el campo data_model del technical.yaml
+  - mermaid_format: usar sintaxis erDiagram de Mermaid con relaciones, atributos y tipos
+
+acceptance:
+  - prompt detecta automaticamente cuando el feature.yaml implica cambios en el modelo de datos
+  - prompt pregunta al usuario si existe diagrama ER previo antes de generar uno nuevo
+  - prompt incluye instrucciones para leer un diagrama ER existente con Read tool
+  - prompt genera propuesta de normalizacion con diagrama ER en Mermaid cuando no existe previo
+  - prompt incluye diccionario de datos junto al diagrama ER
+  - diagrama ER generado usa sintaxis erDiagram de Mermaid valida
+
+context_files:
+  - docs/features/architect/feature.yaml  # business_rules.data_model_detection y data_model_proposal, outputs.conditional_diagrams.er_diagram
+  - docs/features/architect/technical.yaml  # diagram_types.supported
+  - plugins/general/agents/architect.md  # archivo a modificar

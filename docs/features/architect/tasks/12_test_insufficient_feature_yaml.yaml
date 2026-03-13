@@ -1,0 +1,41 @@
+# tasks/12_test_insufficient_feature_yaml.yaml
+task: test_insufficient_feature_yaml
+phase: 5 - Testing & Validation
+level: L2
+parent: technical.yaml
+status: TODO
+
+scope: |
+  Validar que el agente architect NO genera archivos parciales cuando el
+  feature.yaml proporcionado tiene informacion insuficiente. En su lugar,
+  debe responder con la lista estructurada de datos requeridos con preguntas
+  sugeridas para obtener la informacion faltante.
+
+test_scenarios:
+  - missing_business_rules:
+      input: feature.yaml sin business_rules o con reglas vagas
+      expected: lista de faltantes indicando que business_rules esta incompleto, con preguntas sobre restricciones, limites y reglas que impacten la arquitectura
+  - missing_inputs_outputs:
+      input: feature.yaml sin definicion clara de inputs y outputs
+      expected: lista de faltantes indicando que inputs/outputs estan incompletos, con preguntas sobre tipos de dato, formatos y contratos esperados
+  - ambiguous_acceptance_criteria:
+      input: feature.yaml con criterios vagos como "debe ser rapido" o "debe ser seguro"
+      expected: lista de faltantes indicando que acceptance_criteria es ambiguo, con preguntas para obtener criterios medibles y verificables
+  - minimal_description:
+      input: feature.yaml solo con description basica sin acceptance_criteria ni business_rules
+      expected: lista de faltantes indicando multiples campos incompletos con preguntas especificas por campo
+  - unrelated_content:
+      input: archivo YAML que no sigue el formato de feature.yaml estandarizado
+      expected: agente indica que el archivo no tiene el formato esperado y solicita un feature.yaml valido
+
+validations:
+  - agente NO genera technical.yaml cuando los insumos son insuficientes
+  - agente NO genera technical-proposal.md ni infrastructure-proposal.md cuando los insumos son insuficientes
+  - respuesta incluye lista estructurada con campo, estado (missing/incomplete/ambiguous), detalle y pregunta sugerida
+  - cada pregunta sugerida es concreta y orientada al contexto arquitectonico
+  - despues de recibir datos complementarios, el agente re-ejecuta la validacion completa
+
+context_files:
+  - docs/features/architect/feature.yaml  # outputs.insufficient_input_response, tests_scope.feature_yaml_insufficient
+  - docs/features/architect/technical.yaml  # methodology.pipeline
+  - plugins/general/agents/architect.md  # agente a probar
