@@ -1,48 +1,135 @@
 # feature.yaml
 feature: software_architecture_analysis
 owner: product_owner
-version: 1.0
+version: 2.0
 
 description: |
-  Agent specialized in analyzing, evaluating, and recommending architectural
-  solutions for software projects without generating implementation code.
-  Produces structured documentation including infrastructure proposals
-  (AWS and GCP), technical solution proposals with diagrams, and phased
-  development plans with time estimates.
+  Como ingeniero de software o tech lead,
+  puedo proporcionarle al agente un documento de especificacion de caracteristica
+  de producto (feature.yaml) para que analice la funcionalidad descrita y genere
+  o actualice un documento de especificacion tecnica de alto nivel (technical.yaml)
+  con la arquitectura, contratos, dependencias y diagramas necesarios para que
+  el equipo de ingenieria pueda implementar la solucion.
+  Si el documento de producto no tiene la informacion suficiente, el agente
+  debe responder con la lista de datos requeridos para completar el archivo tecnico.
+  El agente nunca genera codigo de implementacion.
 
 acceptance_criteria:
-  - Agent analyzes current project architecture identifying patterns, layers, and quality metrics
-  - Agent evaluates at least 2-3 solution alternatives with pros/cons for each
-  - Agent generates a decision matrix with weighted scoring to compare options
-  - Agent produces a clear final recommendation with justification and trade-offs
-  - Agent creates phased development plans with dependencies and time estimates (optimistic, probable, pessimistic)
-  - Agent generates architecture diagrams using Mermaid syntax
-  - Agent outputs an infrastructure-proposal.md with AWS and GCP cloud proposals
-  - Agent outputs a technical-proposal.md with component, flow, and ER diagrams as applicable
-  - Agent never generates implementation code, code snippets, or source files
+  - Agente recibe un archivo feature.yaml como insumo principal de entrada
+  - Agente analiza el documento de producto e identifica arquitectura, contratos, dependencias y diagramas necesarios
+  - Agente genera o actualiza un archivo technical.yaml con el formato de especificacion tecnica estandarizado
+  - Si el documento de producto es insuficiente, agente responde con lista detallada de datos requeridos en lugar de generar un archivo incompleto
+  - Si la funcionalidad requiere nuevas tablas o campos, agente pregunta si existe un diagrama entidad relacion como contexto
+  - Si no existe diagrama entidad relacion, agente genera propuesta de normalizacion de datos con diagrama ER y diccionario de datos en Mermaid
+  - Si la funcionalidad tiene multiples interacciones entre componentes, agente pregunta si se desea generar un diagrama de secuencia
+  - Agente pregunta si se desea generar un diagrama de arquitectura de infraestructura en AWS o GCP para la funcionalidad
+  - Agente evalua al menos 2-3 alternativas de solucion con pros/contras para cada una
+  - Agente genera matriz de decision con puntuacion ponderada para comparar opciones
+  - Agente produce recomendacion final con justificacion y trade-offs
+  - Agente genera diagramas de arquitectura usando sintaxis Mermaid
+  - Agente nunca genera codigo de implementacion, snippets ni archivos de codigo fuente
 
 business_rules:
-  - no_code_output: agent must never produce implementation code, only architectural documentation
-  - mandatory_outputs: every analysis must generate infrastructure-proposal.md and technical-proposal.md
-  - min_alternatives: at least 2-3 viable solution options must be presented per analysis
-  - estimation_format: three estimates required (optimistic 20%, probable 60%, pessimistic 20%)
-  - infrastructure_providers: proposals must cover both AWS and GCP with comparison matrix
-  - orchestration_model: all infrastructure proposals must integrate with Kubernetes + ArgoCD GitOps model
-  - diagram_format: all diagrams must use Mermaid syntax
-  - diagram_inclusion: include each diagram type only when the solution requires it, never force unnecessary diagrams
+  - primary_input: archivo feature.yaml con formato estandarizado (campos: feature, owner, version, description, acceptance_criteria, business_rules, inputs, outputs, tests_scope)
+  - primary_output: archivo technical.yaml con especificacion tecnica de alto nivel
+  - no_code_output: agente nunca produce codigo de implementacion, solo documentacion arquitectonica
+  - insufficient_input: no generar archivo parcial, responder con lista de datos requeridos
+  - data_model_detection: si feature.yaml menciona nuevas tablas o campos, preguntar por diagrama ER existente
+  - data_model_proposal: si no existe diagrama ER, generar propuesta de normalizacion con diagrama ER (Mermaid) y diccionario de datos
+  - sequence_diagram_offer: si feature.yaml describe multiples interacciones entre componentes, preguntar si se desea diagrama de secuencia
+  - infrastructure_diagram_offer: preguntar si se desea generar diagrama de arquitectura de infraestructura en AWS o GCP
+  - diagram_format: todos los diagramas deben usar sintaxis Mermaid
+  - diagram_inclusion: incluir cada tipo de diagrama solo cuando la solucion lo requiera o el usuario lo solicite
+  - min_alternatives: presentar al menos 2-3 alternativas de solucion viables por analisis
+  - estimation_format: tres estimaciones requeridas (optimista 20%, probable 60%, pesimista 20%)
+  - orchestration_model: propuestas de infraestructura deben integrarse con Kubernetes + ArgoCD GitOps
 
 inputs:
-  - project_codebase: source code of the project to analyze
-  - requirement_description: description of the feature, improvement, or fix to evaluate
-  - business_context: business goals, constraints, timeline, and stakeholder information (optional)
-  - team_context: team size, skill level, and organizational constraints (optional)
+  - feature_yaml: archivo de especificacion de caracteristica de producto con campos estandarizados (feature, owner, version, description, acceptance_criteria, business_rules, inputs, outputs, tests_scope)
+  - project_codebase: codigo fuente del proyecto a analizar (opcional, para contexto de arquitectura existente)
+  - er_diagram: diagrama entidad relacion existente del proyecto (opcional, solicitado por el agente si aplica)
+  - team_context: tamano del equipo, nivel de experiencia y restricciones organizacionales (opcional)
+
+outputs:
+  primary_file:
+    file: technical.yaml
+    description: |
+      Documento de especificacion tecnica de alto nivel que define como
+      implementar la funcionalidad descrita en el feature.yaml de entrada.
+      Contiene arquitectura, contratos, pipeline, dependencias y restricciones.
+    fields:
+      - feature: |
+          Nombre de la funcionalidad en snake_case. Debe coincidir con el campo
+          feature del feature.yaml de entrada para mantener trazabilidad entre
+          la especificacion de producto y la especificacion tecnica.
+
+      - layer: |
+          Capa de la arquitectura donde se implementa la funcionalidad.
+          Valores posibles: api, domain, infrastructure, agent, worker, scheduler.
+          Indica el punto de entrada principal de la solucion dentro de
+          Clean Architecture o la arquitectura del proyecto.
+
+      - architecture: |
+          Bloque que define el patron arquitectonico, el punto de entrada
+          (endpoint, comando, evento, invocacion de agente), el caso de uso
+          principal, y las interfaces de repositorio o servicio involucradas.
+          Describe la estructura de alto nivel sin entrar en codigo.
+
+      - api_contract: |
+          Contrato de la API cuando la funcionalidad expone un endpoint.
+          Incluye metodo HTTP, ruta, tipo de autenticacion, esquema de request
+          con tipos de dato, esquema de response con tipos de dato, y catalogo
+          de errores con codigos HTTP y descripcion. Se omite si la funcionalidad
+          no expone un endpoint (ej. workers, agentes, tareas programadas).
+
+      - pipeline: |
+          Flujo de procesamiento cuando la funcionalidad sigue un pipeline
+          secuencial de fases. Define entrada, proceso y salida de cada fase.
+          Se usa para agentes, workers o procesos batch. Se omite si la
+          funcionalidad es un endpoint simple request-response.
+
+      - data_model: |
+          Modelo de datos cuando la funcionalidad requiere nuevas tablas o
+          campos. Incluye diagrama entidad relacion en Mermaid y diccionario
+          de datos con nombre de entidad, atributos, tipos y relaciones.
+          Se omite si la funcionalidad no modifica el modelo de datos.
+
+      - dependencies: |
+          Lista de servicios, repositorios, herramientas o componentes
+          externos que la funcionalidad necesita para operar. Cada dependencia
+          incluye nombre y descripcion breve de su responsabilidad.
+          Define el grafo de dependencias para que ingenieria sepa que
+          componentes deben existir o crearse antes de implementar.
+
+  conditional_diagrams:
+    - er_diagram:
+        condition: feature.yaml menciona nuevas tablas o campos y no existe diagrama ER previo
+        content: propuesta de normalizacion de datos con diagrama entidad relacion (Mermaid) y diccionario de datos
+    - sequence_diagram:
+        condition: feature.yaml describe multiples interacciones entre componentes y el usuario acepta generarlo
+        content: diagrama de secuencia mostrando flujo de interacciones entre componentes (Mermaid)
+    - infrastructure_diagram:
+        condition: el usuario acepta generar diagrama de infraestructura
+        content: diagrama de arquitectura de infraestructura en AWS o GCP segun eleccion del usuario (Mermaid)
+
+  insufficient_input_response:
+    description: |
+      Cuando el feature.yaml no contiene informacion suficiente para completar
+      el technical.yaml, el agente responde con lista estructurada de datos
+      requeridos en lugar de generar un archivo incompleto.
+    per_missing_item:
+      field: campo del technical.yaml que no puede completarse
+      status: enum[missing, incomplete, ambiguous]
+      detail: que informacion especifica se necesita del feature.yaml
+      suggested_question: pregunta concreta para obtener el dato faltante
 
 tests_scope:
-  - full_analysis: given a project and requirement, agent produces complete analysis with both output files
-  - multi_option_evaluation: agent presents at least 2 solution alternatives with decision matrix
-  - no_code_generation: agent never outputs implementation code in any response
-  - infrastructure_dual_cloud: infrastructure proposal includes both AWS and GCP sections with comparison
-  - diagram_generation: agent generates valid Mermaid diagrams for architecture, components, and flows
-  - phased_plan: development plan includes phases with dependencies, durations, and three-point estimates
-  - quality_assessment: analysis covers cohesion, coupling, scalability, maintainability, testability, and security
-  - redirect_on_code_request: when asked for implementation code, agent redirects to development-focused agents
+  - feature_yaml_complete: feature.yaml con toda la informacion -> genera technical.yaml completo
+  - feature_yaml_insufficient: feature.yaml sin reglas de negocio o inputs claros -> responde con lista de datos requeridos
+  - new_tables_with_er: feature.yaml menciona nuevas tablas + usuario tiene diagrama ER -> usa diagrama como contexto para technical.yaml
+  - new_tables_without_er: feature.yaml menciona nuevas tablas + no existe diagrama ER -> genera propuesta de normalizacion con diagrama ER y diccionario de datos
+  - multiple_interactions: feature.yaml con multiples interacciones entre componentes -> pregunta si generar diagrama de secuencia
+  - infrastructure_diagram_request: usuario acepta generar diagrama de infraestructura -> genera diagrama AWS o GCP segun eleccion
+  - no_code_generation: agente nunca genera codigo de implementacion en ninguna respuesta
+  - multi_option_evaluation: agente presenta al menos 2 alternativas de solucion con matriz de decision
+  - diagram_generation: agente genera diagramas validos en sintaxis Mermaid
