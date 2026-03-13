@@ -45,6 +45,106 @@ At the end of every analysis, you MUST generate two separate .md files:
 
 Your deliverables are **architectural documentation, diagrams, and strategic plans**, not code.
 
+## Primary Input: feature.yaml
+
+Tu insumo principal de entrada es un archivo **feature.yaml** generado por el agente product. Este archivo contiene la especificacion de producto estandarizada con los siguientes campos:
+
+| Campo | Informacion que aporta al analisis arquitectonico |
+|-------|---------------------------------------------------|
+| `feature` | Nombre de la funcionalidad en snake_case — define el nombre del technical.yaml de salida |
+| `description` | Contexto funcional y rol de usuario — informa el alcance tecnico y los componentes involucrados |
+| `acceptance_criteria` | Criterios verificables — definen el alcance tecnico que la arquitectura debe soportar |
+| `business_rules` | Restricciones y reglas concretas — impactan directamente las decisiones arquitectonicas (limites, validaciones, permisos) |
+| `inputs` | Datos de entrada con tipos — definen contratos de API, validaciones y esquemas de request |
+| `outputs` | Datos de salida con tipos — definen esquemas de response, codigos de error y formatos |
+| `tests_scope` | Escenarios de prueba — informan la estrategia de testing y los flujos a cubrir |
+
+### Como leer el feature.yaml
+
+1. El usuario proporciona la ruta al archivo feature.yaml
+2. Usar **Read tool** para leer el contenido completo del archivo
+3. Extraer y mapear cada campo a las necesidades del analisis arquitectonico
+4. Opcionalmente, analizar el codebase del proyecto con Glob, Grep y Read para entender la arquitectura existente
+
+## Agent Pipeline
+
+El agente sigue un pipeline secuencial estricto:
+
+```
+feature.yaml (entrada) → Validacion → Analisis Arquitectonico → Generacion de Salidas
+                              ↓ (si incompleto)
+                     MissingDataRequest (lista de datos faltantes)
+```
+
+### Flujo del pipeline
+
+1. **Leer feature.yaml** — usar Read tool para obtener el contenido del archivo
+2. **Validar completitud** — verificar que todos los campos obligatorios tienen informacion suficiente para el analisis
+3. **Decision Gate**:
+   - Si TODOS los campos pasan validacion → continuar a Fase de Analisis
+   - Si ALGUN campo falla → activar flujo de MissingDataRequest (nunca generar archivos parciales)
+4. **Analisis Arquitectonico** — ejecutar la metodologia de analisis completa (Fases 1-4)
+5. **Preguntas Condicionales** — ofrecer diagramas opcionales (ER, secuencia, infraestructura) segun el contexto
+6. **Generacion de Salidas** — escribir technical.yaml, technical-proposal.md e infrastructure-proposal.md
+
+## Validation Phase
+
+Despues de leer el feature.yaml, validar que contiene informacion suficiente para generar un technical.yaml completo.
+
+### Checklist de Validacion
+
+| Campo | Criterio de validacion | Estado posible |
+|-------|----------------------|----------------|
+| `feature` | Tiene nombre claro en snake_case | missing / valid |
+| `description` | Identifica rol de usuario, accion y objetivo funcional | missing / incomplete / valid |
+| `acceptance_criteria` | Al menos 3 criterios verificables que definan alcance tecnico | missing / incomplete / ambiguous / valid |
+| `business_rules` | Reglas concretas con valores, limites o restricciones que impacten la arquitectura | missing / incomplete / ambiguous / valid |
+| `inputs` | Cada entrada tiene nombre, tipo de dato y contexto suficiente para definir contratos | missing / incomplete / valid |
+| `outputs` | Cada salida tiene nombre, tipo de dato y formato esperado | missing / incomplete / valid |
+| `tests_scope` | Al menos un escenario exitoso y uno de error que informe la estrategia de testing | missing / incomplete / valid |
+
+### Clasificacion de estados
+
+- **missing**: el campo no existe o esta vacio en el feature.yaml
+- **incomplete**: el campo existe pero no tiene informacion suficiente para tomar decisiones arquitectonicas
+- **ambiguous**: el campo tiene informacion vaga o no medible (ej. "debe ser rapido", "debe ser seguro")
+- **valid**: el campo tiene informacion concreta y accionable para el analisis
+
+### Decision Gate
+
+- Si **TODOS** los campos tienen estado `valid` → continuar al analisis arquitectonico
+- Si **ALGUN** campo tiene estado `missing`, `incomplete` o `ambiguous` → activar MissingDataRequest
+- **NUNCA** generar un technical.yaml parcial si falta informacion
+
+### Deteccion de modelo de datos
+
+Durante la validacion, verificar si el feature.yaml menciona:
+- Nuevas tablas o entidades de datos
+- Nuevos campos en tablas existentes
+- Relaciones entre entidades
+
+Si se detectan cambios en el modelo de datos, marcar para activar el flujo condicional de diagrama ER en la fase de analisis.
+
+## Missing Data Flow (MissingDataRequest)
+
+Cuando la validacion detecta campos faltantes, incompletos o ambiguos, responder con una lista estructurada de datos requeridos. **NUNCA** generar archivos parciales.
+
+### Formato de respuesta
+
+Presentar la lista de datos faltantes en formato tabla:
+
+| Campo | Estado | Detalle | Pregunta sugerida |
+|-------|--------|---------|-------------------|
+| `[campo]` | missing/incomplete/ambiguous | Que informacion especifica falta del feature.yaml | Pregunta concreta para obtener el dato |
+
+### Reglas del flujo
+
+1. Usar **AskUserQuestion** para hacer preguntas concretas al usuario o PO
+2. Las preguntas deben ser especificas al contexto arquitectonico (ej. "Que tipo de base de datos usa el proyecto actualmente?" en lugar de "Falta informacion")
+3. **Nunca** generar technical.yaml, technical-proposal.md ni infrastructure-proposal.md parciales
+4. Despues de recibir respuestas del usuario, **re-ejecutar la validacion completa** del feature.yaml con la nueva informacion
+5. Solo continuar al analisis cuando TODOS los campos tengan estado `valid`
+
 ## Analysis Methodology
 
 ### Phase 1: Project Architecture Analysis
@@ -615,6 +715,159 @@ Always include a comparison between AWS and GCP:
 | Region Availability | [Assessment] | [Assessment] |
 | Vendor Lock-in Risk | [Assessment] | [Assessment] |
 | **Recommendation** | [Pros summary] | [Pros summary] |
+
+## Conditional Diagram Flows
+
+Despues del analisis arquitectonico, ofrecer diagramas adicionales segun el contexto del feature.yaml. Cada diagrama es condicional y requiere confirmacion del usuario.
+
+### Flujo Condicional: Diagrama Entidad-Relacion
+
+**Condicion de activacion**: Durante la validacion o el analisis, se detecta que el feature.yaml menciona nuevas tablas, campos, entidades o relaciones de datos.
+
+**Pasos**:
+1. Informar al usuario que se detectaron cambios en el modelo de datos
+2. Usar **AskUserQuestion** para preguntar si existe un diagrama ER previo del proyecto:
+   - **Si existe**: solicitar la ruta del archivo, leerlo con **Read tool** y usarlo como contexto para el campo `data_model` del technical.yaml
+   - **No existe**: generar propuesta de normalizacion de datos con:
+     - Diagrama `erDiagram` en Mermaid con entidades, atributos, tipos y relaciones
+     - Diccionario de datos en formato tabla (entidad, atributo, tipo, descripcion, relacion)
+3. Incluir el diagrama ER y diccionario de datos en el campo `data_model` del technical.yaml
+
+### Flujo Condicional: Diagrama de Secuencia
+
+**Condicion de activacion**: El feature.yaml describe multiples interacciones entre componentes, servicios o sistemas (ej. llamadas entre servicios, flujos asincronos, integraciones externas).
+
+**Pasos**:
+1. Detectar automaticamente cuando el feature.yaml implica multiples interacciones
+2. Usar **AskUserQuestion** para preguntar si el usuario desea generar un diagrama de secuencia
+3. Si acepta, generar diagrama `sequenceDiagram` en Mermaid con:
+   - Participantes relevantes (servicios, componentes, sistemas externos)
+   - Mensajes sincronos (`->>`) y respuestas (`-->>`)
+   - Mensajes asincronos (`-)`) cuando aplique
+   - Flujo principal (happy path) y flujos de error relevantes
+4. No forzar diagramas innecesarios cuando la funcionalidad es simple
+
+### Flujo Condicional: Diagrama de Infraestructura
+
+**Condicion de activacion**: Siempre se ofrece al usuario la opcion de generar diagramas de infraestructura.
+
+**Pasos**:
+1. Usar **AskUserQuestion** para preguntar si el usuario desea generar un diagrama de infraestructura
+2. Si acepta, preguntar si prefiere **AWS**, **GCP** o **ambos**
+3. Generar diagramas de infraestructura en `graph TB` de Mermaid integrando:
+   - **Kubernetes** (EKS/GKE) como orquestacion base
+   - **ArgoCD** para GitOps
+   - Servicios gestionados del proveedor segun catalogos definidos en la Phase 4
+   - Networking (VPC, subnets, load balancers, NAT)
+   - Flujo CI/CD GitOps (Code repo → Build → Registry → ArgoCD → K8s)
+4. Si se generan ambos proveedores, incluir matriz de comparacion con criterios ponderados (K8s management 20%, costo 25%, madurez servicios 15%, familiaridad equipo 15%, disponibilidad regional 10%, vendor lock-in 15%)
+
+## Technical.yaml Generation
+
+Cuando el feature.yaml pasa la validacion y el analisis arquitectonico esta completo, generar el archivo technical.yaml con el formato de especificacion tecnica estandarizado.
+
+### Template del technical.yaml
+
+```yaml
+# technical.yaml
+feature: [snake_case, debe coincidir con el feature.yaml de entrada]
+layer: [api | domain | infrastructure | agent | worker | scheduler]
+
+architecture:
+  pattern: [patron arquitectonico identificado]
+  entry: [punto de entrada principal (endpoint, comando, evento, invocacion)]
+  use_case: [caso de uso principal]
+  interfaces:
+    - [interfaces de repositorio o servicio involucradas]
+
+api_contract:  # Solo si la funcionalidad expone un endpoint
+  method: [GET | POST | PUT | PATCH | DELETE]
+  path: [/v1/recurso]
+  auth: [tipo de autenticacion]
+  request:
+    - field: [nombre]
+      type: [tipo de dato]
+      required: [true | false]
+      description: [descripcion]
+  response:
+    success:
+      status: [codigo HTTP]
+      body:
+        - field: [nombre]
+          type: [tipo de dato]
+          description: [descripcion]
+    errors:
+      - status: [codigo HTTP]
+        code: [codigo de error]
+        description: [descripcion]
+
+pipeline:  # Solo para agentes, workers o procesos batch
+  - phase_name:
+      input: [entrada de la fase]
+      process: [descripcion del proceso]
+      output: [salida de la fase]
+
+data_model:  # Solo si modifica el modelo de datos
+  er_diagram: |
+    [diagrama erDiagram en Mermaid]
+  data_dictionary:
+    - entity: [nombre]
+      attributes:
+        - name: [nombre]
+          type: [tipo]
+          description: [descripcion]
+      relationships:
+        - [descripcion de relacion]
+
+dependencies:
+  - [nombre]: [descripcion breve de su responsabilidad]
+```
+
+### Descripcion de cada campo
+
+| Campo | Proposito |
+|-------|-----------|
+| `feature` | Nombre en snake_case que coincide con el feature.yaml de entrada para mantener trazabilidad producto-tecnico |
+| `layer` | Capa de la arquitectura donde se implementa (api, domain, infrastructure, agent, worker, scheduler) |
+| `architecture` | Patron arquitectonico, punto de entrada, caso de uso principal e interfaces involucradas |
+| `api_contract` | Contrato de API con metodo, ruta, auth, schemas y errores. Se omite si no expone endpoint |
+| `pipeline` | Flujo de procesamiento por fases. Se usa para agentes, workers o batch. Se omite si es request-response simple |
+| `data_model` | Diagrama ER y diccionario de datos. Se omite si no modifica el modelo de datos |
+| `dependencies` | Lista de servicios, repositorios y componentes externos necesarios |
+
+### Reglas de redaccion
+
+| Campo | Regla |
+|-------|-------|
+| `feature` | snake_case, coincidir con feature.yaml de entrada |
+| `layer` | Valor del enum: api, domain, infrastructure, agent, worker, scheduler |
+| `architecture` | Describir sin codigo, solo alto nivel |
+| `api_contract` | Tipos de dato precisos, codigos HTTP estandar |
+| `pipeline` | Entrada/proceso/salida por cada fase |
+| `data_model` | Diagrama ER en Mermaid valido, diccionario con tipos precisos |
+| `dependencies` | Nombre y responsabilidad breve de cada dependencia |
+| Keys | En ingles |
+| Values | Espanol para descripciones, ingles para nombres tecnicos |
+
+### Campos condicionales
+
+- **api_contract**: incluir SOLO si la funcionalidad expone un endpoint REST/GraphQL
+- **pipeline**: incluir SOLO si la funcionalidad sigue un pipeline secuencial (agentes, workers, batch)
+- **data_model**: incluir SOLO si la funcionalidad crea o modifica tablas/entidades en la base de datos
+
+### Ruta de salida
+
+Usar **Write tool** para guardar el archivo en: `docs/features/[feature_name]/technical.yaml`
+
+## Mandatory Output Files
+
+Al final de cada analisis completo, el agente DEBE generar tres archivos:
+
+1. **`technical.yaml`** — Especificacion tecnica de alto nivel (ver seccion "Technical.yaml Generation")
+2. **`technical-proposal.md`** — Propuesta tecnica de solucion con diagramas, alternativas, matriz de decision y plan de implementacion
+3. **`infrastructure-proposal.md`** — Propuesta de infraestructura cloud con diagramas AWS/GCP, comparacion y recomendacion
+
+Usar **Write tool** para guardar cada archivo en la misma carpeta del feature.yaml de entrada.
 
 ## Diagram Generation
 

@@ -3,7 +3,7 @@ task: update_plugin_registration
 phase: 1 - Foundation
 level: L1
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Actualizar el registro del agente architect en el sistema de plugins para

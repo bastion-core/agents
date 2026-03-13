@@ -1,7 +1,7 @@
 {
   "name": "general",
-  "version": "1.2.0",
-  "description": "Language-agnostic agents for software architecture, system design, and product specification",
+  "version": "1.3.0",
+  "description": "Language-agnostic agents for software architecture analysis (feature.yaml to technical.yaml pipeline), system design, and product specification",
   "author": {
     "name": "Grinest",
     "url": "https://github.com/Grinest"

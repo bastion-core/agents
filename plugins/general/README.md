@@ -6,7 +6,7 @@ Language-agnostic agents that work across all technologies and programming langu
 
 ### Architecture & Design
 
-- **architect.md**: Software Architecture Agent specializing in system design, architectural decisions, and technical planning. Provides guidance on architecture patterns, technology selection, and system structure regardless of the implementation language.
+- **architect.md**: Software Architecture Agent (v2.0) that accepts a `feature.yaml` (product specification) as primary input and generates a `technical.yaml` (technical specification), `technical-proposal.md`, and `infrastructure-proposal.md` as outputs. Includes validation of input completeness, missing data flow, conditional diagram generation (ER, sequence, infrastructure AWS/GCP), solution alternatives with decision matrix, and three-point time estimation. Never generates implementation code.
 
 ### Product Specification
 
@@ -27,6 +27,7 @@ These agents complement technology-specific agents by providing high-level guida
 ## When to Use General Agents
 
 Use general plugin agents when:
+- Generating technical specifications from a feature.yaml (product specification)
 - Planning system architecture before implementation
 - Making high-level technical decisions
 - Designing system structure and component interactions

@@ -3,7 +3,7 @@ task: implement_missing_data_flow
 phase: 2 - Core Pipeline
 level: L2
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Implementar el flujo de datos faltantes dentro del prompt del agente

@@ -3,7 +3,7 @@ task: test_conditional_diagrams
 phase: 5 - Testing & Validation
 level: L2
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Validar que el agente architect maneja correctamente los flujos condicionales

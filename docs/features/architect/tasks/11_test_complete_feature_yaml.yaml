@@ -3,7 +3,7 @@ task: test_complete_feature_yaml
 phase: 5 - Testing & Validation
 level: L2
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Validar que el agente architect genera un technical.yaml completo,

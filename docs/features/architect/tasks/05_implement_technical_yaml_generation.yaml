@@ -3,7 +3,7 @@ task: implement_technical_yaml_generation
 phase: 2 - Core Pipeline
 level: L3
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Implementar la fase de generacion del archivo technical.yaml dentro del

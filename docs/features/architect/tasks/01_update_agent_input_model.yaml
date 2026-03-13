@@ -3,7 +3,7 @@ task: update_agent_input_model
 phase: 1 - Foundation
 level: L1
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Reestructurar el prompt del agente architect.md para que acepte un archivo

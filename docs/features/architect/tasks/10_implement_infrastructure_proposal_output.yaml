@@ -3,7 +3,7 @@ task: implement_infrastructure_proposal_output
 phase: 4 - Mandatory Outputs
 level: L2
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Implementar la generacion del archivo infrastructure-proposal.md dentro del

@@ -3,7 +3,7 @@ task: implement_er_diagram_flow
 phase: 3 - Conditional Diagrams
 level: L2
 parent: technical.yaml
-status: TODO
+status: DONE
 
 scope: |
   Implementar el flujo condicional de diagrama entidad-relacion dentro del
