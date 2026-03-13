@@ -409,26 +409,96 @@ alembic revision -m "description"
 - ✅ **One Change per Migration**: Each migration should represent one logical change
 - ✅ **Reversibility**: Always implement `downgrade()` function
 - ✅ **Data Safety**: Use transactions, backup data before destructive changes
-- ✅ **Index Management**: Add indexes for foreign keys and frequently queried columns
+- ✅ **Index Management**: Follow the Database Indexing Guidelines below
 - ✅ **Enums**: Use PostgreSQL ENUMs or string columns with constraints
 
+### Database Indexing Guidelines
+
+> Each index accelerates reads but penalizes writes (INSERT/UPDATE/DELETE).
+> Only create indexes that justify their cost with real and frequent queries.
+
+#### When to Create an Index
+
+| Criterion | Example |
+|----------|---------|
+| **UNIQUE business constraint** | `idempotency_key`, `email`, `ticket_number` |
+| **Foreign key used in JOINs or WHERE** | `user_id` in tables always filtered by user |
+| **Frequent WHERE query with high selectivity** | Column with many distinct values (UUID, email, timestamps) |
+| **Compound index for frequent multi-column query** | `(user_id, created_at)` for "my recent payments" |
+| **Column in ORDER BY of paginated queries** | `created_at DESC` with `LIMIT/OFFSET` |
+
+#### When NOT to Create an Index
+
+| Criterion | Example |
+|----------|---------|
+| **Low cardinality** | `status` with 6 values, `country` with 2-3 values, `boolean` flags |
+| **Small table** (< 10K rows) | Seq scan is equal or faster than index scan |
+| **Rarely filtered column** | `metadata` JSONB that is only read, not searched |
+| **Redundant with a compound** | If `(user_id, status)` exists, you don't need `(user_id)` separately — PostgreSQL uses the compound for queries on `user_id` alone |
+| **Write-heavy table with few reads** | Logs, audit trails, event sourcing |
+
+#### Compound Index Rules
+
+1. **Leftmost prefix rule**: An index `(A, B, C)` works for queries on `A`, `A+B`, and `A+B+C`, but NOT for `B` alone or `C` alone
+2. **Order by descending selectivity**: Most selective column first
+3. **Maximum 3-4 columns** per compound index — more columns = more maintenance cost
+
+#### Index Decision Process
+
+```
+Is it a UNIQUE constraint?
+  → YES: Create UNIQUE index ✅
+
+Is it a FK used in frequent WHERE/JOIN?
+  → YES: Check if a compound covers it
+    → YES it covers: Don't create individual ❌
+    → NO it doesn't: Create individual ✅
+
+Does the column have high cardinality? (> 100 distinct values)
+  → NO: Don't create index ❌ (e.g.: status, country, type)
+  → YES: Is it frequently filtered?
+    → YES: Create index ✅
+    → NO: Don't create ❌
+
+Does a compound index already cover this query?
+  → YES: Don't duplicate ❌
+```
+
+#### Limit per Table
+
+- **Maximum 3 indexes when creating the table** (including UNIQUE constraints)
+- If you need more, justify with a real query and its EXPLAIN ANALYZE
+- Small lookup/config tables: 1-2 indexes maximum
+- High-write tables (logs, events): prefer 0-1 indexes
+
+#### When to Add Indexes Later (not at table creation)
+
+- When a slow query appears in logs (pg_stat_statements)
+- When EXPLAIN ANALYZE shows seq scan on large table
+- Rule: **don't optimize preventively**, create the index when there is evidence
+
 ```python
-# Example: Migration with index and constraint
+# Example: Migration with correct indexing
 def upgrade() -> None:
     op.create_table(
-        'drivers',
+        'payments',
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
-        sa.Column('email', sa.String(255), nullable=False),
+        sa.Column('idempotency_key', sa.String(255), nullable=False),
+        sa.Column('user_id', postgresql.UUID(as_uuid=True), sa.ForeignKey('users.id'), nullable=False),
         sa.Column('status', sa.String(50), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()')),
     )
-    op.create_index('idx_drivers_email', 'drivers', ['email'])
-    op.create_index('idx_drivers_status', 'drivers', ['status'])
+    # ✅ UNIQUE business constraint — frequent lookup
+    op.create_unique_constraint('uq_payments_idempotency_key', 'payments', ['idempotency_key'])
+    # ✅ Compound for "my payments filtered by status" — covers user_id alone too
+    op.create_index('idx_payments_user_id_status', 'payments', ['user_id', 'status'])
+    # ❌ NOT needed: individual idx on user_id (redundant with compound)
+    # ❌ NOT needed: idx on status alone (low cardinality)
 
 def downgrade() -> None:
-    op.drop_index('idx_drivers_status', table_name='drivers')
-    op.drop_index('idx_drivers_email', table_name='drivers')
-    op.drop_table('drivers')
+    op.drop_index('idx_payments_user_id_status', table_name='payments')
+    op.drop_constraint('uq_payments_idempotency_key', 'payments', type_='unique')
+    op.drop_table('payments')
 ```
 
 ## Common Pitfalls to Avoid
