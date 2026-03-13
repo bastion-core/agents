@@ -1,0 +1,66 @@
+# tasks/02_update_review_script_scope_filter.yaml
+task: update_review_script_scope_filter
+phase: 1 - Agent Pipeline Update
+level: L3
+parent: technical.yaml
+status: DONE
+
+scope: |
+  Actualizar el script code-review.sh para manejar el escenario donde
+  NINGUN archivo modificado en el PR es un archivo Python revisable.
+  Actualmente el script filtra archivos con `grep '\.py$'` y si no hay
+  archivos Python, el flujo podria fallar o enviar un prompt vacio al agente.
+  El script debe detectar esta situacion, y en lugar de llamar a la API de
+  Claude, generar directamente el comentario out_of_scope en la PR, crear
+  un check run con conclusion SUCCESS y terminar exitosamente.
+
+files_to_modify:
+  - scripts/code-review.sh
+
+patterns:
+  - early_exit: despues de filtrar archivos Python con grep, verificar si la lista esta vacia
+  - detection_point: en la funcion get_changes(), despues de `git diff --name-only | grep '\.py$'`
+  - empty_check: |
+      if [ -z "$PYTHON_FILES" ] || [ "$FILE_COUNT" -eq 0 ]; then
+        # Activar flujo out_of_scope
+      fi
+  - out_of_scope_flow:
+      step_1: obtener lista completa de archivos modificados (sin filtro .py) para incluirla en el comentario
+      step_2: generar comentario out_of_scope en ingles con la lista de archivos
+      step_3: postear comentario en la PR via gh issue comment
+      step_4: crear check run con conclusion SUCCESS y titulo "Code Review - Out of Scope"
+      step_5: salir con exit code 0 (exitoso, no bloquear merge)
+  - no_api_call: NO llamar a la API de Anthropic cuando no hay archivos revisables (ahorro de costos y tiempo)
+  - comment_format: |
+      ## Code Review - Out of Scope
+
+      **Decision: APPROVE**
+
+      The modified files in this PR are outside the scope of the technical code review.
+      This review focuses on Python source code (`src/`, `tests/`, `scripts/`), and none
+      of the changed files fall within these directories.
+
+      **Changed files:**
+      {lista de archivos modificados}
+
+      No architectural, code quality, or testing analysis is required for these changes.
+      Approving to unblock the merge process.
+
+      ---
+      *Automated review by Backend Python Code Reviewer Agent*
+  - check_run: crear check run via gh API con conclusion "success" y titulo descriptivo
+  - logging: imprimir mensajes claros en el log indicando que se detecto out_of_scope y se omitio la llamada a la API
+
+acceptance:
+  - script detecta cuando no hay archivos Python en el diff
+  - script NO llama a la API de Anthropic cuando no hay archivos revisables
+  - script genera comentario out_of_scope en ingles en la PR
+  - script crea check run con conclusion SUCCESS
+  - script termina con exit code 0 (no bloquea merge)
+  - comentario incluye lista de archivos modificados del PR
+  - log del script indica claramente que se activo el flujo out_of_scope
+
+context_files:
+  - docs/features/python-agents/reviewer-backend-py/technical.yaml  # out_of_scope_rule
+  - scripts/code-review.sh  # archivo a modificar
+  - git-workflows/python/code-review-backend-py.yml  # workflow que invoca el script

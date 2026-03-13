@@ -1,11 +1,11 @@
 name: Claude Code Review
 
+# Trigger on ALL PRs so the review script can post out-of-scope feedback
+# for non-Python changes. The script handles file filtering internally
+# and exits early without calling the Claude API when no .py files are found.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'src/**/*.py'
-      - 'tests/**/*.py'
 
 # Prevent multiple runs for the same PR
 concurrency:

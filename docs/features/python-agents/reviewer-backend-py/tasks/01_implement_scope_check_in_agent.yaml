@@ -1,0 +1,69 @@
+# tasks/01_implement_scope_check_in_agent.yaml
+task: implement_scope_check_in_agent
+phase: 1 - Agent Pipeline Update
+level: L2
+parent: technical.yaml
+status: DONE
+
+scope: |
+  Agregar el Step 0 (Scope Check) al prompt del agente reviewer-backend-py.md.
+  Este paso se ejecuta ANTES del pipeline de revision y determina si los archivos
+  modificados del PR estan dentro del alcance de revision tecnica del agente.
+  Si NINGUN archivo modificado es un archivo Python en src/, tests/ o scripts/,
+  el agente debe generar un comentario informativo en INGLES en la PR indicando
+  que los archivos estan fuera del scope tecnico, emitir APPROVE y terminar
+  sin ejecutar el pipeline completo de revision.
+
+files_to_modify:
+  - plugins/python-development/agents/reviewer-backend-py.md
+
+patterns:
+  - step_0_position: agregar como paso previo al Step 1 (Initial Analysis), antes de cualquier analisis de codigo
+  - reviewable_paths: definir las rutas revisables como src/**/*.py, tests/**/*.py, scripts/**/*.py
+  - scope_detection: |
+      Al recibir la lista de archivos modificados, filtrar contra las rutas revisables.
+      Si la interseccion es vacia -> activar flujo out_of_scope.
+      Si hay al menos un archivo revisable -> continuar al Step 1 normalmente.
+  - out_of_scope_response:
+      language: English (el comentario en la PR debe estar en ingles)
+      decision: APPROVE
+      format: |
+        El agente debe generar un reporte con el siguiente formato:
+
+        ## Code Review - Out of Scope
+
+        **Overall Assessment**: APPROVE
+
+        **Change Type**: Non-reviewable files
+        **Risk Level**: Low
+
+        ---
+
+        ## Summary
+
+        The modified files in this PR are outside the scope of the technical code review.
+        This review focuses on Python source code (`src/`, `tests/`, `scripts/`), and none
+        of the changed files fall within these directories.
+
+        **Changed files:**
+        - [listar cada archivo modificado]
+
+        No architectural, code quality, or testing analysis is required for these changes.
+        Approving to unblock the merge process.
+  - no_scores: cuando es out_of_scope NO incluir secciones de Architecture Score, Code Quality Score ni Testing Score, ya que no hay codigo que analizar
+  - pipeline_gate: este paso actua como gate del pipeline — si es out_of_scope, NINGUNO de los steps 1-6 debe ejecutarse
+
+acceptance:
+  - prompt incluye Step 0 como primer paso del pipeline antes del analisis
+  - prompt define las rutas revisables (src/**/*.py, tests/**/*.py, scripts/**/*.py)
+  - prompt incluye logica clara de filtrado: sin archivos revisables -> out_of_scope
+  - prompt incluye template de respuesta out_of_scope en INGLES
+  - respuesta out_of_scope emite APPROVE como decision
+  - respuesta out_of_scope lista los archivos modificados del PR
+  - respuesta out_of_scope NO incluye secciones de scores (Architecture, Code Quality, Testing)
+  - si hay al menos un archivo revisable, el pipeline continua normalmente al Step 1
+
+context_files:
+  - docs/features/python-agents/reviewer-backend-py/technical.yaml  # out_of_scope_rule y pipeline.step_0_scope_check
+  - docs/features/python-agents/reviewer-backend-py/feature.yaml  # acceptance_criteria y business_rules.archivos_fuera_de_scope
+  - plugins/python-development/agents/reviewer-backend-py.md  # archivo a modificar

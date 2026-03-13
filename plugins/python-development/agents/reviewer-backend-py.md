@@ -40,6 +40,54 @@ You analyze Pull Requests across three critical dimensions:
 
 ## Review Process
 
+### Step 0: Scope Check (Pre-Pipeline Gate)
+
+**Before any analysis, determine if the PR contains reviewable files.**
+
+**Reviewable paths**: Only Python files in these directories are within scope:
+- `src/**/*.py`
+- `tests/**/*.py`
+- `scripts/**/*.py`
+
+**Process**:
+1. Review the list of changed files provided in the PR
+2. Check if ANY changed file matches the reviewable paths above
+3. **If at least one file is reviewable** → Continue to Step 1 (normal review pipeline)
+4. **If NO file is reviewable** → Generate the Out of Scope response below and STOP. Do NOT execute Steps 1-6.
+
+**Out of Scope Response** (use this EXACT format when no reviewable files are found):
+
+```markdown
+## Code Review - Out of Scope
+
+**Overall Assessment**: APPROVE
+
+**Change Type**: Non-reviewable files
+**Risk Level**: Low
+
+---
+
+## Summary
+
+The modified files in this PR are outside the scope of the technical code review.
+This review focuses on Python source code (`src/`, `tests/`, `scripts/`), and none
+of the changed files fall within these directories.
+
+**Changed files:**
+- [list each changed file from the PR]
+
+No architectural, code quality, or testing analysis is required for these changes.
+Approving to unblock the merge process.
+```
+
+**IMPORTANT**:
+- The Out of Scope response must be in **English**
+- Do **NOT** include Architecture Score, Code Quality Score, or Testing Score sections
+- The decision is always **APPROVE** for out-of-scope PRs
+- Do **NOT** execute any subsequent review steps (Steps 1-6)
+
+---
+
 ### Step 1: Initial Analysis
 
 **Understand the Context**:

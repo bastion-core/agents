@@ -1,0 +1,62 @@
+# tasks/04_test_out_of_scope_flow.yaml
+task: test_out_of_scope_flow
+phase: 2 - Testing & Validation
+level: L2
+parent: technical.yaml
+status: DONE
+
+scope: |
+  Validar que el flujo out_of_scope funciona correctamente en los tres
+  componentes: agente (prompt), script (code-review.sh) y workflow
+  (GitHub Actions). Verificar que el agente genera el comentario correcto,
+  que el script detecta la ausencia de archivos Python y termina sin llamar
+  a la API, y que el check run permite el merge.
+
+test_scenarios:
+  - pr_only_config_files:
+      input: PR que modifica solo .yml, .toml, .ini, .cfg
+      expected_agent: genera respuesta out_of_scope en ingles con APPROVE
+      expected_script: detecta 0 archivos Python, NO llama a API, genera comentario, crea check run SUCCESS
+      expected_workflow: se activa, ejecuta script, termina exitosamente
+  - pr_only_documentation:
+      input: PR que modifica solo .md, .rst, .txt
+      expected_agent: genera respuesta out_of_scope en ingles con APPROVE
+      expected_script: detecta 0 archivos Python, NO llama a API, genera comentario, crea check run SUCCESS
+  - pr_only_cicd:
+      input: PR que modifica solo .github/workflows/*.yml
+      expected_agent: genera respuesta out_of_scope en ingles con APPROVE
+      expected_script: detecta 0 archivos Python, NO llama a API, genera comentario
+  - pr_only_infrastructure:
+      input: PR que modifica solo Dockerfile, docker-compose.yml, k8s manifests
+      expected_agent: genera respuesta out_of_scope en ingles con APPROVE
+      expected_script: detecta 0 archivos Python, NO llama a API
+  - pr_mixed_files:
+      input: PR que modifica .yml + src/app/main.py
+      expected_agent: ejecuta pipeline normal de revision (NO out_of_scope)
+      expected_script: detecta al menos 1 archivo Python, llama a API normalmente
+  - pr_only_python:
+      input: PR que modifica solo archivos en src/ y tests/
+      expected_agent: ejecuta pipeline normal de revision completa
+      expected_script: llama a API normalmente
+  - pr_only_dependencies:
+      input: PR que modifica solo requirements.txt, pyproject.toml, poetry.lock
+      expected_agent: genera respuesta out_of_scope en ingles con APPROVE (no son .py)
+      expected_script: detecta 0 archivos Python, NO llama a API
+
+validations:
+  - comentario out_of_scope esta en INGLES (no espanol)
+  - comentario incluye la lista de archivos modificados del PR
+  - comentario incluye decision APPROVE
+  - comentario NO incluye secciones de scores (Architecture, Code Quality, Testing)
+  - check run tiene conclusion SUCCESS (no failure ni neutral)
+  - script termina con exit code 0 (no bloquea merge)
+  - script NO llama a la API de Anthropic cuando no hay archivos revisables
+  - PRs con al menos un archivo .py en src/, tests/ o scripts/ ejecutan el pipeline completo normalmente
+  - el flujo out_of_scope no afecta el flujo normal de revision de PRs con archivos Python
+
+context_files:
+  - docs/features/python-agents/reviewer-backend-py/technical.yaml  # out_of_scope_rule
+  - docs/features/python-agents/reviewer-backend-py/feature.yaml  # tests_scope.pr_fuera_de_scope
+  - plugins/python-development/agents/reviewer-backend-py.md  # agente a validar
+  - scripts/code-review.sh  # script a validar
+  - git-workflows/python/code-review-backend-py.yml  # workflow a validar

@@ -1,0 +1,298 @@
+# technical.yaml
+feature: backend_python_code_review
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "python-development:reviewer-backend-py"
+  agent_definition: plugins/python-development/agents/reviewer-backend-py.md
+  model: sonnet
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "python-development:reviewer-backend-py"
+  model: sonnet
+  tools: [Read, Glob, Grep, Bash]
+  inputs:
+    pull_request: URL del Pull Request o diff de los cambios
+    pr_title: titulo del PR
+    pr_description: descripcion del PR con contexto del cambio
+    changed_files: archivos modificados con lineas agregadas y eliminadas
+    project_codebase: codigo fuente del proyecto para contexto (opcional)
+  success_output:
+    type: reporte de revision en markdown
+    format: seccionado con puntajes, hallazgos y decision
+    decision: enum[APPROVE, REQUEST_CHANGES, COMMENT]
+  output_sections:
+    - overall_assessment: decision, tipo de cambio, nivel de riesgo, tiempo estimado
+    - architecture_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - code_quality_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - testing_score: puntaje X/10 con cobertura, fortalezas y tests faltantes
+    - security_findings: hallazgos de seguridad clasificados por severidad
+    - performance_findings: hallazgos de rendimiento
+    - action_items: must fix (blocking), should fix (high priority), consider (nice to have)
+    - decision: APPROVE o REQUEST_CHANGES con justificacion
+
+out_of_scope_rule:
+  description: |
+    Cuando NINGUN archivo modificado en el PR pertenece al alcance de revision
+    tecnica del agente, no se ejecuta el pipeline de revision. En su lugar,
+    el agente genera un comentario informativo en ingles en la PR y emite APPROVE
+    automaticamente para no bloquear el merge.
+  reviewable_paths:
+    - src/**/*.py
+    - tests/**/*.py
+    - scripts/**/*.py
+  non_reviewable_examples:
+    - archivos de configuracion (.yml, .yaml, .toml, .cfg, .ini)
+    - documentacion (.md, .rst, .txt)
+    - archivos estaticos (imagenes, CSS, HTML)
+    - archivos de CI/CD (.github/workflows/)
+    - archivos de infraestructura (Dockerfile, docker-compose, k8s manifests)
+    - archivos de dependencias (requirements.txt, pyproject.toml, poetry.lock)
+  detection: |
+    En step_0 (pre-pipeline), filtrar archivos modificados contra reviewable_paths.
+    Si la interseccion es vacia, activar flujo out_of_scope en lugar del pipeline normal.
+  response:
+    language: English
+    action: post comment on PR via gh CLI
+    decision: APPROVE
+    comment_template: |
+      ## Code Review - Out of Scope
+
+      **Decision: APPROVE**
+
+      The modified files in this PR are outside the scope of the technical code review.
+      This review focuses on Python source code (`src/`, `tests/`, `scripts/`), and none
+      of the changed files fall within these directories.
+
+      **Changed files:**
+      {list_of_changed_files}
+
+      No architectural, code quality, or testing analysis is required for these changes.
+      Approving to unblock the merge process.
+
+      ---
+      *Automated review by Backend Python Code Reviewer Agent*
+
+pipeline:
+  step_0_scope_check:
+    input: lista de archivos modificados en el PR
+    process: |
+      Filtrar archivos modificados contra las rutas revisables (src/**/*.py,
+      tests/**/*.py, scripts/**/*.py). Si NINGUN archivo modificado esta
+      dentro del alcance de revision, generar comentario informativo en
+      ingles en la PR indicando que los archivos estan fuera del scope
+      tecnico, emitir APPROVE y terminar sin ejecutar el pipeline completo.
+    output_in_scope: continuar a step_1_initial_analysis
+    output_out_of_scope: comentario en PR + APPROVE automatico + fin del pipeline
+
+  step_1_initial_analysis:
+    input: Pull Request (titulo, descripcion, archivos modificados dentro del scope)
+    process: |
+      Leer titulo y descripcion del PR. Identificar tipo de cambio
+      (feature, bug fix, refactoring, documentacion, configuracion, tests).
+      Determinar estrategia de testing segun tipo de cambio.
+      Evaluar alcance (archivos, lineas, complejidad).
+    output: contexto del PR con tipo de cambio y estrategia de testing
+
+  step_2_architecture_review:
+    input: archivos modificados + codebase del proyecto
+    process: |
+      Validar cumplimiento de Clean Architecture (separacion de capas,
+      direccion de dependencias). Verificar principios SOLID. Detectar
+      patrones de diseno apropiados e inapropiados. Identificar violaciones
+      de capa (domain importando de infrastructure).
+    output: analisis arquitectonico con puntaje y hallazgos
+    checks:
+      - domain_layer_no_infrastructure_imports
+      - dependencies_point_inward
+      - interactors_orchestrate_business_logic
+      - repositories_implement_port_interfaces
+      - dtos_for_data_transfer
+
+  step_3_code_quality_review:
+    input: archivos modificados
+    process: |
+      Verificar type hints y documentacion. Evaluar manejo de errores
+      (sin silent failures). Detectar vulnerabilidades de seguridad
+      (SQL injection, credenciales hardcoded, datos sensibles en logs).
+      Identificar problemas de rendimiento (N+1 queries, sync I/O en async).
+      Detectar code smells.
+    output: analisis de calidad con puntaje y hallazgos
+    security_checks:
+      - sql_injection: uso de f-strings en queries SQL
+      - hardcoded_secrets: API keys, passwords en codigo
+      - input_validation: validacion de entradas de usuario
+      - sensitive_data_in_logs: passwords, tokens en mensajes de log
+    performance_checks:
+      - n_plus_1_queries: queries en loops sin eager loading
+      - sync_io_in_async: requests.get en contexto asincrono
+      - missing_eager_loading: falta de joinedload para relaciones
+    code_smells:
+      - long_methods: ">30 lineas"
+      - large_classes: ">300 lineas"
+      - too_many_parameters: ">5 parametros"
+      - duplicated_code: bloques repetidos
+      - magic_numbers: valores sin constantes nombradas
+      - commented_out_code: codigo comentado sin proposito
+      - inappropriate_intimacy: clases demasiado acopladas
+      - feature_envy: metodo usa mas de otra clase que de la propia
+
+  step_4_testing_review:
+    input: archivos de test + archivos modificados
+    process: |
+      Aplicar estrategia de testing segun tipo de cambio.
+      Verificar cobertura >90% para archivos modificados.
+      Evaluar calidad de tests (arrange-act-assert, fixtures, mocks).
+      Verificar convencion de nombres y estructura de directorios.
+    output: analisis de testing con puntaje y hallazgos
+
+  step_5_scripts_review:
+    input: archivos en directorio scripts/ (solo si aplica)
+    condition: cambios afectan directorio scripts/
+    process: |
+      Aplicar criterios pragmaticos para scripts one-off.
+      Verificar SOLO seguridad (SQL injection, credenciales), documentacion
+      minima (header comment) y error handling basico (try-catch, rollback).
+      NO solicitar tests, type hints, Clean Architecture ni repository pattern.
+    output: analisis pragmatico de scripts
+
+  step_6_generate_review:
+    input: analisis de todos los pasos anteriores
+    process: |
+      Consolidar hallazgos en reporte estructurado con puntajes por
+      dimension en encabezados de seccion. Clasificar action items
+      por prioridad. Emitir decision final con justificacion.
+    output: reporte de revision completo en markdown
+
+review_dimensions:
+  architecture:
+    weight: 30%
+    scope:
+      clean_architecture:
+        layers: [presentation, application, domain, infrastructure]
+        dependency_rule: dependencias apuntan hacia adentro (infrastructure -> domain, nunca al reves)
+        domain_purity: domain layer libre de imports de infrastructure
+      solid_principles:
+        single_responsibility: una clase/modulo = una responsabilidad
+        dependency_inversion: depender de abstracciones (interfaces), no de implementaciones concretas
+      design_patterns:
+        expected: [Repository, Interactor, DTO, Factory, Strategy]
+        red_flags: [God Object, Anemic Domain Model, Service Locator, Circular Dependencies]
+
+  code_quality:
+    weight: 40%
+    scope:
+      type_hints: type hints completos en parametros y retornos
+      documentation: docstrings con Args, Returns, Raises
+      error_handling: sin silent failures, errores especificos, logging adecuado
+      security: sin SQL injection, sin credenciales hardcoded, sin datos sensibles en logs
+      performance: sin N+1 queries, sin sync I/O en async, eager loading donde aplique
+
+  testing:
+    weight: 30%
+    scope:
+      coverage_target: ">90% para archivos modificados"
+      naming_convention: "test_should_{expected}_when_{condition}"
+      structure:
+        unit_tests: tests/*/application/ y tests/*/domain/
+        integration_tests: tests/*/infrastructure/routes/v1/test_*_route.py
+
+testing_strategy:
+  route_changes:
+    detection: archivos en src/*/infrastructure/routes/ o decoradores @router.get/@router.post
+    required: integration tests en tests/*/infrastructure/routes/v1/test_*_route.py
+    not_required: unit tests para interactors
+    scope: ciclo completo HTTP request/response, escenarios exitosos y de error
+  non_route_changes:
+    detection: archivos fuera de infrastructure/routes/
+    required: unit tests en tests/*/application/ o tests/*/domain/
+    not_required: integration tests
+    scope: funciones/metodos individuales con mocks de dependencias
+  scripts:
+    detection: archivos en scripts/
+    required: ninguno (overhead injustificado para codigo one-off)
+    criteria: seguridad, documentacion minima, error handling basico
+
+scripts_review_criteria:
+  mandatory:
+    security:
+      - sql_injection_prevention: usar parametrizacion, nunca f-strings en queries
+      - no_hardcoded_credentials: usar variables de entorno o .env
+      - destructive_confirmation: confirmacion explicita para operaciones destructivas (DRY_RUN + input)
+      - gitignore_sensitive_files: archivos con datos sensibles en .gitignore
+    documentation:
+      - header_comment: proposito, cuando usar, prerrequisitos, autor, fecha
+      - critical_variables: variables criticas comentadas
+      - idempotency_warning: advertencia si no es idempotente
+    error_handling:
+      - global_try_catch: try-catch global con mensaje claro
+      - env_validation: validar variables de entorno requeridas
+      - db_rollback: rollback si modifica base de datos
+  recommended:
+    - start_end_messages: mensajes de inicio y fin
+    - progress_indicator: indicador de progreso en loops
+    - error_context: mensajes de error con contexto
+    - results_summary: resumen de resultados al final
+  not_required:
+    - unit_tests
+    - integration_tests
+    - exhaustive_type_hints
+    - clean_architecture
+    - repository_pattern
+    - async_await
+    - code_coverage
+    - strict_linting
+    - structured_logging
+    - detailed_exit_codes
+
+score_rules:
+  authoritative_source: puntajes en encabezados de seccion (### Architecture (Score: X/10))
+  consistency: puntaje debe reflejar el analisis de la seccion
+  automated_extraction: sistemas automatizados extraen puntajes de los encabezados
+  prohibited: no agregar resumenes de metricas, tablas de puntajes ni secciones colapsables adicionales
+
+anti_patterns:
+  reviewer_must_not:
+    - solicitar abstracciones innecesarias
+    - pedir future-proofing sin justificacion
+    - demandar mas tests que los definidos en la estrategia
+    - sugerir refactoring de codigo funcional que no viola principios establecidos
+    - solicitar capas o patrones adicionales mas alla de lo que la arquitectura requiere
+  reviewer_must:
+    - enfocarse en cumplimiento de arquitectura definida
+    - reportar bugs reales y vulnerabilidades de seguridad
+    - verificar tests segun estrategia (rutas = integracion, no-rutas = unitarios)
+    - evaluar solo contra criterios de calidad establecidos
+    - ser constructivo, especifico, educativo, balanceado, respetuoso y pragmatico
+
+approval_checklist:
+  architecture:
+    - no layer violations (domain -> infrastructure)
+    - SOLID principles respected
+    - appropriate design patterns used
+    - no circular dependencies
+    - clear separation of concerns
+  code_quality:
+    - type hints present and correct
+    - no critical security vulnerabilities
+    - proper error handling
+    - no obvious performance issues
+    - code is readable and maintainable
+    - no hardcoded secrets
+  testing:
+    - testing strategy matches change type
+    - coverage >90% maintained
+    - tests follow naming conventions
+    - edge cases covered
+  documentation:
+    - public methods documented
+    - complex logic explained
+    - PR description clear
+
+dependencies:
+  - Read tool: leer archivos del PR y del proyecto para analisis
+  - Glob tool: descubrir estructura del proyecto y patrones de archivos
+  - Grep tool: buscar patrones, imports y dependencias en el codebase
+  - Bash tool: ejecutar gh CLI para obtener informacion del PR, diff y comentarios

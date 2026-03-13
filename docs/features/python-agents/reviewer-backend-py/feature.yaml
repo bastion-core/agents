@@ -1,0 +1,129 @@
+# feature.yaml
+feature: backend_python_code_review
+owner: tech_lead
+version: 1.1
+
+description: |
+  Como tech lead o engineering manager,
+  puedo enviar un Pull Request al agente para que realice una revision de
+  codigo integral que combine analisis de arquitectura, calidad de codigo
+  y cobertura de pruebas, generando un reporte estructurado con puntajes,
+  hallazgos, recomendaciones accionables y una decision final (APPROVE o
+  REQUEST_CHANGES) que determine si el codigo esta listo para produccion.
+  El agente adapta su estrategia de revision segun el tipo de cambio
+  (rutas de API vs logica de negocio) y aplica criterios pragmaticos
+  diferenciados para scripts administrativos one-off.
+
+acceptance_criteria:
+  - Agente recibe un Pull Request y analiza todos los archivos modificados
+  - Agente identifica el tipo de cambio (feature, bug fix, refactoring, documentacion, configuracion, tests)
+  - Agente determina la estrategia de testing correcta segun el tipo de cambio (rutas API vs no-rutas)
+  - Agente evalua cumplimiento de Clean Architecture y principios SOLID
+  - Agente detecta patrones de diseno apropiados e inapropiados (god objects, dependencias circulares, service locator)
+  - Agente verifica type hints, documentacion, manejo de errores, seguridad y rendimiento
+  - Agente valida cobertura de pruebas >90% para archivos modificados
+  - Agente aplica criterios pragmaticos diferenciados para scripts en directorio scripts/
+  - Agente genera reporte estructurado con puntajes por dimension (arquitectura, calidad, testing)
+  - Agente emite decision final APPROVE o REQUEST_CHANGES con justificacion
+  - Los puntajes en los encabezados de seccion son finales y autoritativos para quality gates automatizados
+  - Agente no solicita over-engineering ni cambios innecesarios mas alla de los criterios establecidos
+  - Si ningun archivo modificado esta dentro del alcance de revision tecnica (src/, tests/, scripts/), agente genera comentario en ingles en la PR indicando que los archivos estan fuera del scope y emite APPROVE automaticamente para no bloquear el merge
+
+business_rules:
+  - dimensiones_revision:
+      arquitectura: 30% del peso total
+      calidad_codigo: 40% del peso total
+      testing: 30% del peso total
+  - estrategia_testing_rutas:
+      cambios_en_rutas_api: solo tests de integracion requeridos, NO solicitar unit tests para interactors
+      cambios_no_rutas: solo unit tests requeridos, NO solicitar tests de integracion
+      directorio_rutas: src/*/infrastructure/routes/
+      directorio_tests_integracion: tests/*/infrastructure/routes/v1/test_*_route.py
+      directorio_tests_unitarios: tests/*/application/ o tests/*/domain/
+  - cobertura_minima: ">90% para archivos modificados"
+  - puntajes_autoritativos: los scores en encabezados de seccion (Architecture Score, Code Quality Score, Testing Score) son finales y extraidos por sistemas automatizados
+  - no_secciones_adicionales: no agregar resumenes de metricas, tablas de puntajes ni secciones colapsables al final del reporte
+  - scripts_administrativos:
+      aplica_solo_a: directorio scripts/
+      seguridad_obligatoria: SQL injection prevention, no credenciales hardcoded, confirmacion para operaciones destructivas
+      documentacion_minima: header comment con proposito, cuando usar, prerrequisitos
+      error_handling_basico: try-catch global, validacion de variables de entorno, rollback si modifica BD
+      no_requiere: [unit tests, integration tests, type hints exhaustivos, Clean Architecture, repository pattern, async/await, code coverage, strict linting]
+  - anti_patrones_revision: no solicitar abstracciones innecesarias, no pedir future-proofing sin justificacion, no demandar mas tests que los definidos en la estrategia
+  - decision_final: APPROVE o REQUEST_CHANGES con justificacion
+  - tono: constructivo, especifico, educativo, balanceado, respetuoso, pragmatico
+  - archivos_fuera_de_scope:
+      alcance_revision: archivos Python en src/, tests/ y scripts/
+      archivos_no_revisables: configuracion, documentacion, CI/CD, infraestructura, dependencias
+      comportamiento: no ejecutar pipeline de revision, generar comentario informativo en ingles en la PR y emitir APPROVE automatico
+      idioma_comentario: ingles
+      decision_automatica: APPROVE para no bloquear el merge
+
+inputs:
+  - pull_request: URL del Pull Request o diff de los cambios a revisar
+  - titulo_pr: titulo del PR que describe el proposito del cambio
+  - descripcion_pr: descripcion del PR con contexto del cambio
+  - archivos_modificados: lista de archivos modificados con lineas agregadas y eliminadas
+  - codebase_proyecto: codigo fuente del proyecto para contexto de arquitectura existente (opcional)
+
+outputs:
+  archivo: reporte de revision en formato markdown
+  campos:
+    - overall_assessment: |
+        Evaluacion general del PR con decision (APPROVE, REQUEST_CHANGES o COMMENT),
+        tipo de cambio identificado (Feature, Bug Fix, Refactoring, etc.),
+        nivel de riesgo (Low, Medium, High) y tiempo estimado de revision.
+
+    - architecture_score: |
+        Puntaje de arquitectura sobre 10 puntos. Evalua cumplimiento de Clean Architecture,
+        principios SOLID (Single Responsibility, Dependency Inversion), patrones de diseno
+        apropiados (Repository, Interactor, DTO, Factory, Strategy), separacion de capas
+        (domain, application, infrastructure) y direccion correcta de dependencias.
+        Incluye fortalezas, problemas encontrados y recomendaciones.
+
+    - code_quality_score: |
+        Puntaje de calidad de codigo sobre 10 puntos. Evalua type hints y documentacion,
+        manejo de errores (sin silent failures), vulnerabilidades de seguridad
+        (SQL injection, credenciales hardcoded, datos sensibles en logs),
+        rendimiento (N+1 queries, sync I/O en contexto async) y code smells
+        (metodos largos >30 lineas, clases grandes >300 lineas, demasiados parametros >5,
+        codigo duplicado, magic numbers, codigo comentado).
+
+    - testing_score: |
+        Puntaje de testing sobre 10 puntos. Evalua cobertura de pruebas segun la estrategia
+        correspondiente al tipo de cambio: tests de integracion para cambios en rutas API,
+        unit tests para cambios en logica de negocio. Verifica convencion de nombres
+        (test_should_{expected}_when_{condition}), estructura de directorios
+        y cobertura de edge cases y escenarios de error.
+
+    - security_findings: |
+        Hallazgos de seguridad encontrados en el codigo. Incluye SQL injection,
+        credenciales hardcoded, falta de validacion de inputs, datos sensibles
+        expuestos en logs. Clasificados por severidad (CRITICAL, HIGH, MEDIUM).
+
+    - performance_findings: |
+        Hallazgos de rendimiento encontrados en el codigo. Incluye N+1 queries,
+        I/O sincrono en contexto asincrono, falta de eager loading,
+        consultas no optimizadas.
+
+    - action_items: |
+        Lista priorizada de acciones requeridas, organizada en tres niveles:
+        Must Fix (bloquea merge), Should Fix (alta prioridad),
+        Consider (nice to have). Cada item referencia archivo y linea especifica.
+
+    - decision: |
+        Decision final del reviewer: APPROVE o REQUEST_CHANGES.
+        Incluye justificacion basada en los hallazgos del analisis.
+        Los puntajes en los encabezados de seccion son la fuente autoritativa
+        para quality gates automatizados del workflow de GitHub Actions.
+
+tests_scope:
+  - pr_feature_completo: PR con nueva feature que incluye rutas, interactors y tests de integracion -> genera reporte con APPROVE
+  - pr_sin_tests: PR con cambios en rutas API sin tests de integracion -> genera REQUEST_CHANGES indicando tests faltantes
+  - pr_violacion_arquitectura: PR con imports de infrastructure en domain layer -> detecta layer violation y genera REQUEST_CHANGES
+  - pr_vulnerabilidad_seguridad: PR con SQL injection o credenciales hardcoded -> detecta vulnerabilidad CRITICAL y bloquea merge
+  - pr_logica_negocio: PR con cambios en interactor sin tocar rutas -> requiere solo unit tests, no solicita integration tests
+  - pr_script_administrativo: PR con script one-off en scripts/ -> aplica criterios pragmaticos, no solicita tests ni Clean Architecture
+  - pr_refactoring: PR de refactoring sin cambios funcionales -> evalua mejora en calidad sin solicitar tests adicionales innecesarios
+  - consistencia_puntajes: puntajes en encabezados de seccion coinciden con el analisis detallado de cada dimension
+  - pr_fuera_de_scope: PR con solo archivos de configuracion, documentacion o CI/CD -> genera comentario en ingles indicando fuera de scope y emite APPROVE automatico

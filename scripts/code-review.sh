@@ -163,16 +163,118 @@ get_previous_reviews() {
 }
 
 # =============================================================================
+# Step 1.5: Check if PR has reviewable Python files (Out of Scope detection)
+# =============================================================================
+check_scope() {
+  echo ""
+  echo "=== Step 1.5: Checking PR scope ==="
+
+  # Get ALL changed files (unfiltered) for the out-of-scope comment
+  git diff --name-only "origin/${BASE_REF}...HEAD" > all_changed_files.txt || true
+
+  # Get only Python files in reviewable paths
+  git diff --name-only "origin/${BASE_REF}...HEAD" \
+    | grep '\.py$' \
+    | tee changed_files.txt || true
+
+  local PY_COUNT
+  PY_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
+
+  if [[ "${PY_COUNT}" -eq 0 ]]; then
+    echo "No reviewable Python files found in this PR."
+    echo "Activating out-of-scope flow (skipping Claude API call)."
+
+    # Build the list of changed files for the comment
+    local FILE_LIST=""
+    while IFS= read -r file; do
+      FILE_LIST="${FILE_LIST}- \`${file}\`
+"
+    done < all_changed_files.txt
+
+    # Post out-of-scope comment on PR
+    local OOS_COMMENT="## AI Code Review by Claude (Out of Scope)
+
+**Reviewer**: Claude (${MODEL})
+**Review Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+---
+
+## Code Review - Out of Scope
+
+**Decision: APPROVE**
+
+The modified files in this PR are outside the scope of the technical code review.
+This review focuses on Python source code (\`src/\`, \`tests/\`, \`scripts/\`), and none
+of the changed files fall within these directories.
+
+**Changed files:**
+${FILE_LIST}
+No architectural, code quality, or testing analysis is required for these changes.
+Approving to unblock the merge process.
+
+---
+*Automated review by Backend Python Code Reviewer Agent*"
+
+    gh issue comment "${PR_NUMBER}" --body "${OOS_COMMENT}"
+    echo "Out-of-scope comment posted successfully."
+
+    # Create check run with SUCCESS conclusion
+    curl -s -X POST \
+      -H "Authorization: token ${GH_TOKEN}" \
+      -H "Accept: application/vnd.github.v3+json" \
+      "https://api.github.com/repos/${REPOSITORY}/check-runs" \
+      -d "{
+        \"name\": \"Claude Code Review\",
+        \"head_sha\": \"${HEAD_SHA}\",
+        \"status\": \"completed\",
+        \"conclusion\": \"success\",
+        \"output\": {
+          \"title\": \"Code Review - Out of Scope\",
+          \"summary\": \"No reviewable Python files found. PR approved to unblock merge.\",
+          \"text\": \"Changed files are outside the review scope (src/, tests/, scripts/).\"
+        }
+      }" > /dev/null
+
+    echo "Check run created: success (out-of-scope)"
+
+    # Generate summary if available
+    if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+      cat >> "${GITHUB_STEP_SUMMARY}" <<EOF
+# Claude Code Review Summary
+
+## PR Information
+- **PR #**: ${PR_NUMBER}
+- **Title**: ${PR_TITLE}
+- **Author**: @${PR_AUTHOR}
+
+## Scope Check
+**Result**: Out of Scope — No reviewable Python files found.
+
+## Decision
+**APPROVE** (automated — no Python files to review)
+
+---
+
+See PR comments for details.
+EOF
+    fi
+
+    echo ""
+    echo "=== Out-of-scope flow completed. Exiting successfully. ==="
+    exit 0
+  fi
+
+  echo "Found ${PY_COUNT} reviewable Python file(s). Continuing with full review pipeline."
+}
+
+# =============================================================================
 # Step 2: Get changed files and diffs
 # =============================================================================
 get_changes() {
   echo ""
   echo "=== Step 2: Getting changed files and diffs ==="
 
-  git diff --name-only "origin/${BASE_REF}...HEAD" \
-    | grep '\.py$' \
-    | tee changed_files.txt || true
-
+  # changed_files.txt already populated by check_scope
   CHANGED_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
 
   # Validate max files limit
@@ -726,6 +828,7 @@ quality_gate() {
 main() {
   validate_inputs
   get_previous_reviews
+  check_scope
   get_changes
   call_claude_api
   enforce_decision
