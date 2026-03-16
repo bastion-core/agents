@@ -680,6 +680,38 @@ def export_all_drivers(self, batch_size: int = 1000):
         offset += batch_size
 ```
 
+#### Database Indexing Issues
+
+When reviewing entity definitions or migrations that include indexes, validate against these rules:
+
+**Flag as issues:**
+- ❌ Index on low cardinality column (`status` with 6 values, `boolean` flags, `country` with 2-3 values)
+- ❌ Redundant index that is already covered by a compound index (e.g., `INDEX(user_id)` when `INDEX(user_id, status)` exists)
+- ❌ More than 3 indexes at table creation (including UNIQUE constraints) without justification
+- ❌ Index on a column that is rarely filtered or used in WHERE/JOIN
+- ❌ Index on write-heavy tables with few reads (logs, audit trails, event sourcing)
+- ❌ Compound index with more than 4 columns
+
+**Validate as correct:**
+- ✅ UNIQUE index for business constraints (`idempotency_key`, `email`, `ticket_number`)
+- ✅ Index on FK columns used in frequent WHERE/JOIN (only if not covered by a compound)
+- ✅ Compound index for frequent multi-column queries (e.g., `(user_id, created_at)` for "my recent payments")
+- ✅ Compound index ordered by descending selectivity (most selective column first)
+- ✅ Compound index that follows the leftmost prefix rule: `(A, B, C)` covers `A`, `A+B`, `A+B+C`
+
+```python
+# ✅ GOOD: Correct entity indexing
+class PaymentEntity(Base):
+    __tablename__ = 'payments'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    idempotency_key = Column(String(255), unique=True, nullable=False)  # ✅ UNIQUE business constraint
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    status = Column(String(50), nullable=False)  # ❌ Do NOT add index=True — low cardinality
+
+# ❌ BAD: index=True on low cardinality column
+status = Column(String(50), nullable=False, index=True)  # Only 6 values!
+```
+
 #### Code Smells
 
 **Flag These Issues**:

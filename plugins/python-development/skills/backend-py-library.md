@@ -438,11 +438,59 @@ class DriverEntity(Base):
 - Inherit from SQLAlchemy `Base`
 - Use `__tablename__` to specify table name
 - Use UUID for primary keys with `uuid4` default
-- Add indexes on frequently queried columns
+- Follow the **Database Indexing Guidelines** below when adding indexes
 - Include `created_at` and `updated_at` timestamps
 - Use appropriate SQLAlchemy column types
 - Never use entities outside infrastructure layer
 - Complete docstring describing the table purpose
+
+### Database Indexing Guidelines
+
+> Each index accelerates reads but penalizes writes (INSERT/UPDATE/DELETE).
+> Only create indexes that justify their cost with real and frequent queries.
+
+**When to Create an Index:**
+
+| Criterion | Example |
+|----------|---------|
+| **UNIQUE business constraint** | `idempotency_key`, `email`, `ticket_number` |
+| **Foreign key used in JOINs or WHERE** | `user_id` in tables always filtered by user |
+| **Frequent WHERE query with high selectivity** | Column with many distinct values (UUID, email, timestamps) |
+| **Compound index for frequent multi-column query** | `(user_id, created_at)` for "my recent payments" |
+| **Column in ORDER BY of paginated queries** | `created_at DESC` with `LIMIT/OFFSET` |
+
+**When NOT to Create an Index:**
+
+| Criterion | Example |
+|----------|---------|
+| **Low cardinality** | `status` with 6 values, `country` with 2-3 values, `boolean` flags |
+| **Small table** (< 10K rows) | Seq scan is equal or faster than index scan |
+| **Rarely filtered column** | `metadata` JSONB that is only read, not searched |
+| **Redundant with a compound** | If `(user_id, status)` exists, you don't need `(user_id)` separately |
+| **Write-heavy table with few reads** | Logs, audit trails, event sourcing |
+
+**Compound Index Rules:**
+1. **Leftmost prefix rule**: `(A, B, C)` covers `A`, `A+B`, `A+B+C`, but NOT `B` alone or `C` alone
+2. **Order by descending selectivity**: Most selective column first
+3. **Maximum 3-4 columns** per compound index
+
+**Limit per Table:**
+- **Maximum 3 indexes when creating the table** (including UNIQUE constraints)
+- Don't optimize preventively — create indexes when there is evidence of slow queries
+
+```python
+# ✅ GOOD: Correct entity indexing
+class PaymentEntity(Base):
+    __tablename__ = 'payments'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    idempotency_key = Column(String(255), unique=True, nullable=False)  # ✅ UNIQUE business constraint
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)  # ✅ FK used in WHERE
+    status = Column(String(50), nullable=False)  # ❌ Do NOT add index=True — low cardinality (6 values)
+    metadata = Column(JSONB, nullable=True)  # ❌ Do NOT add index — rarely filtered
+
+# ❌ BAD: Index on low cardinality column
+status = Column(String(50), nullable=False, index=True)  # Only 6 values — won't help!
+```
 
 ### 2.3 DTO Pattern (Data Transfer Object)
 

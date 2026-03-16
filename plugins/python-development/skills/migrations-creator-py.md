@@ -195,14 +195,88 @@ def modify_email_in_users_table_downgrade() -> None:
     op.alter_column('users', 'email', existing_type=sa.String(255), nullable=True)
 ```
 
-### Index Rules
+### Index Rules — Database Indexing Guidelines
 
-- **Automatically** create indexes for all foreign key columns
-- Create indexes for columns that will be frequently queried (ask the user if unsure)
-- Name indexes with the pattern `idx_{table}_{column}`
+> Each index accelerates reads but penalizes writes (INSERT/UPDATE/DELETE).
+> Only create indexes that justify their cost with real and frequent queries.
+
+#### When to Create an Index
+
+| Criterion | Example |
+|----------|---------|
+| **UNIQUE business constraint** | `idempotency_key`, `email`, `ticket_number` |
+| **Foreign key used in JOINs or WHERE** | `user_id` in tables always filtered by user |
+| **Frequent WHERE query with high selectivity** | Column with many distinct values (UUID, email, timestamps) |
+| **Compound index for frequent multi-column query** | `(user_id, created_at)` for "my recent payments" |
+| **Column in ORDER BY of paginated queries** | `created_at DESC` with `LIMIT/OFFSET` |
+
+#### When NOT to Create an Index
+
+| Criterion | Example |
+|----------|---------|
+| **Low cardinality** | `status` with 6 values, `country` with 2-3 values, `boolean` flags |
+| **Small table** (< 10K rows) | Seq scan is equal or faster than index scan |
+| **Rarely filtered column** | `metadata` JSONB that is only read, not searched |
+| **Redundant with a compound** | If `(user_id, status)` exists, you don't need `(user_id)` separately — PostgreSQL uses the compound for queries on `user_id` alone |
+| **Write-heavy table with few reads** | Logs, audit trails, event sourcing |
+
+#### Compound Index Rules
+
+1. **Leftmost prefix rule**: An index `(A, B, C)` works for queries on `A`, `A+B`, and `A+B+C`, but NOT for `B` alone or `C` alone
+2. **Order by descending selectivity**: Most selective column first
+3. **Maximum 3-4 columns** per compound index — more columns = more maintenance cost
+
+#### Index Decision Process
+
+```
+Is it a UNIQUE constraint?
+  → YES: Create UNIQUE index ✅
+
+Is it a FK used in frequent WHERE/JOIN?
+  → YES: Check if a compound covers it
+    → YES it covers: Don't create individual ❌
+    → NO it doesn't: Create individual ✅
+
+Does the column have high cardinality? (> 100 distinct values)
+  → NO: Don't create index ❌ (e.g.: status, country, type)
+  → YES: Is it frequently filtered?
+    → YES: Create index ✅
+    → NO: Don't create ❌
+
+Does a compound index already cover this query?
+  → YES: Don't duplicate ❌
+```
+
+#### Limit per Table
+
+- **Maximum 3 indexes when creating the table** (including UNIQUE constraints)
+- If you need more, justify with a real query and its EXPLAIN ANALYZE
+- Small lookup/config tables: 1-2 indexes maximum
+- High-write tables (logs, events): prefer 0-1 indexes
+
+#### When to Add Indexes Later (not at table creation)
+
+- When a slow query appears in logs (pg_stat_statements)
+- When EXPLAIN ANALYZE shows seq scan on large table
+- Rule: **don't optimize preventively**, create the index when there is evidence
+
+#### Index Naming Convention
+
+- Name indexes with the pattern `idx_{table}_{column}` for single-column indexes
+- Name compound indexes as `idx_{table}_{col1}_{col2}` for multi-column indexes
 
 ```python
+# ✅ Correct: Compound index for frequent multi-column query
+op.create_index('idx_payments_user_id_status', 'payments', ['user_id', 'status'])
+
+# ✅ Correct: FK index when no compound covers it
 op.create_index('idx_users_charging_group_id', 'users', ['charging_group_id'])
+
+# ❌ Wrong: Index on low cardinality column
+op.create_index('idx_payments_status', 'payments', ['status'])  # Only 6 values!
+
+# ❌ Wrong: Redundant with compound
+op.create_index('idx_payments_user_id', 'payments', ['user_id'])  # Already covered by (user_id, status)
 ```
 
 In downgrade, drop indexes before dropping columns/tables:
@@ -765,7 +839,7 @@ Use `alembic revision -m "message"` with these naming patterns:
 1. **Missing downgrade implementation**: Every `upgrade()` MUST have a corresponding `downgrade()` that fully reverses the changes
 2. **Broken revision chain**: Always verify `down_revision` points to the actual latest migration -- never hardcode or guess
 3. **Multiple logical changes in one migration**: Each migration should represent ONE logical change. Split unrelated changes into separate migrations
-4. **Missing indexes on foreign keys**: Always create indexes for FK columns -- this is done automatically by this skill
+4. **Missing indexes on foreign keys used in frequent WHERE/JOIN**: Create indexes for FK columns that are frequently queried, unless already covered by a compound index (see Index Rules section)
 5. **Forgetting to drop enums in downgrade**: When `upgrade()` creates an enum, `downgrade()` must drop it
 6. **Using raw SQL strings**: Use Alembic operations (`op.create_table`, `op.add_column`, etc.), not raw SQL
 7. **Not using `_add_timestamp_columns()`**: Always use the shared utility for `created_at`/`updated_at` -- never create these columns manually

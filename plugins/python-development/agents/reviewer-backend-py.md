@@ -327,6 +327,37 @@ async def get_driver_info(driver_id):
             return await response.json()
 ```
 
+#### Database Indexing Issues
+
+When reviewing migrations or entity definitions that include indexes, validate against these rules:
+
+**Flag as issues:**
+- ❌ Index on low cardinality column (`status` with 6 values, `boolean` flags, `country` with 2-3 values)
+- ❌ Redundant index that is already covered by a compound index (e.g., `INDEX(user_id)` when `INDEX(user_id, status)` exists)
+- ❌ More than 3 indexes at table creation (including UNIQUE constraints) without justification
+- ❌ Index on a column that is rarely filtered or used in WHERE/JOIN
+- ❌ Index on write-heavy tables with few reads (logs, audit trails, event sourcing)
+- ❌ Compound index with more than 4 columns
+
+**Validate as correct:**
+- ✅ UNIQUE index for business constraints (`idempotency_key`, `email`, `ticket_number`)
+- ✅ Index on FK columns used in frequent WHERE/JOIN (only if not covered by a compound)
+- ✅ Compound index for frequent multi-column queries (e.g., `(user_id, created_at)` for "my recent payments")
+- ✅ Compound index ordered by descending selectivity (most selective column first)
+- ✅ Compound index that follows the leftmost prefix rule: `(A, B, C)` covers `A`, `A+B`, `A+B+C`
+
+```python
+# ✅ GOOD: Correct indexing
+op.create_unique_constraint('uq_payments_idempotency_key', 'payments', ['idempotency_key'])
+op.create_index('idx_payments_user_id_status', 'payments', ['user_id', 'status'])
+
+# ❌ BAD: Redundant — compound (user_id, status) already covers user_id alone
+op.create_index('idx_payments_user_id', 'payments', ['user_id'])
+
+# ❌ BAD: Low cardinality — status only has 6 values
+op.create_index('idx_payments_status', 'payments', ['status'])
+```
+
 #### Code Smells
 
 **Flag These Issues**:
