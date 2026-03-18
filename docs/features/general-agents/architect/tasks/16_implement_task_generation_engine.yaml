@@ -1,0 +1,72 @@
+# tasks/16_implement_task_generation_engine.yaml
+task: implement_task_generation_engine
+phase: 5 - Technical YAML Analysis
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [15_implement_subagent_selection_flow]
+
+scope: |
+  Agregar al prompt del agente architect.md la logica de generacion de tareas
+  de implementacion a partir de un technical.yaml validado. Este es el paso mas
+  complejo del flujo y debe cubrir:
+
+  1. ANALISIS DEL TECHNICAL.YAML:
+     - Extraer componentes de implementacion del technical.yaml (endpoints, interactors,
+       repositorios, DTOs, migraciones, tests, etc.)
+     - Identificar la capa (layer) para determinar que tipo de tareas generar
+     - Analizar secciones condicionales presentes (api_contract, pipeline, data_model)
+
+  2. CLASIFICACION POR COMPONENTE:
+     - Clasificar cada tarea en uno de los componentes: backend, frontend, mobile, devops
+     - backend: endpoints, interactors, repositorios, servicios, migraciones
+     - frontend: componentes UI, paginas, formularios, integraciones API
+     - mobile: pantallas, navegacion, servicios nativos, integraciones API
+     - devops: CI/CD, infraestructura, despliegue, monitoreo, configuracion
+
+  3. ASIGNACION DE SUB-AGENTES:
+     - Asignar cada tarea al sub-agente correspondiente segun su componente
+     - Usar el campo opcional assigned_subagent en cada tarea
+
+  4. FORMATO DE TAREAS:
+     - Nombrar archivos como {NN}_{action}_{component}.yaml
+     - Cada tarea debe incluir: task, level (L1-L5), parent, status (PENDING),
+       scope, files_to_create, patterns, acceptance, context_files
+     - Campos opcionales: files_to_modify, phase, depends_on, assigned_subagent
+
+  5. CRITERIOS DE NIVEL (level):
+     - L1: tarea simple, un solo archivo, sin dependencias externas
+     - L2: tarea moderada, 2-3 archivos, dependencias internas
+     - L3: tarea compleja, multiples archivos, integracion entre capas
+     - L4: tarea critica, cambios cross-cutting, impacto en multiples dominios
+     - L5: tarea de alto riesgo, cambios de infraestructura o arquitectura base
+
+  6. OUTPUT:
+     - Crear directorio tasks/ dentro del directorio raiz del technical.yaml analizado
+     - Escribir cada tarea como archivo YAML independiente usando Write tool
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - component_decomposition: descomponer technical.yaml en tareas por componente
+  - task_template: formato estandarizado con campos obligatorios y opcionales
+  - naming_convention: "{NN}_{action}_{component}.yaml" con numeracion secuencial
+  - level_assignment: L1-L5 segun complejidad, archivos involucrados y dependencias
+  - write_tool: usar Write tool para crear cada archivo de tarea en disco
+  - subagent_mapping: mapear componentes a sub-agentes seleccionados por el usuario
+
+acceptance:
+  - genera tareas organizadas por componente (backend, frontend, mobile, devops)
+  - cada tarea tiene todos los campos obligatorios del schema
+  - los archivos se crean en {directorio_del_technical.yaml}/tasks/
+  - el nombrado sigue la convencion {NN}_{action}_{component}.yaml
+  - los niveles L1-L5 se asignan coherentemente segun la complejidad real
+  - cada tarea tiene assigned_subagent cuando hay sub-agentes seleccionados
+  - los scope son especificos y acotados (una responsabilidad por tarea)
+  - los acceptance criteria son verificables y concretos
+
+context_files:
+  - docs/features/general-agents/architect/technical.yaml  # seccion technical_yaml_analysis.task_generation
+  - plugins/general/agents/architect.md  # archivo a modificar
+  - docs/features/general-agents/architect/tasks/01_update_agent_input_model.yaml  # ejemplo de tarea existente

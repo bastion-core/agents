@@ -1,0 +1,731 @@
+# technical.yaml
+feature: frontend_nextjs_code_review
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "nextjs-development:reviewer-frontend-nextjs"
+  agent_definition: plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+  model: sonnet
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "nextjs-development:reviewer-frontend-nextjs"
+  model: sonnet
+  tools: [Read, Glob, Grep, Bash]
+  inputs:
+    pull_request: URL del Pull Request o diff de los cambios
+    pr_title: titulo del PR
+    pr_description: descripcion del PR con contexto del cambio
+    changed_files: archivos modificados con lineas agregadas y eliminadas
+    project_codebase: codigo fuente del proyecto para contexto (opcional)
+  success_output:
+    type: reporte de revision en markdown
+    format: seccionado con puntajes, hallazgos y decision
+    decision: enum[APPROVE, REQUEST_CHANGES, COMMENT]
+  output_sections:
+    - overall_assessment: decision, tipo de cambio, nivel de riesgo, tiempo estimado
+    - architecture_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - code_quality_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - testing_score: puntaje X/10 con cobertura, fortalezas y tests faltantes
+    - security_findings: hallazgos de seguridad clasificados por severidad
+    - performance_findings: hallazgos de rendimiento
+    - action_items: must fix (blocking), should fix (high priority), consider (nice to have)
+    - decision: APPROVE o REQUEST_CHANGES con justificacion
+
+# =============================================================================
+# REVIEW SCOPE
+# =============================================================================
+review_scope:
+  description: >
+    Agente especializado en code review de Pull Requests de proyectos frontend
+    Next.js bajo arquitectura de dos capas (domain + infrastructure) con Zustand
+    stores y DataAccess pattern. Evalua calidad arquitectonica, calidad de codigo
+    TypeScript/React y estrategia de testing segun los estandares definidos para
+    proyectos Next.js del equipo.
+  dimensions:
+    architecture:
+      weight: 30%
+      scope:
+        - Cumplimiento de arquitectura de dos capas (domain + infrastructure)
+        - Principios SOLID adaptados a frontend TypeScript/React
+        - Patrones de diseno esperados (Either, Zustand Store, DataAccess, Discriminated Unions)
+        - Separacion de capas y direccion de dependencias (infrastructure -> domain)
+        - Estructura de modulos por feature
+        - Identificacion de deuda tecnica
+    code_quality:
+      weight: 40%
+      scope:
+        - TypeScript strict mode y buenas practicas
+        - Patrones de componentes React y hooks
+        - Manejo de errores con Either monad
+        - Vulnerabilidades de seguridad
+        - Consideraciones de rendimiento
+        - Mantenibilidad del codigo
+    testing:
+      weight: 30%
+      scope:
+        - Cobertura de tests para codigo nuevo
+        - Calidad y completitud de tests
+        - Buenas practicas de testing con Vitest + Testing Library
+        - Cobertura de edge cases
+        - Patron de tests colocados junto al archivo fuente
+
+# =============================================================================
+# OUT OF SCOPE RULE
+# =============================================================================
+out_of_scope_rule:
+  description: |
+    Cuando NINGUN archivo modificado en el PR pertenece al alcance de revision
+    tecnica del agente, no se ejecuta el pipeline de revision. En su lugar,
+    el agente genera un comentario informativo en ingles en la PR y emite APPROVE
+    automaticamente para no bloquear el merge.
+  reviewable_paths:
+    - "src/core/**/*.ts"
+    - "src/core/**/*.tsx"
+    - "src/ui/**/*.tsx"
+    - "src/ui/**/*.ts"
+    - "src/app/**/*.tsx"
+    - "src/app/**/*.ts"
+    - "src/components/**/*.tsx"
+    - "src/components/**/*.ts"
+  non_reviewable_examples:
+    - archivos de configuracion (.yml, .yaml, .json excepto i18n, .config.js, .config.ts)
+    - documentacion (.md, .rst, .txt)
+    - archivos estaticos (imagenes, SVG, fuentes)
+    - archivos de CI/CD (.github/workflows/)
+    - archivos de infraestructura (Dockerfile, docker-compose, k8s manifests)
+    - archivos de dependencias (package.json, package-lock.json, yarn.lock)
+    - archivos de configuracion raiz (next.config.js, tailwind.config.js, tsconfig.json, vitest.config.ts)
+    - archivos de estilos globales (globals.css)
+    - archivos de i18n (src/messages/*.json)
+    - archivos publicos (public/*)
+  detection: |
+    En step_0 (pre-pipeline), filtrar archivos modificados contra reviewable_paths.
+    Si la interseccion es vacia, activar flujo out_of_scope en lugar del pipeline normal.
+  response:
+    language: English
+    action: post comment on PR via gh CLI
+    decision: APPROVE
+    comment_template: |
+      ## Code Review - Out of Scope
+
+      **Decision: APPROVE**
+
+      The modified files in this PR are outside the scope of the technical code review.
+      This review focuses on Next.js/TypeScript source code (`src/core/`, `src/ui/`,
+      `src/app/`, `src/components/`), and none of the changed files fall within
+      these directories.
+
+      **Changed files:**
+      {list_of_changed_files}
+
+      No architectural, code quality, or testing analysis is required for these changes.
+      Approving to unblock the merge process.
+
+      ---
+      *Automated review by Frontend Next.js Code Reviewer Agent*
+
+# =============================================================================
+# REVIEW PIPELINE
+# =============================================================================
+pipeline:
+  step_0_scope_check:
+    input: lista de archivos modificados en el PR
+    process: |
+      Filtrar archivos modificados contra las rutas revisables (src/core/**/*.ts(x),
+      src/ui/**/*.ts(x), src/app/**/*.ts(x), src/components/**/*.ts(x)).
+      Si NINGUN archivo modificado esta dentro del alcance de revision, generar
+      comentario informativo en ingles en la PR indicando que los archivos estan
+      fuera del scope tecnico, emitir APPROVE y terminar sin ejecutar el pipeline completo.
+    output_in_scope: continuar a step_1_initial_analysis
+    output_out_of_scope: comentario en PR + APPROVE automatico + fin del pipeline
+
+  step_1_initial_analysis:
+    input: Pull Request (titulo, descripcion, archivos modificados dentro del scope)
+    process: |
+      Leer titulo y descripcion del PR. Identificar tipo de cambio
+      (feature, bug fix, refactoring, documentacion, configuracion, tests).
+      Determinar estrategia de testing segun tipo de cambio y capa afectada.
+      Evaluar alcance (archivos, lineas, complejidad).
+    output: contexto del PR con tipo de cambio y estrategia de testing
+    change_types:
+      - new_feature: nuevo modulo/feature completo
+      - bug_fix: correccion de errores
+      - refactoring: reestructuracion sin cambio funcional
+      - ui_update: cambios visuales en componentes
+      - tests_only: solo tests nuevos o actualizados
+      - configuration: cambios de configuracion
+
+  step_2_architecture_review:
+    input: archivos modificados + codebase del proyecto
+    process: |
+      Validar cumplimiento de arquitectura de dos capas (domain + infrastructure,
+      sin capa application). Verificar direccion de dependencias
+      (infrastructure -> domain). Detectar patrones de diseno apropiados e
+      inapropiados. Identificar violaciones de capa (domain importando de
+      infrastructure, component importando directamente de otro modulo infrastructure).
+    output: analisis arquitectonico con puntaje y hallazgos
+    checks:
+      - domain_layer_purity: domain no importa de infrastructure, React, Next.js, Zustand, Axios
+      - dependency_direction: infrastructure -> domain (nunca al reves)
+      - module_boundaries: no importar infrastructure/ de otros modulos (usar domain types)
+      - module_structure: estructura estandar domain/infrastructure por feature (sin application/)
+      - data_access_pattern: clase concreta para HTTP, sin interface en domain
+      - store_pattern: stores llaman DataAccess directamente, multiples stores por concern
+      - no_application_layer: no debe existir capa application/ con Ploc, UseCase, Command, Dependencies
+
+  step_3_code_quality_review:
+    input: archivos modificados
+    process: |
+      Verificar cumplimiento de TypeScript strict mode, uso correcto de tipos
+      (sin 'any', discriminated unions, Either monad). Evaluar patrones de
+      componentes React, hooks custom, stores Zustand. Detectar vulnerabilidades
+      de seguridad. Identificar problemas de rendimiento. Verificar convenciones
+      de nombres y organizacion de imports. Detectar code smells.
+    output: analisis de calidad con puntaje y hallazgos
+
+    typescript_checks:
+      strict_mode:
+        - no_any_type: "no usar 'any', preferir 'unknown' con type guards"
+        - discriminated_unions: "estados con campo 'kind' como discriminador"
+        - proper_generics: "genericos para utilidades reutilizables (Either<E,A>, handleRequest<T>)"
+        - string_enums: "enums para valores de dominio"
+        - type_inference: "inferir tipos de Zod schemas con z.infer<typeof schema>"
+      either_pattern:
+        - data_access_never_throw: "DataAccess retorna Either<ServiceError, ServiceSuccess<T>>, nunca lanza excepciones"
+        - handle_request_wrapper: "handleRequest<T>() envuelve todas las llamadas HTTP"
+        - fold_for_branching: "fold() para manejar ambos caminos (error/success) directo en stores"
+        - service_error_structure: "ServiceError incluye: code, message, description"
+      state_management:
+        - discriminated_union_states: "estados con Loading/Loaded/Error usando campo 'kind'"
+        - kind_constants: "constantes LOADING_KIND, LOADED_KIND, ERROR_KIND en vez de magic strings"
+        - state_check_before_access: "verificar state.kind antes de acceder a datos"
+
+    component_checks:
+      - use_client_directive: "'use client' SOLO cuando el componente usa hooks, eventos o estado"
+      - props_interface: "props definidas con interface (no type alias)"
+      - i18n_compliance: "texto visible SIEMPRE via useTranslations() (nunca hardcoded)"
+      - store_selectors: "estado del store via selectores especificos (no desestructurar todo)"
+      - tailwind_classes: "estilos con Tailwind, cn() para condicionales (no template literals)"
+      - page_as_wrapper: "paginas App Router son wrappers minimos que importan Screen components"
+      - no_business_logic_in_pages: "logica de negocio fuera de src/app/ pages"
+
+    hook_checks:
+      - use_prefix: "prefijo 'use' obligatorio"
+      - proper_location: "hooks en infrastructure/ui/hooks/"
+      - use_memo_for_expensive: "useMemo solo para computaciones costosas"
+      - use_callback_for_passed_handlers: "useCallback solo cuando handler se pasa como prop a componente memoizado"
+      - use_ref_for_init_flags: "useRef para flags de inicializacion"
+      - return_object: "retornar objeto (no array) para mejor legibilidad"
+
+    store_checks:
+      - multiple_stores_per_module: "multiples stores por modulo, divididos por concern (~60-100 lineas)"
+      - separate_state_actions_interfaces: "State y Actions en interfaces separadas (en domain/states/)"
+      - actions_call_data_access: "stores llaman DataAccess directamente (no Ploc ni UseCase)"
+      - fold_in_actions: "response.fold() directo en las acciones del store"
+      - boolean_loading_flags: "boolean loading flags (isLoadingList, isLoadingDetail, etc.)"
+      - immutable_set: "set() para actualizar estado"
+      - specific_selectors: "consumir con selectores: useStore((s) => ({ field: s.field }))"
+      - data_access_module_level: "DataAccess instanciado fuera del store, a nivel de modulo"
+      - cross_store_communication: "useOtherStore.getState().action() para comunicacion entre stores"
+      - no_fat_stores: "evitar stores monoliticos de 500+ lineas"
+
+    data_access_checks:
+      - concrete_class: "clase concreta, sin interface en domain (no es un port)"
+      - uses_handle_request: "usa handleRequest<T>() para envolver llamadas HTTP"
+      - base_url_injected: "baseApiUrl inyectado via constructor"
+      - uses_api_auth: "usa apiAuth (axios con interceptor Bearer token)"
+      - original_method: "originalMethod() para identificar el origen en logs de error"
+
+    service_checks:
+      - only_for_real_logic: "solo crear Service cuando hay logica real (no solo HTTP calls)"
+      - not_http_wrapper: "si solo es fetch/post → usar DataAccess en su lugar"
+      - valid_example: "ejemplo valido: DraftsService (localStorage + auto-save + parseo)"
+
+    helpers_checks:
+      - repeat_threshold: "crear helper solo cuando el patron se repite 3+ veces"
+      - pure_functions: "funciones puras (sin side effects)"
+      - proper_location: "ubicar en infrastructure/helpers/"
+      - naming: "nombrar en camelCase (normalizeResponse.ts)"
+
+    naming_conventions:
+      files:
+        components: "PascalCase.tsx"
+        hooks: "camelCase.ts con prefijo use"
+        data_access: "PascalCase.ts (DriversDataAccess.ts)"
+        services: "PascalCase.ts — solo para servicios con logica real"
+        helpers: "camelCase.ts (normalizeResponse.ts)"
+        stores: "PascalCase.ts"
+        types: "PascalCase.ts"
+        dtos: "PascalCase.ts"
+        tests: "PascalCase.test.ts(x) colocado junto al archivo fuente"
+      variables:
+        components: "PascalCase"
+        hooks: "camelCase con prefijo 'use'"
+        constants: "UPPER_SNAKE_CASE"
+        types: "PascalCase"
+        stores: "camelCase con prefijo 'use'"
+        functions: "camelCase"
+        private_fields: "camelCase (no usar prefijo _)"
+
+    import_order:
+      - "React / Next.js imports"
+      - "Third-party libraries"
+      - "Path alias imports (@core/*, @ui/*, @components/*)"
+      - "Relative imports"
+      - "Type imports (import type { })"
+
+    path_aliases:
+      "~/*": "./src/*"
+      "@ui/*": "./src/ui/*"
+      "@components/*": "./src/components/*"
+      "@core/*": "./src/core/*"
+      "public/*": "./public/*"
+
+    security_checks:
+      - no_hardcoded_secrets: "no API keys, tokens o passwords en codigo"
+      - xss_prevention: "no usar dangerouslySetInnerHTML sin sanitizacion"
+      - input_validation: "validacion con Zod en formularios"
+      - no_sensitive_data_in_client: "no exponer datos sensibles en client components"
+      - env_variables: "secretos en variables de entorno (NEXT_PUBLIC_ solo para datos publicos)"
+      - no_eval: "nunca usar eval() o Function() con strings dinamicos"
+
+    performance_checks:
+      - no_premature_memoization: "no usar React.memo, useMemo, useCallback sin medir performance"
+      - dynamic_imports: "dynamic() import para componentes pesados (maps, charts)"
+      - server_side_pagination: "paginacion server-side para listas grandes"
+      - debounce_search: "debounce en campos de busqueda (300ms)"
+      - next_image: "usar next/image para optimizacion de imagenes"
+      - no_full_data_load: "no cargar todos los datos de una vez"
+      - cancel_previous_requests: "cancelar requests anteriores al cambiar filtros"
+      - lazy_load_modals: "lazy load modals y sidebars que no son visibles inicialmente"
+
+    code_smells:
+      - any_type: "usar unknown y type guards en vez de any"
+      - magic_strings: "usar constantes o enums"
+      - hardcoded_text: "usar useTranslations()"
+      - direct_api_in_components: "usar store -> DataAccess"
+      - business_logic_in_components: "extraer a hooks o helpers"
+      - mutating_state_directly: "usar set() de Zustand (inmutable)"
+      - cross_module_infrastructure_import: "importar de infrastructure de otros modulos (usar domain types)"
+      - console_log_in_production: "usar logger service"
+      - nested_ternaries: "extraer a funciones o early returns"
+      - long_components: ">200 lineas (extraer sub-componentes o hooks)"
+      - too_many_props: ">7 props (considerar composicion o context)"
+      - commented_out_code: "codigo comentado sin proposito"
+
+  step_4_testing_review:
+    input: archivos de test + archivos modificados
+    process: |
+      Verificar que los tests estan colocados junto al archivo fuente
+      ({File}.test.ts(x)). Evaluar calidad de tests por capa
+      (domain, stores, data-access, UI). Verificar patrones
+      de mock correctos con Vitest. Evaluar cobertura de edge cases.
+    output: analisis de testing con puntaje y hallazgos
+
+    test_location:
+      pattern: "colocado junto al archivo fuente"
+      example: "DriversDataAccess.ts -> DriversDataAccess.test.ts"
+      rule: "NO usar directorio tests/ separado"
+
+    testing_by_layer:
+      domain_tests:
+        what_to_test:
+          - "funciones de transformacion de datos"
+          - "validaciones de negocio"
+          - "operaciones Either monad"
+          - "utilidades del dominio"
+        rules:
+          - "sin mocks (logica pura)"
+          - "cubrir casos edge (null, undefined, arrays vacios)"
+          - "testar ambos caminos de Either (left/right)"
+          - "usar import { describe, it, expect } from 'vitest'"
+        coverage_target: "90%+"
+
+      store_tests:
+        what_to_test:
+          - "acciones del store con respuestas exitosas"
+          - "acciones del store con respuestas de error"
+          - "transiciones de loading state"
+          - "reset de estado"
+        rules:
+          - "mockear DataAccess con vi.mock()"
+          - "testar caso exitoso Y caso de error"
+          - "verificar transiciones de loading state"
+          - "beforeEach para resetear estado del store"
+          - "usar act() para envolver actualizaciones de estado"
+          - "usar import { describe, it, expect, vi, beforeEach } from 'vitest'"
+        coverage_target: "70%+"
+
+      data_access_tests:
+        what_to_test:
+          - "construccion correcta de URLs"
+          - "manejo de errores HTTP"
+          - "transformacion de respuestas"
+        coverage_target: "60%+"
+
+      ui_tests:
+        what_to_test:
+          - "renderizado correcto con datos"
+          - "estados de loading, error, empty"
+          - "interacciones del usuario (click, input)"
+          - "texto visible (traducido)"
+        rules:
+          - "usar render custom de test-utils (incluye NextIntlProvider)"
+          - "mockear next/navigation cuando se usen hooks de router"
+          - "buscar por rol, texto o test-id (no por clase CSS)"
+          - "testar comportamiento visible, no implementacion interna"
+          - "usar screen.getByText, screen.getByRole"
+          - "usar import { describe, it, expect, vi } from 'vitest'"
+        coverage_target: "50%+ (componentes criticos)"
+
+    mock_patterns:
+      factory_pattern: "usar factories (fishery o manual) para generar datos de test consistentes"
+      data_access_mock_factory: "mockGetServiceFactory para mockear DataAccess completos con Either"
+      custom_mocks:
+        - "LocalStorageMock: simula localStorage en jsdom"
+        - "MockStorageService: wrapper de storage para tests"
+        - "MockWebSocketFactory: simula conexiones WebSocket"
+      next_navigation_mock: |
+        vi.mock('next/navigation', async () => ({
+          ...(await vi.importActual('next/navigation')),
+          useParams: () => ({ locale: 'es' }),
+        }))
+
+  step_5_generate_review:
+    input: analisis de todos los pasos anteriores
+    process: |
+      Consolidar hallazgos en reporte estructurado con puntajes por
+      dimension en encabezados de seccion. Clasificar action items
+      por prioridad. Emitir decision final con justificacion.
+    output: reporte de revision completo en markdown
+
+# =============================================================================
+# REVIEW DIMENSIONS (detailed criteria)
+# =============================================================================
+review_dimensions:
+  architecture:
+    weight: 30%
+    scope:
+      two_layer_architecture:
+        layers: [domain, infrastructure]
+        dependency_rule: "infrastructure -> domain (nunca al reves)"
+        domain_purity: "domain layer libre de imports de infrastructure, React, Next.js, Zustand, Axios"
+        no_application_layer: "NO debe existir capa application/ con Ploc, UseCase, Command, Dependencies"
+        module_structure: |
+          src/core/{module-name}/
+          ├── domain/           # entities, dtos, states, enums, consts
+          └── infrastructure/   # data-access, services (solo logica real), helpers, store, ui/
+      solid_principles:
+        single_responsibility: "un componente/clase/modulo = una responsabilidad"
+        dependency_inversion: "infrastructure depende de domain types, no al reves"
+        open_closed: "extensible via composicion, no modificacion"
+        interface_segregation: "interfaces especificas por necesidad (no fat interfaces)"
+      design_patterns:
+        expected:
+          - "Either Monad: manejo funcional de errores en DataAccess"
+          - "Zustand Store: multiples stores pequenos por modulo (~60-100 lineas), divididos por concern"
+          - "DataAccess: clase concreta para HTTP, sin interface en domain"
+          - "Discriminated Unions: estados UI con campo 'kind'"
+          - "Helpers: funciones puras para patrones repetidos 3+ veces"
+        red_flags:
+          - "God Component: componente con demasiada logica y responsabilidades"
+          - "Fat Store: store monolitico de 500+ lineas con demasiadas responsabilidades"
+          - "Direct API in Component: componente llamando APIs sin pasar por store/DataAccess"
+          - "Application Layer: existencia de capa application/ con Ploc, UseCase, Command"
+          - "Cross-module Infrastructure Import: importar de infrastructure/ de otro modulo"
+          - "Circular Dependencies: dependencias circulares entre modulos"
+          - "Prop Drilling Excesivo: pasar props a traves de muchos niveles (usar store o context)"
+          - "DI Framework: uso de InversifyJS, tsyringe u otros frameworks de DI"
+
+  code_quality:
+    weight: 40%
+    scope:
+      typescript_strictness: "TypeScript strict mode, sin any, discriminated unions, Either pattern"
+      component_patterns: "componentes funcionales, props con interface, use client solo cuando necesario"
+      hook_patterns: "hooks con prefijo use, retornan objetos, useMemo/useCallback solo cuando justificado"
+      store_patterns: "Zustand con interfaces separadas, stores llaman DataAccess directo, multiples stores por concern"
+      error_handling: "Either monad en DataAccess, response.fold() directo en stores, sin try/catch para errores de API"
+      security: "sin secretos hardcoded, sin XSS, validacion con Zod, no exponer datos sensibles en client"
+      performance: "sin memoizacion prematura, dynamic imports, paginacion server-side, debounce"
+      i18n: "todo texto visible via useTranslations(), claves organizadas por feature"
+      formatting: "semicolons false, single quotes, indent 2, Prettier"
+
+  testing:
+    weight: 30%
+    scope:
+      location: "tests colocados junto al archivo fuente ({File}.test.ts(x))"
+      coverage_targets:
+        domain: "90%+"
+        stores: "70%+"
+        infrastructure_data_access: "60%+"
+        ui_components: "50%+ (componentes criticos)"
+      mock_patterns: "vi.mock(), vi.fn(), mockGetServiceFactory, factories para datos"
+      test_quality: "testar comportamiento visible, no implementacion interna"
+
+# =============================================================================
+# TESTING STRATEGY
+# =============================================================================
+testing_strategy:
+  description: |
+    La estrategia de testing se adapta a la capa afectada por los cambios.
+    Los tests SIEMPRE estan colocados junto al archivo fuente, no en
+    directorio separado. Framework: Vitest + @testing-library/react.
+  domain_changes:
+    detection: archivos en src/core/*/domain/
+    required: tests unitarios puros sin mocks
+    location: "{File}.test.ts junto al archivo fuente"
+    coverage: "90%+"
+  store_changes:
+    detection: archivos en src/core/*/infrastructure/store/
+    required: tests de acciones con DataAccess mockeado (vi.mock(), vi.fn())
+    location: "{File}.test.ts junto al archivo fuente"
+    coverage: "70%+"
+  infrastructure_changes:
+    detection: archivos en src/core/*/infrastructure/ (data-access, services, helpers)
+    required: tests de DataAccess y servicios con mocks
+    location: "{File}.test.ts(x) junto al archivo fuente"
+    coverage: "60%+"
+  ui_changes:
+    detection: archivos en src/core/*/infrastructure/ui/**/*.tsx o src/app/**/*.tsx
+    required: tests de componentes con React Testing Library
+    location: "{File}.test.tsx junto al archivo fuente"
+    coverage: "50%+ para componentes criticos"
+    not_required: "100% de cobertura en UI, testar comportamiento critico"
+
+# =============================================================================
+# SCORE RULES
+# =============================================================================
+score_rules:
+  authoritative_source: "puntajes en encabezados de seccion (### Architecture (Score: X/10))"
+  consistency: "puntaje debe reflejar el analisis de la seccion"
+  automated_extraction: "sistemas automatizados extraen puntajes de los encabezados"
+  prohibited: "no agregar resumenes de metricas, tablas de puntajes ni secciones colapsables adicionales"
+
+# =============================================================================
+# ANTI-PATTERNS (Reviewer behavior)
+# =============================================================================
+anti_patterns:
+  reviewer_must_not:
+    - "solicitar abstracciones innecesarias (no Abstract Base Classes a menos que 3+ clases la extiendan)"
+    - "solicitar Generic CRUD Abstractions prematuras (no BaseCrudService<T>)"
+    - "solicitar deep inheritance hierarchies (maximo 1 nivel)"
+    - "solicitar capa application/ con Ploc, UseCase, Command o Dependencies"
+    - "solicitar fat stores monoliticos — dividir por concern"
+    - "solicitar unnecessary middleware layers"
+    - "solicitar DI frameworks (InversifyJS, tsyringe) — DataAccess instanciado a nivel de modulo"
+    - "solicitar premature optimization (React.memo, useMemo, useCallback sin medir)"
+    - "solicitar over-testing de implementation details (no testar que useState fue llamado)"
+    - "pedir future-proofing sin justificacion"
+    - "demandar mas tests que los definidos en la estrategia por capa"
+    - "sugerir refactoring de codigo funcional que no viola principios establecidos"
+    - "solicitar capas o patrones adicionales mas alla de la cadena Component -> Store -> DataAccess"
+    - "solicitar interfaces en domain para DataAccess (son clases concretas, no ports)"
+  reviewer_must:
+    - "enfocarse en cumplimiento de arquitectura de dos capas (domain + infrastructure)"
+    - "reportar bugs reales y vulnerabilidades de seguridad"
+    - "verificar tests segun estrategia por capa (domain 90%+, stores 70%+, etc.)"
+    - "evaluar solo contra criterios de calidad establecidos"
+    - "verificar Either pattern en DataAccess (no try/catch para errores de API)"
+    - "verificar response.fold() directo en stores (no Ploc intermediario)"
+    - "verificar discriminated unions con campo 'kind' para estados"
+    - "verificar i18n (texto visible via useTranslations, nunca hardcoded)"
+    - "verificar que imports respetan boundaries de capas y modulos"
+    - "verificar que stores son pequenos y focalizados (~60-100 lineas por concern)"
+    - "ser constructivo, especifico, educativo, balanceado, respetuoso y pragmatico"
+
+# =============================================================================
+# APPROVAL CHECKLIST
+# =============================================================================
+approval_checklist:
+  architecture:
+    - "two-layer architecture: only domain/ and infrastructure/ (no application/)"
+    - "no layer violations (domain libre de imports de infrastructure/React/Next.js)"
+    - "dependency direction respected (infrastructure -> domain)"
+    - "module boundaries respected (no cross-module infrastructure imports)"
+    - "SOLID principles respected"
+    - "expected patterns used (Either, Zustand Store, DataAccess, Discriminated Unions)"
+    - "stores are small and focused (~60-100 lines per concern)"
+    - "no circular dependencies"
+    - "clear separation of concerns"
+  code_quality:
+    - "TypeScript strict mode compliance (no any)"
+    - "Either pattern in DataAccess (no try/catch for API errors)"
+    - "response.fold() directo en stores (no Ploc intermediario)"
+    - "discriminated unions with 'kind' field for states"
+    - "no critical security vulnerabilities (no hardcoded secrets, no XSS)"
+    - "proper component patterns (use client only when needed, props with interface)"
+    - "i18n compliance (visible text via useTranslations)"
+    - "no obvious performance issues"
+    - "code is readable and maintainable"
+    - "naming conventions followed"
+    - "import order respected"
+  testing:
+    - "tests colocated with source files ({File}.test.ts(x))"
+    - "coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)"
+    - "mock patterns correct (vi.mock(), vi.fn(), factories)"
+    - "edge cases covered"
+    - "tests verify behavior, not implementation details"
+  forms:
+    - "Zod schema for validation"
+    - "zodResolver integration with React Hook Form"
+    - "types inferred from schema (z.infer)"
+
+# =============================================================================
+# OUTPUT FORMAT
+# =============================================================================
+output_format:
+  template: |
+    ## Code Review Summary
+
+    **Overall Assessment**: [APPROVE | REQUEST_CHANGES | COMMENT]
+
+    **Change Type**: [Feature | Bug Fix | Refactoring | UI Update | Tests Only | etc.]
+    **Risk Level**: [Low | Medium | High]
+    **Estimated Review Time**: [X minutes]
+
+    ---
+
+    ### Architecture (Score: X/10)
+
+    [Analysis of architectural decisions]
+
+    **Strengths**:
+    - [Point 1]
+    - [Point 2]
+
+    **Issues Found**:
+    - [Critical issue] - [Explanation and suggestion]
+    - [Warning] - [Explanation]
+
+    **Recommendations**:
+    - [Specific actionable recommendation]
+
+    ---
+
+    ### Code Quality (Score: X/10)
+
+    [Analysis of code quality]
+
+    **Strengths**:
+    - [Point 1]
+
+    **Issues Found**:
+    - [Issue] at `File.tsx:123`
+    - [Warning] at `File.ts:456`
+
+    **Recommendations**:
+    - [Specific actionable recommendation]
+
+    ---
+
+    ### Testing (Score: X/10)
+
+    [Analysis of test coverage and quality]
+
+    **Coverage**: [X%]
+
+    **Strengths**:
+    - [Point 1]
+
+    **Missing Tests**:
+    - [What needs testing]
+
+    **Recommendations**:
+    - Add domain tests for `transformFunction` in `Entity.ts`
+    - Add store tests for `use{Module}Store` actions with success and error paths
+
+    ---
+
+    ### Security
+
+    **Findings**:
+    - [None | List of security issues]
+
+    ---
+
+    ### Performance
+
+    **Findings**:
+    - [None | List of performance concerns]
+
+    ---
+
+    ### Action Items
+
+    **Must Fix (Blocking Merge)**:
+    1. [Critical item]
+
+    **Should Fix (High Priority)**:
+    1. [Important item]
+
+    **Consider (Nice to Have)**:
+    1. [Suggestion]
+
+    ---
+
+    ### Decision
+
+    **[APPROVE | REQUEST CHANGES]**
+
+    **Justification**: [Explain why approving or requesting changes]
+
+    **IMPORTANT**: Do NOT add metrics summaries, score tables, or collapsible
+    sections at the end. The GitHub Actions workflow will automatically generate
+    these from your section header scores.
+
+# =============================================================================
+# TONE AND COMMUNICATION
+# =============================================================================
+tone_and_communication:
+  principles:
+    - "Be Constructive: Focus on solutions, not just problems"
+    - "Be Specific: Reference exact files and line numbers"
+    - "Be Educational: Explain WHY something is an issue"
+    - "Be Balanced: Acknowledge good practices too"
+    - "Be Respectful: Remember there's a human behind the code"
+    - "Be Pragmatic: Respect the established quality criteria and avoid over-engineering suggestions"
+  language: English
+  good_examples:
+    - "Great use of the Either pattern here! The fold() makes error handling very explicit."
+    - "Consider extracting this logic into a custom hook to keep the component focused on rendering."
+    - "This store correctly folds the Either response from DataAccess into loading/loaded states. Clean implementation."
+  bad_examples:
+    - "This code is bad. (Not specific or helpful)"
+    - "Why did you do it this way? (Sounds accusatory)"
+    - "Just fix this. (No explanation or guidance)"
+
+# =============================================================================
+# REFERENCE TECHNOLOGY STACK
+# =============================================================================
+reference_stack:
+  description: |
+    Stack de referencia probado en produccion. El reviewer debe adaptar sus
+    criterios a las versiones instaladas en el proyecto bajo revision,
+    manteniendo los mismos patrones arquitectonicos.
+  required:
+    framework: "Next.js 13+ (App Router)"
+    language: "TypeScript (strict mode)"
+    runtime: "React 18+"
+    state_management: "Zustand"
+    styling: "Tailwind CSS v4"
+    forms: "React Hook Form + Zod"
+    http_client: "Axios"
+    testing:
+      framework: "Vitest"
+      component_testing: "@testing-library/react"
+      environment: "jsdom"
+  recommended:
+    ui_library: "shadcn/ui (Radix UI primitives)"
+    i18n: "next-intl"
+    tables: "TanStack React Table"
+
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
+dependencies:
+  - Read tool: leer archivos del PR y del proyecto para analisis
+  - Glob tool: descubrir estructura del proyecto y patrones de archivos
+  - Grep tool: buscar patrones, imports y dependencias en el codebase
+  - Bash tool: ejecutar gh CLI para obtener informacion del PR, diff y comentarios

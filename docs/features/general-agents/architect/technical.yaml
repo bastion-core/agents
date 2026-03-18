@@ -16,6 +16,144 @@ methodology:
     - phase_3: Development Planning
     - phase_4: Infrastructure Architecture Proposal
 
+technical_yaml_analysis:
+  description: |
+    Cuando se solicite analizar un archivo technical.yaml existente, el agente
+    debe validar su estructura, solicitar los sub-agentes a utilizar, y generar
+    una lista de tareas desglosadas por componente.
+
+  validation:
+    trigger: el usuario solicita analizar un archivo technical.yaml
+    process: |
+      Leer el archivo technical.yaml proporcionado y validar que contenga
+      el formato minimo esperado. Si no cumple, reportar los campos faltantes
+      y detener el flujo sin generar tareas.
+    minimum_schema:
+      required_fields:
+        - feature: "snake_case, debe coincidir con el feature.yaml de entrada"
+        - layer: "enum[api, domain, infrastructure, agent, worker, scheduler]"
+      required_sections:
+        - architecture:
+            required_keys: [pattern, entry]
+            optional_keys: [use_case, interfaces, model, tools_access, agent_definition]
+        - dependencies: "lista de dependencias con nombre y descripcion"
+      conditional_sections:
+        - api_contract:
+            condition: la funcionalidad expone un endpoint HTTP
+            required_keys: [method, path, auth, request, response]
+        - pipeline:
+            condition: la funcionalidad es un agente, worker o proceso batch
+            required_keys: [input, process, output]  # por cada fase
+        - data_model:
+            condition: la funcionalidad modifica el modelo de datos
+            required_keys: [er_diagram, data_dictionary]
+        - agent_contract:
+            condition: la funcionalidad es un agente (layer = agent)
+            required_keys: [invocation, tools, inputs, success_output]
+    validation_output:
+      valid: continuar a fase de seleccion de sub-agentes
+      invalid: |
+        Reportar lista de campos/secciones faltantes con formato:
+        - campo: [nombre del campo]
+          status: missing | incomplete | invalid_format
+          expected: [descripcion de lo esperado]
+        No generar tareas hasta que el archivo sea valido.
+
+  subagent_selection:
+    trigger: el archivo technical.yaml paso la validacion
+    process: |
+      Preguntar al usuario que sub-agentes deben utilizarse para generar
+      las tareas de implementacion. El usuario debe proporcionar los nombres
+      exactos de los sub-agentes disponibles en el sistema de plugins
+      (ej. "python-development:backend-py", "python-development:qa-backend-py").
+    input: nombres de sub-agentes separados por coma o lista
+    validation: verificar que los nombres correspondan a sub-agentes validos del ecosistema de plugins
+    output: lista de sub-agentes confirmados para generacion de tareas
+
+  task_generation:
+    trigger: sub-agentes seleccionados y confirmados
+    output_directory: "{directorio_raiz_del_technical.yaml}/tasks/"
+    process: |
+      Analizar el technical.yaml validado junto con el contexto del proyecto.
+      Generar tareas de implementacion desglosadas por componente, asignando
+      cada tarea al sub-agente correspondiente. Identificar dependencias
+      entre tareas para establecer el orden logico de ejecucion.
+
+    component_classification:
+      description: |
+        Las tareas se organizan por componente para identificar dependencias
+        cruzadas y permitir ejecucion paralela donde sea posible.
+      components:
+        - backend: endpoints, interactors, repositorios, servicios, migraciones
+        - frontend: componentes UI, paginas, formularios, integraciones API
+        - mobile: pantallas, navegacion, servicios nativos, integraciones API
+        - devops: CI/CD, infraestructura, despliegue, monitoreo, configuracion
+
+    task_file_format:
+      naming: "{NN}_{action}_{component}.yaml"  # ej. 01_create_endpoint.yaml
+      schema:
+        required_fields:
+          task: "identificador unico en snake_case"
+          level: "enum[L1, L2, L3, L4, L5] segun complejidad"
+          parent: "technical.yaml (referencia al documento padre)"
+          status: "enum[PENDING, IN_PROGRESS, DONE]"  # siempre PENDING al crearse
+          scope: "descripcion detallada del alcance de la tarea"
+          files_to_create: "lista de archivos que esta tarea debe crear"
+          patterns: "patrones y convenciones a seguir en la implementacion"
+          acceptance: "criterios de aceptacion verificables"
+          context_files: "archivos de referencia necesarios para implementar la tarea"
+        optional_fields:
+          files_to_modify: "lista de archivos existentes que esta tarea modifica"
+          phase: "fase del desarrollo (ej. '1 - Foundation', '2 - Core Logic')"
+          depends_on: "lista de task IDs que deben completarse antes"
+          assigned_subagent: "sub-agente responsable de ejecutar la tarea"
+
+    level_criteria:
+      L1: "tarea simple, un solo archivo, sin dependencias externas"
+      L2: "tarea moderada, 2-3 archivos, dependencias internas"
+      L3: "tarea compleja, multiples archivos, integracion entre capas"
+      L4: "tarea critica, cambios cross-cutting, impacto en multiples dominios"
+      L5: "tarea de alto riesgo, cambios de infraestructura o arquitectura base"
+
+    dependency_rules:
+      - domain_layer_before_infrastructure: tareas de domain (interfaces, DTOs) antes de infrastructure (implementaciones)
+      - infrastructure_before_application: tareas de infrastructure (repos, services) antes de application (interactors)
+      - backend_before_frontend: endpoints de API antes de integraciones frontend/mobile
+      - schema_before_data: migraciones de base de datos antes de codigo que depende del nuevo schema
+      - shared_libraries_first: cambios en librerias compartidas antes de codigo que las consume
+
+    example_task: |
+      # tasks/01_create_endpoint.yaml
+      task: create_trip_endpoint
+      level: L3
+      parent: technical.yaml
+      status: PENDING
+
+      scope: |
+        Implementar POST /api/v1/trips en FastAPI.
+        Solo el endpoint + validacion de inputs.
+        No implementar logica de negocio aqui.
+
+      files_to_create:
+        - app/api/v1/trips/router.py
+        - app/api/v1/trips/schemas.py
+        - tests/unit/api/test_create_trip.py
+
+      patterns:
+        - router: usar APIRouter con prefix /trips
+        - schemas: Pydantic v2 con validadores custom
+        - error_handling: HTTPException con detail descriptivo
+
+      acceptance:
+        - endpoint devuelve 201 con trip_id
+        - validacion de coordenadas antes del use case
+        - tests unitarios cubren happy path + 3 error cases
+
+      context_files:
+        - /docs/architecture.md
+        - /docs/coding_guidelines.md
+        - technical.yaml
+
 analysis_capabilities:
   architectural_patterns_detected:
     - Layered Architecture

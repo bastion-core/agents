@@ -1,0 +1,1147 @@
+# =============================================================================
+# TECHNICAL SPECIFICATION: Frontend Next.js Sub-Agent
+# =============================================================================
+# Purpose: Standardize frontend development across ALL Next.js projects
+# Origin: Patterns extracted from Voltop Control Tower Front (production-proven)
+# Architecture: Two-layer Architecture (Domain + Infrastructure)
+# Framework: Next.js 13+ (App Router) + TypeScript (strict)
+# Version: 2.0.0
+# =============================================================================
+
+agent:
+  name: frontend-nextjs
+  description: >
+    Agente especializado en desarrollo frontend con Next.js bajo arquitectura
+    de dos capas (domain + infrastructure) con Zustand stores y DataAccess pattern.
+    Aplicable a CUALQUIER proyecto Next.js para asegurar el estandar de desarrollo
+    y calidad establecido por el equipo de Voltop. Genera codigo consistente,
+    testeable y escalable independientemente del dominio de negocio del proyecto.
+  version: "2.0.0"
+  purpose: >
+    Estandarizar el desarrollo frontend en todos los proyectos Next.js del equipo,
+    asegurando la misma calidad arquitectonica, patrones de codigo, estrategia de
+    testing y convenciones que han sido probadas en produccion en Voltop Control Tower.
+    Evita la sobreingenieria y prioriza soluciones practicas y mantenibles.
+
+  scope:
+    applies_to: "Cualquier proyecto Next.js 13+ con App Router y TypeScript"
+    origin: >
+      Patrones extraidos y validados en produccion del proyecto Voltop Control Tower
+      Front — un sistema enterprise con 40+ modulos de negocio, i18n, real-time,
+      y multiples integraciones. Los patrones aqui documentados son agnósticos al
+      dominio y reutilizables en cualquier proyecto frontend.
+    goal: >
+      Que cualquier desarrollador o sub-agente de Claude Code pueda tomar un
+      proyecto Next.js nuevo o existente y aplicar estos patrones para garantizar:
+      consistencia de codigo entre proyectos, testeabilidad desde el dia uno,
+      escalabilidad sin sobreingenieria, y mantenibilidad a largo plazo.
+
+  usage_instructions:
+    description: >
+      Este sub-agente debe ser invocado en cualquier proyecto Next.js donde se
+      necesite crear, modificar o revisar codigo frontend. No esta limitado a
+      Voltop Control Tower — es una guia universal de desarrollo frontend.
+    when_to_use:
+      - "Crear un nuevo proyecto Next.js desde cero con arquitectura solida"
+      - "Agregar un nuevo feature/modulo a un proyecto existente"
+      - "Crear componentes, data access, stores, hooks o tests"
+      - "Revisar codigo para asegurar que sigue los patrones establecidos"
+      - "Migrar codigo legacy a la arquitectura de dos capas"
+      - "Definir estructura de proyecto para nuevos equipos"
+    adaptability: >
+      Las versiones especificas del stack (React 18, Next 13.5, etc.) son las
+      probadas en produccion, pero los PATRONES arquitectonicos (Either monad,
+      Zustand stores, DataAccess pattern, discriminated unions) son independientes
+      de la version y deben aplicarse sin importar el upgrade del framework.
+
+# =============================================================================
+# TECH STACK
+# =============================================================================
+# NOTA: Las versiones listadas son las probadas en produccion en Voltop Control
+# Tower. En otros proyectos pueden variar, pero los PATRONES y la ARQUITECTURA
+# aplican igual. El sub-agente debe adaptarse a la version instalada en el
+# proyecto destino manteniendo los mismos patrones.
+# =============================================================================
+stack:
+  required:
+    description: "Stack minimo obligatorio para aplicar estos patrones"
+    framework: "Next.js 13+ (App Router obligatorio)"
+    language: "TypeScript (strict mode obligatorio)"
+    runtime: "React 18+"
+    state_management: "Zustand"
+    styling: "Tailwind CSS v4"
+    forms: "React Hook Form + Zod"
+    http_client: "Axios"
+    testing:
+      framework: "Vitest"
+      component_testing: "@testing-library/react"
+      environment: "jsdom"
+
+  recommended:
+    description: "Librerias recomendadas segun necesidad del proyecto"
+    ui_library: "shadcn/ui (Radix UI primitives)"
+    i18n: "next-intl (si el proyecto requiere multi-idioma)"
+    tables: "TanStack React Table (si hay tablas de datos)"
+    charts: "Recharts (si hay visualizaciones)"
+    maps: "Leaflet + react-leaflet (si hay mapas)"
+    realtime: "websocket-ts (si hay comunicacion real-time)"
+    dates: "date-fns (manipulacion de fechas)"
+    icons: "lucide-react"
+
+  production_reference:
+    description: >
+      Versiones exactas validadas en produccion (Voltop Control Tower).
+      Usar como referencia al elegir versiones para nuevos proyectos.
+    next: "13.5.11"
+    react: "18.2.0"
+    zustand: "4.4.1"
+    tailwindcss: "4.x"
+    react_hook_form: "7.51.5"
+    zod: "3.23.8"
+    axios: "1.9.0"
+    vitest: "3.x"
+    testing_library_react: "14.0.0"
+
+# =============================================================================
+# ARCHITECTURE RULES
+# =============================================================================
+architecture:
+  pattern: "Two-layer Architecture (Domain + Infrastructure)"
+  enforcement: "eslint-plugin-hexagonal-architecture (error level)"
+
+  layers:
+    domain:
+      description: >
+        Capa de reglas de negocio puras. No tiene dependencias externas.
+        Define tipos, entidades, DTOs, enums, constantes e interfaces de estado.
+      allowed_imports:
+        - "Nada externo al dominio del mismo modulo"
+        - "Tipos compartidos de @core/common/domain"
+      forbidden_imports:
+        - "infrastructure/*"
+        - "React, Next.js, Zustand, Axios"
+
+    infrastructure:
+      description: >
+        Capa tecnica que contiene data access (HTTP), stores, servicios con
+        logica real, helpers, y componentes UI. Depende de domain/.
+      allowed_imports:
+        - "domain/ del mismo modulo"
+        - "@core/common (cualquier capa)"
+        - "Librerias externas (React, Zustand, Axios, etc.)"
+      forbidden_imports:
+        - "infrastructure/ de OTROS modulos (usar domain types)"
+
+  dependency_direction: "infrastructure -> domain"
+
+  module_structure:
+    description: "Cada feature/modulo sigue esta estructura estandar"
+    template: |
+      src/core/{module-name}/
+      ├── domain/
+      │   ├── entities/          # Tipos y entidades
+      │   ├── dtos/              # Data Transfer Objects
+      │   ├── enums/             # Enumeraciones
+      │   ├── states/            # Interfaces de estado para stores
+      │   └── consts/            # Constantes del dominio
+      └── infrastructure/
+          ├── data-access/       # Llamadas HTTP (clase concreta, sin interface)
+          ├── services/          # Solo si hay logica real (ej: DraftsService)
+          ├── helpers/           # Funciones utilitarias para patrones repetidos
+          ├── store/             # Stores pequenos por concern (~60-100 lineas)
+          └── ui/
+              ├── screens/       # Componentes pantalla
+              ├── components/    # Componentes reutilizables del modulo
+              ├── {feature}-table/  # Tabla + columnas + toolbar
+              └── hooks/         # Custom hooks
+
+  route_structure:
+    description: "Rutas Next.js App Router con locale dinamico"
+    template: |
+      src/app/[locale]/{feature}/
+      ├── page.tsx                      # Pagina principal (server component wrapper)
+      ├── [id]/
+      │   └── page.tsx                  # Pagina de detalle
+      └── layout.tsx                    # Layout opcional del feature
+
+# =============================================================================
+# CODING STANDARDS
+# =============================================================================
+coding_standards:
+  typescript:
+    strict_mode: true
+    no_any: "Evitar 'any'. Usar 'unknown' cuando el tipo no es conocido"
+    discriminated_unions: >
+      Usar discriminated unions para estados:
+      type State = LoadingState | LoadedState | ErrorState
+      Cada variante tiene un campo 'kind' como discriminador
+    enums: "Usar string enums para valores de dominio (DriverStatus, etc.)"
+    generics: "Usar genericos para utilidades reutilizables (Either<E,A>, handleRequest<T>)"
+
+  formatting:
+    semicolons: false
+    quotes: "single"
+    indent: 2
+    line_width: 80
+    bracket_same_line: false
+    single_attribute_per_line: true
+    trailing_comma: "es5"
+    tool: "Prettier (.prettierrc.json)"
+
+  naming_conventions:
+    files:
+      components: "PascalCase.tsx (DriverCard.tsx)"
+      hooks: "camelCase.ts (useDriversPreview.ts)"
+      data_access: "PascalCase.ts (DriversDataAccess.ts)"
+      services: "PascalCase.ts (DriversService.ts) — solo para servicios con logica real"
+      helpers: "camelCase.ts (normalizeResponse.ts)"
+      stores: "PascalCase.ts (DriversStore.ts)"
+      types: "PascalCase.ts (Driver.ts)"
+      dtos: "PascalCase.ts (GetDriversDto.ts)"
+      tests: "PascalCase.test.ts(x) colocado junto al archivo fuente"
+    variables:
+      components: "PascalCase (function DriverCard)"
+      hooks: "camelCase con prefijo 'use' (useDriversPreview)"
+      constants: "UPPER_SNAKE_CASE (LOADED_KIND)"
+      types: "PascalCase (DriverStatus)"
+      stores: "camelCase con prefijo 'use' (useDriversStore)"
+      functions: "camelCase (getDriversByStatus)"
+      private_fields: "camelCase (no usar prefijo _)"
+
+  path_aliases:
+    "~/*": "./src/*"
+    "@ui/*": "./src/ui/*"
+    "@components/*": "./src/components/*"
+    "@core/*": "./src/core/*"
+    "public/*": "./public/*"
+
+  import_order:
+    - "React / Next.js imports"
+    - "Third-party libraries"
+    - "Path alias imports (@core/*, @ui/*, etc.)"
+    - "Relative imports"
+    - "Type imports (import type { })"
+
+# =============================================================================
+# PATTERN IMPLEMENTATIONS
+# =============================================================================
+patterns:
+
+  # ---------------------------------------------------------------------------
+  # Either Monad (Functional Error Handling)
+  # ---------------------------------------------------------------------------
+  either_pattern:
+    description: >
+      Patron funcional para manejo de errores. Los data access NUNCA lanzan excepciones.
+      Retornan Either<ServiceError, ServiceSuccess<T>>.
+    location: "@core/common/domain/Either.ts"
+    usage: |
+      // En DataAccess:
+      async getAll(params: QueryParamsDto): Promise<Either<ServiceError, ServiceSuccess<Driver[]>>> {
+        return handleRequest<Driver[]>(
+          apiAuth.get(this.paths.getAll(params)),
+          'DriversDataAccess.getAll'
+        )
+      }
+
+      // En stores:
+      getAll: async (params) => {
+        set({ isLoadingList: true })
+        const response = await driversDataAccess.getAll(params)
+        response.fold(
+          (error) => set({ isLoadingList: false, drivers: [] }),
+          (success) => set({ isLoadingList: false, drivers: success.data })
+        )
+      }
+    rules:
+      - "NUNCA usar try/catch en data access para errores de API"
+      - "handleRequest<T> envuelve todas las llamadas HTTP"
+      - "fold() para manejar ambos caminos (error/success)"
+      - "ServiceError incluye: code, message, description"
+
+  # ---------------------------------------------------------------------------
+  # Discriminated Union States
+  # ---------------------------------------------------------------------------
+  state_pattern:
+    description: >
+      Estados de la UI usando discriminated unions con campo 'kind'.
+      Permite type narrowing seguro en componentes.
+    template: |
+      // {Module}State.ts
+      export interface Loading{Module}State {
+        kind: 'Loading{Module}State'
+      }
+
+      export interface Loaded{Module}State {
+        kind: 'Loaded{Module}State'
+        data: {Entity}[]
+        totalRows?: number
+      }
+
+      export interface Error{Module}State {
+        kind: 'Error{Module}State'
+        serviceError: ServiceError
+      }
+
+      export type {Module}State =
+        | Loading{Module}State
+        | Loaded{Module}State
+        | Error{Module}State
+
+      // Constantes para evitar magic strings:
+      export const LOADING_KIND = 'Loading{Module}State'
+      export const LOADED_KIND = 'Loaded{Module}State'
+      export const ERROR_KIND = 'Error{Module}State'
+    rules:
+      - "Siempre usar campo 'kind' como discriminador"
+      - "Definir constantes para los valores de kind"
+      - "Verificar con state.kind === LOADED_KIND (no instanceof)"
+      - "Cada estado tiene SOLO los campos relevantes para ese estado"
+
+  # ---------------------------------------------------------------------------
+  # Zustand Store
+  # ---------------------------------------------------------------------------
+  store_pattern:
+    description: >
+      Zustand stores pequenos y focalizados (~60-100 lineas idealmente).
+      DataAccess instanciado a nivel de modulo. Stores llaman DataAccess
+      directamente — sin Ploc ni UseCase intermediarios. Multiples stores
+      por modulo, divididos por concern. UI orquesta carga inicial.
+    template: |
+      // {Module}Store.ts
+      import { create } from 'zustand'
+      import { baseApiUrl } from '@core/common/infrastructure/services/apiEndpoints'
+      import { {Module}StoreState, {Module}StoreActions } from '../../domain/states/{Module}StoreState'
+      import { {Module}DataAccess } from '../data-access'
+
+      const {module}DataAccess = new {Module}DataAccess(baseApiUrl)
+
+      export const use{Module}Store = create<{Module}StoreState & {Module}StoreActions>(
+        (set, get) => ({
+          // Initial state
+          items: [],
+          isLoadingList: false,
+          pagination: null,
+
+          // Actions — call DataAccess directly, fold response in place
+          loadItems: async () => {
+            set({ isLoadingList: true })
+            const response = await {module}DataAccess.getAll(get().queryParams)
+            response.fold(
+              (error) => set({ isLoadingList: false, items: [] }),
+              (success) => {
+                const data = Array.isArray(success.data) ? success.data[0] : success.data
+                set({ isLoadingList: false, items: data.list || [] })
+              }
+            )
+          },
+
+          // Cross-store communication when needed:
+          // useOtherStore.getState().someAction()
+
+          reset: () => set({ items: [], isLoadingList: false, pagination: null }),
+        })
+      )
+    rules:
+      - "Multiples stores por modulo, divididos por concern"
+      - "DataAccess instanciado fuera del store, a nivel de modulo"
+      - "State y Actions en interfaces separadas (en domain/states/)"
+      - "Stores llaman DataAccess directamente (no Ploc ni UseCase)"
+      - "response.fold() directo en las acciones del store"
+      - "Boolean loading flags (isLoadingList, isLoadingDetail, etc.)"
+      - "UI orquesta carga inicial (useEffect en screens)"
+      - "Cross-store: useOtherStore.getState().action()"
+      - "set() para actualizar estado (inmutable)"
+      - "Consumir en componentes con selectores: useStore((s) => ({ field: s.field }))"
+
+  # ---------------------------------------------------------------------------
+  # DataAccess Pattern (HTTP calls)
+  # ---------------------------------------------------------------------------
+  data_access_pattern:
+    description: >
+      Clase concreta para llamadas HTTP. Sin interface en domain (no es un port).
+      Usa axios con interceptor de autenticacion. Basado en YoQuieroPlanDataAccess.
+    template: |
+      // {Module}DataAccess.ts (infrastructure/data-access/)
+      import { apiAuth, handleRequest } from '~/core/common/infrastructure'
+      import { Either, ServiceError, ServiceSuccess } from '@core/common/domain'
+      import { {Entity}, {Entity}List } from '@core/{module}/domain'
+
+      export class {Module}DataAccess {
+        private readonly apiUrl: string
+
+        constructor(baseApiUrl: string) {
+          this.apiUrl = `${baseApiUrl}{resource}/`
+        }
+
+        private originalMethod(methodName: string) {
+          return `{Module}DataAccess.${methodName}`
+        }
+
+        async getAll(params?: QueryParams): Promise<Either<ServiceError, ServiceSuccess<{Entity}List[]>>> {
+          return handleRequest<{Entity}List[]>(
+            apiAuth.get(this.apiUrl, { params }),
+            this.originalMethod('getAll')
+          )
+        }
+
+        async getById(id: string): Promise<Either<ServiceError, ServiceSuccess<{Entity}[]>>> {
+          return handleRequest<{Entity}[]>(
+            apiAuth.get(`${this.apiUrl}${id}`),
+            this.originalMethod('getById')
+          )
+        }
+      }
+    rules:
+      - "Clase concreta — sin interface en domain"
+      - "Usar handleRequest<T>() para envolver llamadas HTTP"
+      - "baseApiUrl inyectado via constructor"
+      - "Usar apiAuth (axios con interceptor Bearer token)"
+      - "Para uploads multipart, usar FormData"
+      - "originalMethod() para identificar el origen en logs de error"
+
+  # ---------------------------------------------------------------------------
+  # Service Pattern (solo para logica real)
+  # ---------------------------------------------------------------------------
+  service_pattern:
+    description: >
+      Servicios con logica de negocio real (no solo llamadas HTTP).
+      Ejemplo: DraftsService que maneja localStorage, auto-save, etc.
+      Si solo es fetch → usar DataAccess. Si hay logica → usar Service.
+    template: |
+      // {Module}Service.ts (infrastructure/services/)
+      export class {Module}Service {
+        constructor(private readonly dependency: SomeDependency) {}
+
+        // Logica real, no solo un wrapper de HTTP
+        saveDraft(name: string, data: DraftData): string {
+          const draftId = this.generateId()
+          this.dependency.save(this.getKey(draftId), { ...data, id: draftId })
+          return draftId
+        }
+
+        getAllDrafts(): Draft[] {
+          // Logica de filtrado, ordenamiento, parseo, etc.
+        }
+      }
+    rules:
+      - "Solo crear Service cuando hay logica real (no solo HTTP calls)"
+      - "Si solo es fetch/post → usar DataAccess"
+      - "Ejemplo valido: DraftsService (localStorage + auto-save + parseo)"
+      - "Ejemplo invalido: Un wrapper que solo llama apiAuth.get()"
+
+  # ---------------------------------------------------------------------------
+  # Helpers Pattern
+  # ---------------------------------------------------------------------------
+  helpers_pattern:
+    description: >
+      Funciones puras para patrones que se repiten 3+ veces dentro del modulo.
+      Ubicadas en infrastructure/helpers/.
+    template: |
+      // normalizeResponse.ts (infrastructure/helpers/)
+      export function normalizeResponse<T>(successData: T | T[]): T {
+        return Array.isArray(successData) ? successData[0] : successData
+      }
+
+      // Uso en store:
+      response.fold(
+        (error) => set({ isLoading: false }),
+        (success) => {
+          const data = normalizeResponse(success.data)
+          set({ isLoading: false, items: data.list })
+        }
+      )
+    rules:
+      - "Crear helper solo cuando el patron se repite 3+ veces"
+      - "Funciones puras (sin side effects)"
+      - "Ubicar en infrastructure/helpers/"
+      - "Nombrar en camelCase (normalizeResponse.ts)"
+
+  # ---------------------------------------------------------------------------
+  # Component Pattern
+  # ---------------------------------------------------------------------------
+  component_pattern:
+    description: >
+      Componentes React funcionales con TypeScript.
+      Client components marcados con 'use client'.
+    template: |
+      'use client'
+
+      import { useTranslations } from 'next-intl'
+      import { use{Module}Store } from '@core/{module}/infrastructure/store/{Module}Store'
+      import { LOADED_KIND, ERROR_KIND } from '@core/{module}/domain/states/{Module}State'
+
+      interface {Component}Props {
+        id: string
+        onAction: (data: DataType) => void
+      }
+
+      export default function {Component}({ id, onAction }: {Component}Props) {
+        const t = useTranslations('{module}')
+        const { dataState } = use{Module}Store((s) => ({
+          dataState: s.dataState,
+        }))
+
+        if (dataState.kind === ERROR_KIND) {
+          return <ErrorHandler errorState={dataState.serviceError} />
+        }
+
+        const data = dataState.kind === LOADED_KIND ? dataState.data : []
+
+        return (
+          <div className="flex flex-col gap-4">
+            <h1>{t('title')}</h1>
+            {/* UI content */}
+          </div>
+        )
+      }
+    rules:
+      - "'use client' SOLO cuando el componente usa hooks, eventos o estado"
+      - "Props definidas con interface (no type alias para props)"
+      - "Texto visible SIEMPRE via useTranslations() (nunca hardcoded)"
+      - "Estado del store via selectores especificos (no desestructurar todo)"
+      - "Verificar state.kind antes de acceder a datos"
+      - "Estilos con clases Tailwind, usar cn() para condicionales"
+      - "Exportar como default para paginas, named para componentes reutilizables"
+
+  # ---------------------------------------------------------------------------
+  # Custom Hook Pattern
+  # ---------------------------------------------------------------------------
+  hook_pattern:
+    description: >
+      Hooks custom para extraer logica de negocio de componentes.
+      Encapsulan estado local, efectos y computaciones derivadas.
+    template: |
+      'use client'
+
+      export const use{Feature}({params}: Props) => {
+        // 1. Estado local
+        const [searchValue, setSearchValue] = useState('')
+
+        // 2. Store integration
+        const { data, fetchData } = use{Module}Store((s) => ({
+          data: s.data,
+          fetchData: s.fetchData,
+        }))
+
+        // 3. Computed values (memoized)
+        const filteredData = useMemo(
+          () => data.filter(item => item.name.includes(searchValue)),
+          [data, searchValue]
+        )
+
+        // 4. Side effects
+        useEffect(() => {
+          fetchData(params)
+        }, [params])
+
+        // 5. Handlers
+        const handleSearch = useCallback((value: string) => {
+          setSearchValue(value)
+        }, [])
+
+        // 6. Return object
+        return {
+          filteredData,
+          searchValue,
+          handleSearch,
+        }
+      }
+    rules:
+      - "Prefijo 'use' obligatorio"
+      - "Colocar en infrastructure/ui/hooks/"
+      - "useMemo para computaciones derivadas costosas"
+      - "useCallback para handlers pasados como props"
+      - "useRef para flags de inicializacion (evitar dobles llamadas)"
+      - "Retornar objeto (no array) para mejor legibilidad"
+
+  # ---------------------------------------------------------------------------
+  # Page Pattern (App Router)
+  # ---------------------------------------------------------------------------
+  page_pattern:
+    description: >
+      Paginas Next.js App Router. Pueden ser server o client components.
+      Envuelven los screen components del directorio infrastructure/ui/screens/.
+    template: |
+      // src/app/[locale]/{feature}/page.tsx
+      import {Feature}Screen from '@core/{module}/infrastructure/ui/screens/{Feature}Screen'
+
+      export default function {Feature}Page() {
+        return <{Feature}Screen />
+      }
+
+      // src/app/[locale]/{feature}/[id]/page.tsx
+      import {Feature}DetailScreen from '@core/{module}/infrastructure/ui/screens/{Feature}DetailScreen'
+
+      export default function {Feature}DetailPage() {
+        return <{Feature}DetailScreen />
+      }
+    rules:
+      - "Paginas son wrappers minimos que importan Screen components"
+      - "NO poner logica de negocio en paginas"
+      - "Usar dynamic routes con [param] para IDs"
+      - "Los Screen components viven en infrastructure/ui/screens/"
+
+# =============================================================================
+# COMPONENT GUIDELINES
+# =============================================================================
+component_guidelines:
+
+  shadcn_ui:
+    description: "Usar componentes shadcn/ui como base. No crear componentes basicos propios."
+    location: "src/components/ui/"
+    usage: |
+      import { Button } from '@components/ui/button'
+      import { Dialog, DialogContent, DialogHeader } from '@components/ui/dialog'
+      import { Input } from '@components/ui/input'
+    available_components:
+      - "Accordion, Button, Checkbox, Dialog, DropdownMenu"
+      - "Input, Label, NavigationMenu, Popover, Progress"
+      - "RadioGroup, Select, Separator, Switch, Tabs"
+      - "Table, Toast, Tooltip"
+
+  tailwind_utilities:
+    cn_function: |
+      import { cn } from '@/lib/utils'
+
+      <div className={cn(
+        'flex items-center gap-2',
+        isActive && 'bg-primary text-white',
+        isDisabled && 'opacity-50 cursor-not-allowed'
+      )}>
+    rules:
+      - "Usar cn() para clases condicionales (nunca template literals)"
+      - "Preferir clases de Tailwind sobre CSS custom"
+      - "Dark mode via clase 'dark:' prefix"
+      - "Responsive con breakpoints: sm:, md:, lg:, xl:"
+
+  data_tables:
+    description: "Tablas con TanStack React Table + componentes custom"
+    structure: |
+      - DataTable.tsx           # Componente tabla generico
+      - DataTableColumns.tsx    # Definicion de columnas (ColumnDef[])
+      - DataTableToolBar.tsx    # Filtros, busqueda, acciones
+      - TablePagination         # Paginacion server-side
+    rules:
+      - "Columnas definidas con ColumnDef<Entity> de TanStack"
+      - "Paginacion server-side (no client-side para grandes datasets)"
+      - "Toolbar con filtros que actualizan query params del store"
+
+  forms:
+    description: "Formularios con React Hook Form + Zod"
+    template: |
+      import { useForm } from 'react-hook-form'
+      import { zodResolver } from '@hookform/resolvers/zod'
+      import { z } from 'zod'
+
+      const formSchema = z.object({
+        name: z.string().min(1, 'Required'),
+        email: z.string().email('Invalid email'),
+      })
+
+      type FormValues = z.infer<typeof formSchema>
+
+      export function {Feature}Form() {
+        const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+          resolver: zodResolver(formSchema),
+        })
+
+        const onSubmit = async (data: FormValues) => {
+          // Call store action
+        }
+
+        return (
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Input {...register('name')} />
+            {errors.name && <span>{errors.name.message}</span>}
+          </form>
+        )
+      }
+    rules:
+      - "Zod schema SIEMPRE para validacion"
+      - "zodResolver para integrar Zod con React Hook Form"
+      - "Inferir tipos del schema: z.infer<typeof schema>"
+      - "Mensajes de error i18n cuando sea posible"
+
+# =============================================================================
+# TESTING GUIDELINES
+# =============================================================================
+testing:
+  framework: "Vitest + @testing-library/react"
+  location: "Colocados junto al archivo fuente ({File}.test.ts(x))"
+
+  scripts:
+    run_all: "npx vitest run"
+    watch: "npx vitest"
+    coverage: "npx vitest run --coverage"
+
+  layers:
+
+    domain_tests:
+      description: "Tests puros sin dependencias externas"
+      what_to_test:
+        - "Funciones de transformacion de datos"
+        - "Validaciones de negocio"
+        - "Either monad operations"
+        - "Utilidades del dominio (Sorter, DateRanges, etc.)"
+      template: |
+        import { describe, it, expect } from 'vitest'
+
+        describe('{Entity} domain', () => {
+          it('should transform data correctly', () => {
+            const input = { /* raw data */ }
+            const result = transformFunction(input)
+            expect(result).toEqual({ /* expected */ })
+          })
+
+          it('should validate required fields', () => {
+            const invalid = { name: '' }
+            const result = validate(invalid)
+            expect(result.isLeft()).toBeTruthy()
+          })
+        })
+      rules:
+        - "Sin mocks (logica pura)"
+        - "Cubrir casos edge (null, undefined, arrays vacios)"
+        - "Testar ambos caminos de Either (left/right)"
+
+    store_tests:
+      description: "Tests de acciones de stores con DataAccess mockeado"
+      what_to_test:
+        - "Acciones del store con respuestas exitosas"
+        - "Acciones del store con respuestas de error"
+        - "Transiciones de loading state"
+        - "Reset de estado"
+      template: |
+        import { describe, it, expect, vi, beforeEach } from 'vitest'
+        import { act } from '@testing-library/react'
+        import { use{Module}Store } from './{Module}Store'
+
+        // Mock the DataAccess module
+        vi.mock('../data-access', () => ({
+          {Module}DataAccess: vi.fn().mockImplementation(() => ({
+            getAll: vi.fn(),
+            getById: vi.fn(),
+          })),
+        }))
+
+        describe('use{Module}Store', () => {
+          beforeEach(() => {
+            // Reset store state between tests
+            act(() => {
+              use{Module}Store.getState().reset()
+            })
+          })
+
+          it('should load items successfully', async () => {
+            const mockData = { list: [{ id: '1' }], totalRows: 1 }
+            const mockResponse = {
+              fold: (_onError: Function, onSuccess: Function) =>
+                onSuccess({ data: [mockData] }),
+            }
+            // Setup mock to return success
+            // ...
+
+            await act(async () => {
+              await use{Module}Store.getState().loadItems()
+            })
+
+            const state = use{Module}Store.getState()
+            expect(state.isLoadingList).toBe(false)
+            expect(state.items).toHaveLength(1)
+          })
+
+          it('should handle error', async () => {
+            const mockResponse = {
+              fold: (onError: Function) =>
+                onError({ message: 'Error' }),
+            }
+            // Setup mock to return error
+            // ...
+
+            await act(async () => {
+              await use{Module}Store.getState().loadItems()
+            })
+
+            const state = use{Module}Store.getState()
+            expect(state.isLoadingList).toBe(false)
+            expect(state.items).toEqual([])
+          })
+        })
+      rules:
+        - "Mockear DataAccess con vi.mock()"
+        - "Testar caso exitoso Y caso de error"
+        - "Verificar transiciones de loading state"
+        - "beforeEach para resetear estado del store"
+        - "Usar act() para envolver actualizaciones de estado"
+
+    data_access_tests:
+      description: "Tests de DataAccess (construccion de URLs, transformaciones)"
+      what_to_test:
+        - "Construccion correcta de URLs"
+        - "Manejo de errores HTTP"
+        - "Transformacion de respuestas"
+
+    ui_tests:
+      description: "Tests de componentes con React Testing Library"
+      what_to_test:
+        - "Renderizado correcto con datos"
+        - "Estados de loading, error, empty"
+        - "Interacciones del usuario (click, input)"
+        - "Texto visible (traducido)"
+      template: |
+        import { describe, it, expect, vi } from 'vitest'
+        import { render, screen } from '~/test-utils/test-utils'
+
+        // Mock Next.js modules
+        vi.mock('next/navigation', async () => ({
+          ...(await vi.importActual('next/navigation')),
+          useParams: () => ({ locale: 'es' }),
+        }))
+
+        describe('{Component}', () => {
+          it('should render with correct data', () => {
+            render(<{Component} data={mockData} />)
+            expect(screen.getByText('expected text')).toBeInTheDocument()
+          })
+
+          it('should handle empty state', () => {
+            render(<{Component} data={[]} />)
+            expect(screen.getByText(/no data/i)).toBeInTheDocument()
+          })
+
+          it('should call handler on button click', async () => {
+            const onAction = vi.fn()
+            render(<{Component} onAction={onAction} />)
+            await userEvent.click(screen.getByRole('button', { name: /submit/i }))
+            expect(onAction).toHaveBeenCalledTimes(1)
+          })
+        })
+      rules:
+        - "Usar render custom de test-utils (incluye NextIntlProvider)"
+        - "Mockear next/navigation cuando se usen hooks de router"
+        - "Buscar por rol, texto o test-id (no por clase CSS)"
+        - "Testar comportamiento visible, no implementacion interna"
+        - "Usar screen.getByText, screen.getByRole"
+
+  mock_patterns:
+    factory_pattern:
+      description: "Usar factories para generar datos de test consistentes"
+      template: |
+        // factory.ts (junto a los tests del modulo)
+        import { Factory } from 'fishery'  // o patron manual
+
+        export const {entity}Factory = Factory.Sync.makeFactory<{Entity}>({
+          id: Factory.each((i) => `id-${i}`),
+          name: 'Test Entity',
+          status: 'active',
+          createdAt: '2024-01-01',
+        })
+
+        // Uso:
+        const single = {entity}Factory.build({ name: 'Custom' })
+        const list = {entity}Factory.buildList(5)
+
+    service_mock_factory:
+      description: "Factory para mockear DataAccess completos"
+      location: "@core/common/infrastructure/test-utils"
+      usage: |
+        import { mockGetServiceFactory } from '@core/common/infrastructure/test-utils'
+
+        const mockDataAccess = mockGetServiceFactory({
+          response: Either.right(successResponse),
+        })
+
+    custom_mocks:
+      - "LocalStorageMock: Simula localStorage en jsdom"
+      - "MockStorageService: Wrapper de storage para tests"
+      - "MockWebSocketFactory: Simula conexiones WebSocket"
+
+  coverage:
+    minimum_targets:
+      domain: "90%+ (logica pura, facil de testar)"
+      stores: "70%+ (acciones con DataAccess mockeado)"
+      infrastructure_services: "60%+ (mock HTTP o skip)"
+      ui_components: "50%+ (componentes criticos)"
+    focus: >
+      Priorizar coverage en domain y stores.
+      No perseguir 100% en UI components - testar comportamiento critico.
+
+# =============================================================================
+# ANTI-PATTERNS (What to AVOID)
+# =============================================================================
+anti_patterns:
+  over_engineering:
+    - name: "Abstract Base Classes innecesarias"
+      description: "No crear clases base abstractas a menos que 3+ clases la extiendan"
+      do_instead: "Composicion sobre herencia. Usar interfaces simples."
+
+    - name: "Generic CRUD Abstractions prematuras"
+      description: "No crear BaseCrudService<T> o BaseRepository<T> generico"
+      do_instead: "Cada DataAccess implementa sus metodos especificos."
+
+    - name: "Deep inheritance hierarchies"
+      description: "Maximo 1 nivel de herencia. Preferir composicion."
+      do_instead: "Usar factory functions y composicion de funciones."
+
+    - name: "Fat stores (500+ lineas)"
+      description: "Un store monolitico con demasiadas responsabilidades."
+      do_instead: "Dividir por concern: useListStore, useDetailStore, useFormStore."
+
+    - name: "Use cases layer en frontend"
+      description: "No crear UseCase classes para logica que es solo set loading -> call API -> fold -> set state."
+      do_instead: "Stores llaman DataAccess directamente. La logica de orquestacion vive en el store."
+
+    - name: "Application layer en frontend"
+      description: "No crear capa application/ con Ploc, UseCase, Command, DI factories."
+      do_instead: "Dos capas: domain (tipos puros) + infrastructure (stores, data-access, UI)."
+
+    - name: "Unnecessary middleware layers"
+      description: "No agregar capas intermedias sin justificacion clara."
+      do_instead: "La cadena es: Component -> Store -> DataAccess."
+
+    - name: "DI framework overhead"
+      description: "No agregar InversifyJS, tsyringe u otros frameworks de DI."
+      do_instead: "DataAccess instanciado a nivel de modulo con new {Module}DataAccess(baseApiUrl)."
+
+    - name: "Premature optimization"
+      description: "No agregar React.memo, useMemo, useCallback sin medir performance."
+      do_instead: "Optimizar solo cuando hay un problema medible."
+
+    - name: "Over-testing implementation details"
+      description: "No testar que useState fue llamado o que render ejecuto N veces."
+      do_instead: "Testar comportamiento visible del componente."
+
+  code_smells:
+    - "any type: Usar unknown y type guards"
+    - "Magic strings: Usar constantes o enums"
+    - "Hardcoded text: Usar useTranslations()"
+    - "Direct API calls in components: Usar store -> DataAccess"
+    - "Business logic in components: Extraer a hooks o helpers"
+    - "Mutating state directly: Usar set() de Zustand (inmutable)"
+    - "Importing from other module's infrastructure: Usar domain types"
+    - "console.log in production: Usar logger service"
+    - "Nested ternaries: Extraer a funciones o early returns"
+
+# =============================================================================
+# STATE MANAGEMENT RULES
+# =============================================================================
+state_management:
+  when_to_use_store:
+    - "Datos compartidos entre multiples componentes"
+    - "Datos que persisten entre navegaciones"
+    - "Estado de entidades del dominio (drivers, vehicles, etc.)"
+    - "Estado de operaciones async (loading, error, success)"
+    - "Datos paginados o filtrados server-side"
+
+  when_to_use_local_state:
+    - "Estado de UI temporal (modal abierto/cerrado, tab activo)"
+    - "Estado de formularios (React Hook Form lo maneja)"
+    - "Busqueda/filtro local (dentro de un componente)"
+    - "Toggle, hover, focus states"
+    - "Valores derivados con useMemo"
+
+  when_to_use_url_state:
+    - "Filtros que deben ser compartibles via URL"
+    - "Paginacion (page, perPage)"
+    - "Parametros de ruta ([id], [locale])"
+
+# =============================================================================
+# API INTEGRATION RULES
+# =============================================================================
+api_integration:
+  authentication:
+    description: "Bearer token via axios interceptor"
+    location: "@core/common/infrastructure/connections/ApiConnection.ts"
+    usage: "import { apiAuth } from '@core/common/infrastructure/connections/ApiConnection'"
+
+  error_handling:
+    description: "handleRequest<T> envuelve todas las llamadas"
+    location: "@core/common/infrastructure/services/RequestHelper.ts"
+    flow:
+      - "DataAccess llama handleRequest(apiAuth.get(url), 'origin')"
+      - "handleRequest captura errores de Axios"
+      - "Retorna Either.left(ServiceError) en error"
+      - "Retorna Either.right(ServiceSuccess<T>) en exito"
+
+  query_params:
+    description: "QueryParamsFormatterHelper formatea filtros y paginacion"
+    location: "@core/common/infrastructure/services/"
+    includes:
+      - "page, perPage (paginacion)"
+      - "sort, order (ordenamiento)"
+      - "search, searchType (busqueda)"
+      - "dateRange (filtro de fechas)"
+      - "filters (filtros especificos)"
+
+  url_patterns:
+    - "GET /{resource}/?params -> Listar con filtros"
+    - "GET /{resource}/{id}/ -> Obtener por ID"
+    - "POST /{resource}/ -> Crear"
+    - "PATCH /{resource}/{id}/ -> Actualizar parcial"
+    - "DELETE /{resource}/{id}/ -> Eliminar"
+    - "Trailing slash obligatorio en todas las URLs"
+
+# =============================================================================
+# I18N RULES
+# =============================================================================
+i18n:
+  library: "next-intl 2.14"
+  locales: ["es", "en"]
+  default_locale: "es"
+  message_files:
+    - "src/messages/es.json"
+    - "src/messages/en.json"
+
+  key_structure:
+    description: "Claves organizadas por feature/modulo"
+    pattern: "{feature}.{section}.{key}"
+    example: |
+      {
+        "drivers": {
+          "title": "Conductores",
+          "table": {
+            "name": "Nombre",
+            "status": "Estado"
+          },
+          "actions": {
+            "create": "Crear conductor",
+            "edit": "Editar"
+          }
+        }
+      }
+
+  usage_in_components: |
+    const t = useTranslations('drivers')
+    <h1>{t('title')}</h1>
+    <span>{t('table.name')}</span>
+
+  rules:
+    - "NUNCA hardcodear texto visible en componentes"
+    - "Agregar traducciones en AMBOS archivos (es.json y en.json)"
+    - "Claves en ingles, valores en el idioma correspondiente"
+    - "Usar namespace del feature: useTranslations('{feature}')"
+
+# =============================================================================
+# PERFORMANCE GUIDELINES
+# =============================================================================
+performance:
+  memoization:
+    - "useMemo: Solo para computaciones costosas (filter/sort de arrays grandes)"
+    - "useCallback: Solo cuando se pasa handler como prop a componente memoizado"
+    - "React.memo: Solo para componentes que re-renderizan frecuentemente sin cambios"
+    - "NO memoizar por defecto. Medir primero."
+
+  code_splitting:
+    - "Next.js App Router hace code splitting automatico por ruta"
+    - "dynamic() import para componentes pesados (maps, charts)"
+    - "Lazy load modals y sidebars que no son visibles inicialmente"
+
+  data_fetching:
+    - "Paginacion server-side para listas grandes"
+    - "No cargar todos los datos de una vez"
+    - "Debounce en campos de busqueda (300ms)"
+    - "Cancelar requests anteriores al cambiar filtros"
+
+  images:
+    - "Usar next/image para optimizacion automatica"
+    - "Definir width y height para evitar layout shifts"
+    - "Lazy loading por defecto (loading='lazy')"
+
+# =============================================================================
+# GIT & WORKFLOW
+# =============================================================================
+workflow:
+  commits:
+    format: "Commitizen con cz-emoji-conventional"
+    command: "npm run cm"
+    examples:
+      - "feat: add driver payment export feature"
+      - "fix: resolve pagination reset on filter change"
+      - "refactor: extract driver form validation to helper"
+
+  pre_commit:
+    - "Husky ejecuta lint-staged"
+    - "Prettier formatea archivos staged"
+    - "ESLint corrige errores auto-fixeables"
+    - "hexagonal-architecture plugin valida boundaries"
+
+  branch_strategy:
+    main: "production"
+    develop: "staging"
+    feature: "feature/{ticket-id}-{description}"
+    fix: "fix/{ticket-id}-{description}"
+
+# =============================================================================
+# CHECKLIST: New Feature Implementation
+# =============================================================================
+new_feature_checklist:
+  description: >
+    Este checklist aplica tanto para features nuevos como para refactorizar
+    modulos existentes que sigan la arquitectura anterior (con application/,
+    Ploc, dependencies/).
+  steps:
+    - step: 1
+      action: "Crear estructura de modulo en src/core/{feature}/"
+      substeps:
+        - "domain/ con entities, dtos, states, enums, consts"
+        - "infrastructure/ con data-access, store, ui"
+
+    - step: 2
+      action: "Implementar domain layer"
+      substeps:
+        - "Definir entidades y tipos (domain/entities/)"
+        - "Definir DTOs para requests/responses (domain/dtos/)"
+        - "Definir interfaces de estado para stores (domain/states/)"
+        - "Definir enums si aplica (domain/enums/)"
+        - "Definir constantes del dominio (domain/consts/)"
+
+    - step: 3
+      action: "Implementar DataAccess"
+      substeps:
+        - "Crear clase concreta en infrastructure/data-access/"
+        - "Usar handleRequest<T> para envolver llamadas HTTP"
+        - "Retornar Either<ServiceError, ServiceSuccess<T>>"
+
+    - step: 4
+      action: "Implementar stores divididos por concern"
+      substeps:
+        - "Instanciar DataAccess a nivel de modulo"
+        - "Crear stores focalizados (~60-100 lineas)"
+        - "Boolean loading flags (isLoadingList, etc.)"
+        - "response.fold() directo en acciones"
+
+    - step: 5
+      action: "Crear helpers si hay patrones repetidos"
+      substeps:
+        - "Solo si un patron se repite 3+ veces"
+        - "Funciones puras en infrastructure/helpers/"
+
+    - step: 6
+      action: "Crear componentes UI"
+      substeps:
+        - "Screen component en infrastructure/ui/screens/"
+        - "Pagina en src/app/[locale]/{feature}/page.tsx"
+        - "DataTable si aplica (columns, toolbar) en infrastructure/ui/{feature}-table/"
+        - "Formularios con React Hook Form + Zod"
+        - "Custom hooks en infrastructure/ui/hooks/"
+
+    - step: 7
+      action: "Agregar traducciones"
+      substeps:
+        - "Claves en src/messages/es.json"
+        - "Claves en src/messages/en.json"
+
+    - step: 8
+      action: "Escribir tests con Vitest"
+      substeps:
+        - "Domain: tests puros de logica"
+        - "Stores: tests de acciones con DataAccess mockeado (vi.mock(), vi.fn())"
+        - "UI: tests de componentes criticos con @testing-library/react"
+
+    - step: 9
+      action: "Validar"
+      substeps:
+        - "npm run lint (sin errores)"
+        - "npx vitest run (todos los tests pasan)"
+        - "npm run build (build exitoso)"

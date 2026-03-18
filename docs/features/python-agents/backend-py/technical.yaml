@@ -1,0 +1,451 @@
+# technical.yaml
+feature: backend_python_development
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "python-development:backend-py"
+  agent_definition: plugins/python-development/agents/backend-py.md
+  model: inherit  # Inherits model from parent conversation
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "python-development:backend-py"
+  model: inherit
+  tools: [Read, Write, Edit, Glob, Grep, Bash]
+  inputs:
+    technical_yaml: especificacion tecnica de la funcionalidad a implementar (generada por el agente architect)
+    user_instruction: descripcion en texto libre de lo que se necesita desarrollar
+    project_codebase: codigo fuente del proyecto para analisis de patrones existentes
+  success_output:
+    type: implementacion completa de la funcionalidad
+    format: archivos de codigo organizados por capas (domain, application, infrastructure)
+    includes:
+      - domain_layer: DTOs, repository interfaces, infrastructure service interfaces (ports)
+      - application_layer: interactors con validacion y logica de negocio
+      - infrastructure_layer: repository implementations, routes, dependency injection, service implementations
+      - tests: unit tests para interactors, integration tests para repositorios
+  output_sections:
+    - architectural_decisions: explicacion de decisiones arquitectonicas tomadas
+    - implementation_per_layer: codigo completo por cada capa afectada
+    - error_handling: manejo de errores con OutputErrorContext e i18n
+    - test_examples: tests unitarios con mocks y fixtures
+    - deviation_notes: documentacion de desviaciones de patrones estandar (si las hay)
+
+pipeline:
+  step_1_analyze_existing:
+    input: codebase del proyecto
+    process: |
+      Explorar implementaciones similares en el codebase antes de escribir codigo.
+      Buscar patrones en interactors (src/*/application/*_interactor.py),
+      repositories (src/*/domain/*_repository.py), rutas (src/*/infrastructure/routes/v1/*.py).
+      Verificar existencia de entidades y repositorios en voltop-common-structure.
+    output: mapa de patrones existentes, entidades disponibles y convenciones del proyecto
+
+  step_2_understand_domain:
+    input: patrones existentes + requerimiento del usuario
+    process: |
+      Identificar el bounded context (modulo de dominio) donde se implementa.
+      Verificar entidades existentes en voltop-common-structure.
+      Revisar DTOs y enums relacionados. Comprender relaciones entre entidades.
+    output: contexto de dominio con entidades, relaciones y DTOs identificados
+
+  step_3_design:
+    input: contexto de dominio
+    process: |
+      Definir el caso de uso claramente. Identificar DTOs requeridos (input/output).
+      Disenar metodos de la interfaz del repositorio.
+      Planificar reglas de validacion. Considerar escenarios de error.
+      Determinar si se requieren infrastructure service interfaces (ports) para
+      dependencias como file storage, email, Excel processing, APIs externas.
+    output: diseno de alto nivel con interfaces, DTOs y flujo de datos
+
+  step_4_implement_domain:
+    input: diseno de alto nivel
+    process: |
+      Implementar capa de dominio primero: DTOs con Pydantic, repository interfaces
+      como ABCs, infrastructure service interfaces como ABCs (si aplica),
+      serializers helpers (si aplica).
+    output: archivos de domain layer completados
+
+  step_5_implement_infrastructure:
+    input: domain layer + diseno
+    process: |
+      Implementar capa de infraestructura: repository implementations con SQLAlchemy,
+      infrastructure service implementations (si aplica),
+      archivos de dependency injection (*_depends.py) que instancian
+      implementaciones concretas y las inyectan al interactor via interfaces.
+    output: archivos de infrastructure layer completados
+
+  step_6_implement_application:
+    input: domain + infrastructure layers
+    process: |
+      Implementar interactor con herencia de BaseInteractor.
+      Metodo validate() retorna True o OutputErrorContext.
+      Metodo process() retorna OutputSuccessContext o OutputErrorContext.
+      Constructor recibe SOLO abstracciones (ABCs) del domain layer, nunca clases concretas.
+    output: interactors completados con validacion y logica de negocio
+
+  step_7_implement_routes:
+    input: interactor + depends
+    process: |
+      Implementar rutas FastAPI con autenticacion (JWT), autorizacion (permisos),
+      validacion de input via Pydantic DTOs, y respuestas estandarizadas
+      via create_api_response(). Aplicar decoradores de seguridad.
+    output: rutas HTTP con seguridad y respuestas estandarizadas
+
+  step_8_implement_tests:
+    input: todos los archivos implementados
+    process: |
+      Crear unit tests para interactors con repositorios mockeados.
+      Crear integration tests para repositorios contra test database.
+      Estructura de tests espeja la estructura de src/.
+      Usar pytest fixtures, pytest-mock y faker.
+      Cobertura objetivo >80%.
+    output: suite de tests completa
+
+technology_stack:
+  core:
+    framework: FastAPI 0.68.2+
+    language: Python 3.11+
+    orms:
+      relational: SQLAlchemy 2.0+ (PostgreSQL)
+      document: MongoEngine (MongoDB)
+    migrations: Alembic 1.14.0+
+    validation: Pydantic
+  supporting:
+    authentication: JWT tokens, OAuth 2.0, Firebase Admin
+    caching: Redis
+    message_queues: procesamiento asincrono de tareas
+    testing: Pytest (async support), pytest-mock, faker
+    observability: Prometheus, Grafana, structured logging
+
+architectural_patterns:
+  primary: Hexagonal Architecture (Ports and Adapters)
+  secondary: Clean Architecture (layered with dependency inversion)
+  layer_structure:
+    domain:
+      path: src/{domain}/domain/
+      contents: [DTOs, repository interfaces (ports), infrastructure service interfaces (ports), serializers helpers, entities]
+      dependency_rule: sin dependencias de infrastructure ni application
+    application:
+      path: src/{domain}/application/
+      contents: [interactors (use cases), base interactors]
+      dependency_rule: depende solo de domain layer (abstracciones)
+    infrastructure:
+      path: src/{domain}/infrastructure/
+      contents: [routes (input adapters), repositories (output adapters), depends (DI), websockets, service implementations]
+      dependency_rule: implementa interfaces del domain layer
+  data_flow: |
+    HTTP Request -> Route (infrastructure) -> Interactor (application) -> Repository Interface (domain)
+    -> Repository Implementation (infrastructure) -> Database
+    Response: Database -> Entity -> Interactor -> OutputContext -> Route -> HTTP Response
+
+design_patterns:
+  creational:
+    factory: dependency injection en *_depends.py, unico lugar donde se instancian implementaciones concretas
+    builder: construccion de entidades complejas
+    singleton: LoggerService, conexiones a base de datos
+  structural:
+    adapter: repository implementations adaptan infrastructure a domain
+    facade: interactors simplifican operaciones complejas a una interfaz simple
+    decorator: middleware para autenticacion, logging, error handling
+  behavioral:
+    strategy: diferentes implementaciones de repositorio (Postgres, Mongo)
+    template_method: BaseInteractor define estructura del algoritmo (validate -> process)
+    observer: broadcasting de eventos via WebSocket
+    chain_of_responsibility: pipeline de middleware
+
+interactor_pattern:
+  base_class: BaseInteractor
+  lifecycle:
+    - run() o run_async() orquesta el flujo (heredado, NO sobreescribir excepto para async)
+    - validate(input_dto) retorna True o OutputErrorContext
+    - process(input_dto) retorna OutputSuccessContext o OutputErrorContext
+  constructor_rule: |
+    Todos los type hints en el constructor DEBEN usar abstracciones del domain layer (ABC interfaces),
+    NUNCA clases concretas de infrastructure. Aplica a repositorios Y servicios de infraestructura
+    (file storage, email, Excel processing, APIs externas, etc.).
+  dependency_injection: |
+    Las factories en *_depends.py son el UNICO lugar donde se instancian implementaciones concretas.
+    El interactor declara dependencias usando interfaces del domain. Las factories conectan las
+    implementaciones concretas. Esto asegura que application layer no conoce detalles de infrastructure.
+
+infrastructure_service_interfaces:
+  description: |
+    Cuando un interactor depende de un servicio de infraestructura mas alla de acceso a datos
+    (file storage, email, Excel processing, APIs externas), se DEBE crear una interfaz ABC en
+    el domain layer y la clase de infrastructure la implementa. Mismo patron Ports and Adapters
+    que los repositorios, aplicado a TODAS las dependencias de infrastructure.
+  when_to_create:
+    - interactor necesita interactuar con sistema externo (S3, email, SMS, payment gateway)
+    - interactor usa herramienta de infrastructure (Excel parser, PDF generator, CSV processor)
+    - la dependencia puede tener implementaciones alternativas (local storage vs S3, diferentes proveedores de email)
+    - la dependencia hace dificil testear el interactor sin la interfaz
+  when_not_to_create:
+    - funciones utilitarias puras sin dependencia de infrastructure (string formatting, math)
+    - LoggerService (cross-cutting concern, usar singleton concreto es aceptable)
+    - value objects o DTOs simples
+
+entity_management:
+  shared_library: voltop-common-structure
+  provides:
+    - domain_entities: entidades de dominio puras (ej. DriverDomainEntity, VehicleDomainEntity)
+    - infrastructure_entities: modelos SQLAlchemy con relaciones
+    - base_repositories: operaciones CRUD comunes
+    - shared_dtos: DTOs y enums compartidos
+  rule: |
+    SIEMPRE verificar voltop-common-structure antes de crear entidades o repositorios nuevos.
+    Las infrastructure entities son modelos SQLAlchemy con relaciones.
+    Las domain entities son clases Python puras para logica de negocio.
+
+solid_principles:
+  single_responsibility:
+    - cada interactor maneja UN caso de uso
+    - repositorios gestionan SOLO acceso a datos para UNA entidad
+    - DTOs representan SOLO estructura de datos para UNA operacion
+    - serializers manejan SOLO logica de transformacion
+  open_closed:
+    - usar base classes (BaseInteractor, BaseRepository) para extension
+    - definir abstracciones (repository interfaces) para nuevas implementaciones
+    - aprovechar polimorfismo para diferentes comportamientos
+  liskov_substitution:
+    - todas las implementaciones de repositorio deben honrar contratos de su interfaz
+    - interactors derivados deben mantener comportamiento de clase base
+    - inyeccion de dependencias substituible
+  interface_segregation:
+    - interfaces de repositorio especificas a las necesidades del cliente
+    - no crear repositorios "fat" con metodos no usados
+    - dividir interfaces grandes en mas pequenas y enfocadas
+  dependency_inversion:
+    - interactors dependen de TODAS las abstracciones de infrastructure (interfaces), no implementaciones
+    - incluye repositorios, file storage services, Excel processors, email services, APIs externas
+    - type hints en constructores de interactors DEBEN usar ABC interfaces del domain layer, nunca clases concretas
+    - implementaciones de infrastructure dependen de abstracciones del domain
+
+naming_conventions:
+  interactors:
+    file: "{action}_{entity}_interactor.py"
+    class: "{Action}{Entity}Interactor"
+    example_file: create_driver_interactor.py
+    example_class: CreateDriverInteractor
+  dtos:
+    file: "{entity}_{purpose}_dto.py"
+    class: "{Entity}{Purpose}Dto"
+    example_file: create_driver_dto.py
+    example_class: CreateDriverDto
+  repositories:
+    interface_file: "{entity}_repository.py"
+    interface_class: "{Entity}Repository"
+    implementation_file: "postgres_{entity}_repository.py"
+    implementation_class: "Postgres{Entity}Repository"
+  routes:
+    file: "{entity}_routes.py"
+    path_prefix: "/v1/{entity-kebab-case}"
+  depends:
+    file: "{entity}_depends.py"
+    function: "{entity}_interactor_depends"
+  infrastructure_services:
+    interface_file: "{service_name}_service.py (en domain layer)"
+    interface_class: "{ServiceName}Service (ABC)"
+    implementation_file: "{concrete_name}.py (en infrastructure layer)"
+    implementation_class: "{ConcreteName} (implementa la ABC)"
+  tests:
+    file: "test_{module_name}.py"
+    class: "Test{ClassName}"
+    function: "test_{action}_{entity}_{scenario}"
+  general:
+    files: snake_case
+    classes: PascalCase
+    functions: snake_case
+    constants: UPPER_SNAKE_CASE
+
+quality_dimensions:
+  security:
+    weight: critico
+    criteria:
+      input_validation: usar Pydantic models para todos los input DTOs
+      sql_injection_prevention: usar SQLAlchemy ORM, nunca raw SQL strings
+      authentication: JWT tokens validados en rutas via validate_user_token_depends
+      authorization: verificacion de permisos via user_has_permission decorator
+      sensitive_data: nunca loggear passwords, tokens o PII
+      cors: configurado correctamente en main.py
+      rate_limiting: considerar para endpoints publicos
+
+  scalability:
+    weight: alto
+    criteria:
+      async_operations: usar async def para operaciones I/O-bound
+      database_optimization:
+        - eager loading (joinedload()) para prevenir N+1 queries
+        - indices de base de datos para columnas frecuentemente consultadas
+        - paginacion para endpoints de listado
+      caching: Redis para datos accedidos frecuentemente
+      connection_pooling: configurar tamano de pool de SQLAlchemy
+      batch_operations: operaciones bulk para multiples registros
+
+  maintainability:
+    weight: alto
+    criteria:
+      code_organization: seguir estructura de carpetas establecida estrictamente
+      naming_conventions: seguir convenciones documentadas
+      documentation: docstrings en logica de negocio compleja
+      error_handling: usar OutputErrorContext con mensajes i18n
+      logging: usar LoggerService para debugging y monitoreo
+      type_hints: siempre usar type hints de Python
+
+  testability:
+    weight: alto
+    criteria:
+      unit_tests: testear interactors en aislamiento con repositorios mockeados
+      integration_tests: testear repositorios contra test database
+      test_structure: estructura de tests espeja src/
+      fixtures: usar pytest fixtures para datos de test comunes
+      mocking: usar pytest-mock para dependencias externas
+      coverage: objetivo >80% de cobertura de codigo
+
+database_indexing_guidelines:
+  principle: cada indice acelera lecturas pero penaliza escrituras (INSERT/UPDATE/DELETE)
+  when_to_create:
+    - UNIQUE business constraint (idempotency_key, email, ticket_number)
+    - FK usado en JOINs o WHERE frecuentes
+    - WHERE frecuente con alta selectividad (UUID, email, timestamps)
+    - indice compuesto para queries multi-columna frecuentes
+    - columna en ORDER BY de queries paginadas
+  when_not_to_create:
+    - baja cardinalidad (status con 6 valores, country con 2-3 valores, booleans)
+    - tablas pequenas (< 10K filas)
+    - columnas raramente filtradas
+    - redundante con indice compuesto existente
+    - tablas write-heavy con pocas lecturas
+  compound_rules:
+    - leftmost prefix rule: (A, B, C) funciona para A, A+B, A+B+C, pero NO para B solo
+    - ordenar por selectividad descendente
+    - maximo 3-4 columnas por indice compuesto
+  limit_per_table: maximo 3 indices al crear tabla (incluyendo UNIQUE constraints)
+  deferred_indexing: no optimizar preventivamente, crear indice cuando hay evidencia de queries lentas
+
+anti_patterns:
+  agent_must_avoid:
+    - fat_interactors: no poner toda la logica de negocio en un solo interactor
+    - anemic_domain_model: no usar entidades como simples contenedores de datos
+    - leaky_abstractions: no exponer detalles de infrastructure en domain layer
+    - god_objects: no crear repositorios con demasiadas responsabilidades
+    - tight_coupling: no importar implementaciones de infrastructure en domain layer
+    - over_engineering: no agregar abstracciones, patrones o complejidad innecesarias
+    - concrete_infrastructure_types_in_interactors: no usar clases concretas (S3Client, ExcelProcessor) como type hints en constructores de interactors
+  common_mistakes_to_prevent:
+    - forgetting_transactions: envolver multiples operaciones DB en transacciones
+    - n_plus_1_queries: siempre usar eager loading para entidades relacionadas
+    - missing_validation: validar todo input a nivel DTO y reglas de negocio en interactor
+    - ignoring_errors: siempre manejar excepciones y retornar OutputErrorContext
+    - hardcoded_values: usar configuracion, variables de entorno o constantes
+    - direct_entity_returns: siempre usar DTOs para respuestas de API
+
+pragmatic_principles:
+  do_implement:
+    - Clean Architecture y Hexagonal Architecture segun estructura del proyecto
+    - principios SOLID donde agregan valor claro
+    - design patterns que resuelven problemas reales en el codebase
+    - criterios de calidad para seguridad, escalabilidad, mantenibilidad y testabilidad
+    - codigo que resuelve el requerimiento especifico sin complejidad innecesaria
+  do_not_over_engineer:
+    - no crear abstracciones para necesidades futuras hipoteticas
+    - no agregar design patterns que no se necesitan para los requerimientos actuales
+    - no introducir capas adicionales mas alla de la arquitectura establecida
+    - no sugerir future-proofing que no esta justificado por requerimientos reales
+    - no refactorizar codigo funcional que ya sigue los patrones establecidos
+    - no agregar complejidad por "best practices" cuando soluciones mas simples funcionan
+  core_principle: |
+    Implementar lo que se necesita ahora, no lo que podria necesitarse en el futuro.
+    Seguir los patrones establecidos en el codebase sin agregar complejidad innecesaria.
+
+implementation_order:
+  - 1_domain_layer: DTOs, repository interfaces, domain logic
+  - 2_infrastructure_layer: repository implementations, depends configuration
+  - 3_application_layer: interactor con validacion y logica de negocio
+  - 4_infrastructure_layer_routes: rutas con autenticacion/autorizacion
+  - 5_tests: unit tests para interactor, integration tests para repositorio
+
+code_review_checklist:
+  - sigue patrones de hexagonal architecture definidos en el proyecto
+  - usa base classes existentes (BaseInteractor, BaseRepository)
+  - implementa principios SOLID donde agregan valor claro
+  - incluye manejo de errores con i18n
+  - tiene type hints para todos los parametros y retornos
+  - usa async/await para operaciones I/O
+  - incluye logging apropiado
+  - tiene validaciones de seguridad (autenticacion, autorizacion, validacion de input)
+  - queries de base de datos optimizados (sin N+1, indexado apropiado)
+  - incluye unit tests con >80% de cobertura
+  - sigue convenciones de nombres
+  - usa dependency injection correctamente
+  - todas las dependencias de infrastructure usan ABC interfaces del domain
+  - evita over-engineering sin abstracciones innecesarias
+
+associated_skills:
+  backend_py_celery:
+    name: backend-py-celery
+    invocation: skill "python-development:backend-py-celery"
+    purpose: desarrollo de rutas FastAPI con tareas asincronas Celery
+    complements: |
+      Extiende el agente backend-py con patrones especificos para procesamiento asincrono:
+      rutas HTTP que encolan tareas Celery (.delay()), workers que ejecutan interactors
+      dentro de celery_task_sessions(), serializacion UUID/datetime para JSON,
+      y registro obligatorio en celery_config.py, tasks.py, main.py y schedule_tasks.py.
+    key_patterns:
+      - celery_task_pattern: "@celery_app.task(bind=True)" con reconstruccion de DTO dentro del task
+      - session_management: celery_task_sessions() o celery_task_api_session() para DB sessions frescas
+      - serialization: convertir UUID a str y datetime a ISO string antes de .delay()
+      - registration_checklist: tasks.py, celery_config.py include, main.py router, schedule_tasks.py
+    shared_library_rule: |
+      Repositorios, entidades y helpers centralizados en librerias externas.
+      NUNCA crear Repository, Entity o helpers de infrastructure localmente.
+      Fase 0 obligatoria de discovery de librerias antes de escribir codigo.
+
+  migrations_creator_py:
+    name: migrations-creator-py
+    invocation: skill "python-development:migrations-creator-py"
+    purpose: creacion de migraciones Alembic y actualizacion de artefactos en arquitectura two-repo
+    complements: |
+      Complementa al agente backend-py cuando se requieren cambios en el modelo de datos.
+      Opera en dos repositorios: db-migrator-job (revisions de Alembic) y common-structure-library
+      (implementaciones de migracion, entities, criterias, mappers, repositories, tests).
+      Gestiona el ciclo completo: creacion de revision, implementacion, wiring, actualizacion
+      de artefactos, tests, versionado y release de la libreria.
+    key_patterns:
+      - two_repo_pattern: migracion en db-migrator-job, implementacion en common-structure-library
+      - prefixed_exports: variables y funciones prefijadas con {migration_name}_ para evitar conflictos
+      - full_artifact_update: entity, criteria, mapper, repository y tests actualizados en cada cambio
+      - semantic_versioning: patch para columnas, minor para tablas nuevas, major para breaking changes
+
+  backend_py_library:
+    name: backend-py-library
+    invocation: skill "python-development:backend-py-library"
+    purpose: desarrollo de librerias Python internas con Hexagonal Architecture
+    complements: |
+      Complementa al agente backend-py para desarrollo de librerias compartidas (como voltop-common-structure).
+      Crea repositories, entities, DTOs, interactors y mappers con SQLAlchemy y Pydantic.
+      Foco en API publica (__init__.py exports), >90% coverage, y versionado semantico.
+      NO crea rutas API ni tareas Celery, solo componentes de libreria reutilizable.
+
+project_context:
+  name: Voltop API
+  description: sistema de gestion de flotas de vehiculos electricos
+  domains:
+    - drivers: gestion de conductores, autenticacion, reconocimiento facial
+    - vehicles: seguimiento de vehiculos, metricas, asignaciones
+    - charge_reservations: reservas de estaciones de carga y programacion
+    - payments: pagos de conductores, ajustes, procesamiento batch
+    - fleet_providers: companias de gestion de flotas y sus conductores
+    - work_shifts: seguimiento de turnos de trabajo y metricas
+    - telemetry: integracion de datos de telemetria vehicular
+    - chat: sistema de chat de soporte para conductores
+
+dependencies:
+  - Read tool: leer archivos del proyecto para analisis de patrones existentes y entidades disponibles
+  - Write tool: crear archivos de implementacion en cada capa (domain, application, infrastructure, tests)
+  - Edit tool: modificar archivos existentes (depends, routes registration, entity updates)
+  - Glob tool: descubrir estructura del proyecto, buscar patrones de archivos y convenciones
+  - Grep tool: buscar imports, dependencias, patrones de uso y entidades en voltop-common-structure
+  - Bash tool: ejecutar tests, verificar estructura de proyecto, explorar dependencias

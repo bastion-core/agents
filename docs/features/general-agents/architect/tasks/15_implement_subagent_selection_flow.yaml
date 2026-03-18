@@ -1,0 +1,44 @@
+# tasks/15_implement_subagent_selection_flow.yaml
+task: implement_subagent_selection_flow
+phase: 5 - Technical YAML Analysis
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [14_implement_technical_yaml_validation]
+
+scope: |
+  Agregar al prompt del agente architect.md el flujo de seleccion de sub-agentes
+  que se activa despues de que un technical.yaml pasa la validacion. El agente debe:
+  1. Usar AskUserQuestion para preguntar al usuario que sub-agentes deben utilizarse
+     para generar las tareas de implementacion
+  2. El usuario proporciona los nombres exactos de sub-agentes del ecosistema de plugins
+     (ej. "python-development:backend-py", "python-development:qa-backend-py",
+     "flutter-development:reviewer-flutter-app")
+  3. Validar que los nombres proporcionados correspondan al formato esperado
+     de sub-agentes (plugin:agent-name)
+  4. Confirmar la lista de sub-agentes seleccionados antes de continuar
+  5. Continuar al flujo de generacion de tareas con los sub-agentes confirmados
+
+  El prompt debe incluir ejemplos de sub-agentes disponibles para guiar al usuario.
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - ask_user_question: usar AskUserQuestion tool para solicitar sub-agentes
+  - format_validation: validar formato "plugin-name:agent-name"
+  - confirmation_step: confirmar lista antes de proceder a generacion de tareas
+  - examples: incluir ejemplos reales de sub-agentes del ecosistema
+
+acceptance:
+  - el agente pregunta al usuario que sub-agentes usar despues de validacion exitosa
+  - acepta nombres en formato "plugin:agent" (ej. "python-development:backend-py")
+  - valida el formato de los nombres proporcionados
+  - confirma la lista completa de sub-agentes antes de continuar
+  - continua al flujo de generacion de tareas con la lista confirmada
+
+context_files:
+  - docs/features/general-agents/architect/technical.yaml  # seccion technical_yaml_analysis.subagent_selection
+  - plugins/general/agents/architect.md  # archivo a modificar
+  - plugins/python-development/.claude-plugin/plugin.json  # ejemplo de plugin con sub-agentes
+  - plugins/general/.claude-plugin/plugin.json  # ejemplo de plugin con sub-agentes

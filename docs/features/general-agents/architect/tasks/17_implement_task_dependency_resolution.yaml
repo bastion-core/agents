@@ -1,0 +1,57 @@
+# tasks/17_implement_task_dependency_resolution.yaml
+task: implement_task_dependency_resolution
+phase: 5 - Technical YAML Analysis
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [16_implement_task_generation_engine]
+
+scope: |
+  Agregar al prompt del agente architect.md la logica de resolucion de dependencias
+  entre tareas generadas. Despues de generar las tareas individuales, el agente debe:
+
+  1. ANALIZAR DEPENDENCIAS ENTRE TAREAS:
+     - Identificar que tareas dependen de otras para poder ejecutarse
+     - Aplicar las reglas de dependencia establecidas:
+       a. domain_layer_before_infrastructure: DTOs e interfaces antes de implementaciones
+       b. infrastructure_before_application: repos y services antes de interactors
+       c. backend_before_frontend: endpoints API antes de integraciones UI
+       d. schema_before_data: migraciones DB antes de codigo que usa el nuevo schema
+       e. shared_libraries_first: cambios en librerias compartidas antes de consumidores
+
+  2. ASIGNAR CAMPO depends_on:
+     - Agregar el campo depends_on con los task IDs de las dependencias
+     - Los task IDs son los nombres del campo task de cada tarea
+     - Solo incluir dependencias directas, no transitivas
+
+  3. DETERMINAR ORDEN DE EJECUCION:
+     - Numerar las tareas ({NN}_) segun el orden logico de ejecucion
+     - Las tareas sin dependencias van primero (numeros bajos)
+     - Las tareas con dependencias van despues de sus prerequisitos
+     - Las tareas del mismo nivel pueden ejecutarse en paralelo
+
+  4. VALIDAR AUSENCIA DE CICLOS:
+     - Verificar que no existan dependencias circulares
+     - Si se detecta un ciclo, reportar el conflicto y sugerir como resolverlo
+
+files_to_modify:
+  - plugins/general/agents/architect.md
+
+patterns:
+  - dependency_graph: construir grafo dirigido de dependencias entre tareas
+  - topological_sort: ordenar tareas por orden topologico para numeracion
+  - direct_dependencies_only: solo dependencias directas, no transitivas
+  - cycle_detection: verificar ausencia de dependencias circulares
+  - parallel_execution: identificar tareas que pueden ejecutarse en paralelo
+
+acceptance:
+  - cada tarea tiene depends_on correcto con task IDs de sus prerequisitos
+  - la numeracion ({NN}_) refleja el orden logico de ejecucion
+  - se aplican las 5 reglas de dependencia definidas en la spec
+  - no existen dependencias circulares en las tareas generadas
+  - tareas independientes entre si tienen numeracion que permite ejecucion paralela
+  - el agente reporta el orden de ejecucion sugerido al usuario
+
+context_files:
+  - docs/features/general-agents/architect/technical.yaml  # seccion technical_yaml_analysis.task_generation.dependency_rules
+  - plugins/general/agents/architect.md  # archivo a modificar

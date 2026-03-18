@@ -1,0 +1,58 @@
+# tasks/19_test_invalid_technical_yaml_analysis.yaml
+task: test_invalid_technical_yaml_analysis
+phase: 6 - Testing
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [14_implement_technical_yaml_validation]
+
+scope: |
+  Ejecutar test del flujo de validacion de technical.yaml usando un archivo
+  con errores intencionales para verificar que el agente rechaza correctamente
+  archivos invalidos y reporta los problemas encontrados.
+
+  Escenarios a probar:
+
+  1. CAMPOS OBLIGATORIOS FALTANTES:
+     - technical.yaml sin campo feature → debe reportar missing
+     - technical.yaml sin campo layer → debe reportar missing
+     - technical.yaml con layer invalido (ej. "controller") → debe reportar invalid_format
+
+  2. SECCIONES OBLIGATORIAS FALTANTES:
+     - technical.yaml sin seccion architecture → debe reportar missing
+     - technical.yaml con architecture sin key pattern → debe reportar incomplete
+     - technical.yaml con architecture sin key entry → debe reportar incomplete
+     - technical.yaml sin seccion dependencies → debe reportar missing
+
+  3. SECCIONES CONDICIONALES INCORRECTAS:
+     - technical.yaml con layer=api pero sin api_contract → debe reportar missing
+     - technical.yaml con layer=agent pero sin pipeline → debe reportar missing
+     - technical.yaml con data_model incompleto (sin er_diagram) → debe reportar incomplete
+
+  4. FLUJO DE DETENCION:
+     - Verificar que el agente NO genera tareas cuando la validacion falla
+     - Verificar que el agente NO pregunta por sub-agentes cuando la validacion falla
+     - Verificar que el reporte de errores incluye todos los campos problematicos
+
+  Documentar resultados en tests/test_invalid_technical_yaml_analysis_result.md
+
+files_to_create:
+  - docs/features/general-agents/architect/tests/test_invalid_technical_yaml_analysis_result.md
+
+patterns:
+  - negative_testing: verificar que el agente rechaza inputs invalidos correctamente
+  - error_format_validation: verificar formato del reporte (campo, status, expected)
+  - flow_termination: verificar que el flujo se detiene sin generar artefactos
+
+acceptance:
+  - el agente detecta campos obligatorios faltantes y reporta con status missing
+  - el agente detecta campos con formato invalido y reporta con status invalid_format
+  - el agente detecta secciones obligatorias incompletas y reporta con status incomplete
+  - el agente detecta secciones condicionales faltantes segun contexto
+  - el agente NO genera tareas ni pregunta por sub-agentes cuando la validacion falla
+  - el reporte de errores sigue el formato estructurado definido en la spec
+  - el resultado del test se documenta en el archivo de resultados
+
+context_files:
+  - docs/features/general-agents/architect/technical.yaml  # reglas de validacion
+  - plugins/general/agents/architect.md  # agente bajo prueba
