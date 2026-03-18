@@ -1,0 +1,773 @@
+# technical.yaml
+feature: reviewer_mobile_flutter
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "flutter-development:reviewer-mobile-flutter"
+  agent_definition: plugins/flutter-development/agents/reviewer-mobile-flutter.md
+  model: sonnet
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "flutter-development:reviewer-mobile-flutter"
+  model: sonnet
+  tools: [Read, Glob, Grep, Bash]
+  inputs:
+    pull_request: URL del Pull Request o diff de los cambios
+    pr_title: titulo del PR
+    pr_description: descripcion del PR con contexto del cambio
+    changed_files: archivos modificados con lineas agregadas y eliminadas
+    project_codebase: codigo fuente del proyecto para contexto (opcional)
+  success_output:
+    type: reporte de revision en markdown
+    format: seccionado con puntajes, hallazgos y decision
+    decision: enum[APPROVE, REQUEST_CHANGES, COMMENT]
+  output_sections:
+    - overall_assessment: decision, tipo de cambio, nivel de riesgo, tiempo estimado
+    - architecture_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - code_quality_score: puntaje X/10 con fortalezas, problemas y recomendaciones
+    - testing_score: puntaje X/10 con cobertura, fortalezas y tests faltantes
+    - security_findings: hallazgos de seguridad clasificados por severidad
+    - performance_findings: hallazgos de rendimiento
+    - action_items: must fix (blocking), should fix (high priority), consider (nice to have)
+    - decision: APPROVE o REQUEST_CHANGES con justificacion
+
+# =============================================================================
+# REVIEW SCOPE
+# =============================================================================
+review_scope:
+  description: >
+    Agente especializado en code review de Pull Requests de proyectos Flutter
+    mobile bajo Clean Architecture con feature-based modularization, BLoC + Freezed
+    state management, Dio networking con Result<T> pattern, y get_it DI. Evalua
+    calidad arquitectonica, calidad de codigo Dart/Flutter y estrategia de testing
+    segun los estandares definidos para proyectos Flutter del equipo.
+  dimensions:
+    architecture:
+      weight: 30%
+      scope:
+        - Cumplimiento de Clean Architecture con feature-based modularization (4 capas)
+        - Principios SOLID aplicados a Dart/Flutter
+        - Patrones de diseno esperados (BLoC + Freezed, Repository, Result<T>, DI via get_it)
+        - Separacion de capas y direccion de dependencias (Presentation -> Application -> Domain <- Infrastructure)
+        - Estructura de modulos por feature
+        - Identificacion de deuda tecnica
+    code_quality:
+      weight: 40%
+      scope:
+        - Dart best practices y convenciones
+        - Patrones de widgets Flutter y composicion de UI
+        - Manejo de errores con Result<T> sealed class
+        - Vulnerabilidades de seguridad
+        - Consideraciones de rendimiento
+        - Mantenibilidad del codigo
+    testing:
+      weight: 30%
+      scope:
+        - Cobertura de tests para codigo nuevo
+        - Calidad y completitud de tests
+        - Buenas practicas de testing con bloc_test + Mockito
+        - Cobertura de edge cases
+        - Estructura de tests mirror de lib/
+
+# =============================================================================
+# OUT OF SCOPE RULE
+# =============================================================================
+out_of_scope_rule:
+  description: |
+    Cuando NINGUN archivo modificado en el PR pertenece al alcance de revision
+    tecnica del agente, no se ejecuta el pipeline de revision. En su lugar,
+    el agente genera un comentario informativo en ingles en la PR y emite APPROVE
+    automaticamente para no bloquear el merge.
+  reviewable_paths:
+    - "lib/features/**/*.dart"
+    - "lib/common/**/*.dart"
+    - "lib/settings/**/*.dart"
+    - "lib/logs/**/*.dart"
+    - "lib/main.dart"
+    - "test/**/*.dart"
+  non_reviewable_examples:
+    - archivos de configuracion (.yml, .yaml, .json excepto pubspec, .config.js)
+    - documentacion (.md, .rst, .txt)
+    - archivos estaticos (imagenes, SVG, fuentes, assets/)
+    - archivos de CI/CD (.github/workflows/)
+    - archivos de infraestructura (Dockerfile, docker-compose, k8s manifests)
+    - archivos de dependencias (pubspec.yaml, pubspec.lock)
+    - archivos de configuracion raiz (analysis_options.yaml, build.yaml)
+    - archivos generados (*.freezed.dart, *.g.dart, *.mocks.dart)
+    - archivos de plataforma nativa (android/, ios/, web/, macos/, linux/, windows/)
+    - archivos de Firebase (firebase.json, .firebaserc, google-services.json, GoogleService-Info.plist)
+    - archivos de entorno (.env, .env.example)
+  detection: |
+    En step_0 (pre-pipeline), filtrar archivos modificados contra reviewable_paths.
+    Excluir archivos generados (*.freezed.dart, *.g.dart, *.mocks.dart).
+    Si la interseccion es vacia, activar flujo out_of_scope en lugar del pipeline normal.
+  response:
+    language: English
+    action: post comment on PR via gh CLI
+    decision: APPROVE
+    comment_template: |
+      ## Code Review - Out of Scope
+
+      **Decision: APPROVE**
+
+      The modified files in this PR are outside the scope of the technical code review.
+      This review focuses on Flutter/Dart source code (`lib/features/`, `lib/common/`,
+      `lib/settings/`, `test/`), and none of the changed files fall within
+      these directories (excluding generated files).
+
+      **Changed files:**
+      {list_of_changed_files}
+
+      No architectural, code quality, or testing analysis is required for these changes.
+      Approving to unblock the merge process.
+
+      ---
+      *Automated review by Flutter Mobile Code Reviewer Agent*
+
+# =============================================================================
+# REVIEW PIPELINE
+# =============================================================================
+pipeline:
+  step_0_scope_check:
+    input: lista de archivos modificados en el PR
+    process: |
+      Filtrar archivos modificados contra las rutas revisables (lib/features/**/*.dart,
+      lib/common/**/*.dart, lib/settings/**/*.dart, lib/logs/**/*.dart, lib/main.dart,
+      test/**/*.dart). Excluir archivos generados (*.freezed.dart, *.g.dart, *.mocks.dart).
+      Si NINGUN archivo modificado (no generado) esta dentro del alcance de revision,
+      generar comentario informativo en ingles en la PR indicando que los archivos estan
+      fuera del scope tecnico, emitir APPROVE y terminar sin ejecutar el pipeline completo.
+    output_in_scope: continuar a step_1_initial_analysis
+    output_out_of_scope: comentario en PR + APPROVE automatico + fin del pipeline
+
+  step_1_initial_analysis:
+    input: Pull Request (titulo, descripcion, archivos modificados dentro del scope)
+    process: |
+      Leer titulo y descripcion del PR. Identificar tipo de cambio
+      (feature, bug fix, refactoring, ui update, tests only, configuracion).
+      Determinar estrategia de testing segun tipo de cambio y capa afectada.
+      Evaluar alcance (archivos, lineas, complejidad).
+    output: contexto del PR con tipo de cambio y estrategia de testing
+    change_types:
+      - new_feature: nuevo feature module completo
+      - bug_fix: correccion de errores
+      - refactoring: reestructuracion sin cambio funcional
+      - ui_update: cambios visuales en widgets/screens
+      - tests_only: solo tests nuevos o actualizados
+      - configuration: cambios de configuracion (DI, routing, settings)
+
+  step_2_architecture_review:
+    input: archivos modificados + codebase del proyecto
+    process: |
+      Validar cumplimiento de Clean Architecture con feature-based modularization
+      (4 capas: presentation, application/BLoC, domain, infrastructure).
+      Verificar direccion de dependencias
+      (Presentation -> Application -> Domain <- Infrastructure).
+      Detectar patrones de diseno apropiados e inapropiados. Identificar violaciones
+      de capa (domain importando de infrastructure, presentation con logica de negocio).
+    output: analisis arquitectonico con puntaje y hallazgos
+    checks:
+      - domain_layer_purity: domain no importa de infrastructure, Flutter, BLoC, Dio, get_it
+      - dependency_direction: "Presentation -> Application -> Domain <- Infrastructure"
+      - module_boundaries: features no importan de infrastructure/ de otros features
+      - module_structure: cada feature con 4 capas (application/bloc, domain, infrastructure, presentation)
+      - repository_pattern: abstract interface en domain/, implementacion en infrastructure/
+      - bloc_pattern: BLoC en application/bloc/ con Freezed events y states
+      - di_registration: abstract types en get_it, factories para BLoCs, lazySingletons para servicios
+
+  step_3_code_quality_review:
+    input: archivos modificados
+    process: |
+      Verificar cumplimiento de Dart best practices, uso correcto de tipos
+      (null safety, sealed classes, Freezed unions). Evaluar patrones de
+      BLoC (event.map(), state.when()), widgets (BlocBuilder/BlocConsumer),
+      repositories (Result<T>). Detectar vulnerabilidades de seguridad.
+      Identificar problemas de rendimiento. Verificar convenciones de nombres.
+      Detectar code smells.
+    output: analisis de calidad con puntaje y hallazgos
+
+    dart_checks:
+      null_safety:
+        - sound_null_safety: "null safety habilitado, no usar late innecesariamente"
+        - required_keyword: "usar required para parametros obligatorios en named params"
+        - null_assertions: "evitar ! operator, preferir null check con if o ?? operator"
+        - nullable_types: "usar String? solo cuando null es un valor valido de negocio"
+      freezed_pattern:
+        - sealed_classes_for_events: "eventos como @freezed sealed class con const factory"
+        - sealed_classes_for_states: "estados como @freezed sealed class con const factory"
+        - part_directives: "part directive para archivos .freezed.dart (y .g.dart si aplica)"
+        - event_map_handler: "event.map() para delegation en BLoC constructor"
+        - state_when_consumption: "state.when() para consumo exhaustivo en UI"
+      result_pattern:
+        - repository_returns_result: "repositorios SIEMPRE retornan Result<T>"
+        - api_provider_returns_result: "API providers SIEMPRE retornan Result<T>"
+        - result_when_consumption: "result.when(success:, failure:) para manejar ambos caminos"
+        - no_throw_in_business: "NUNCA lanzar excepciones en logica de negocio"
+        - catch_dio_exception: "SIEMPRE catch DioException en API providers"
+
+    bloc_checks:
+      - event_map_delegation: "BLoC usa event.map() para delegar a handlers privados"
+      - private_handlers: "handlers como _onEventName(emit) con prefijo underscore"
+      - emit_loading_first: "emitir estado loading antes de operaciones async"
+      - result_when_in_handlers: "result.when() para manejar success/failure en handlers"
+      - constructor_injection: "dependencias inyectadas via constructor (no get_it directo)"
+      - helper_extraction: "extraer helpers cuando BLoC tiene >6 event handlers o >200 lineas"
+      - no_abstract_base_bloc: "NO crear clases BLoC base abstractas"
+      - factory_registration: "BLoCs registrados como registerFactory en DI (nueva instancia por widget)"
+
+    widget_checks:
+      - bloc_builder_for_rebuild: "BlocBuilder para reconstruir widgets segun estado"
+      - bloc_consumer_for_side_effects: "BlocConsumer para side effects + rebuild"
+      - bloc_listener_for_navigation: "BlocListener para side effects puros (navegacion, snackbar)"
+      - state_when_exhaustive: "state.when() para cubrir todos los estados exhaustivamente"
+      - no_business_logic: "widgets NO contienen logica de negocio"
+      - voltop_components: "usar VoltopButton, VoltopText, VoltopTextField en lugar de widgets raw"
+      - voltop_colors: "usar VoltopColors en lugar de valores Color() crudos"
+      - phosphor_icons: "usar PhosphorIcons para iconografia"
+      - screen_naming: "screens nombrados como {name}_screen.dart"
+      - widget_naming: "widgets nombrados como {name}_widget.dart o descriptivamente"
+
+    repository_checks:
+      - abstract_in_domain: "interfaz abstracta en domain/repositories/"
+      - impl_in_infrastructure: "implementacion concreta en infrastructure/"
+      - delegates_to_api_provider: "implementacion delega a API provider (no Dio directo)"
+      - returns_result: "todos los metodos retornan Future<Result<T>>"
+      - registered_as_abstract: "DI registra tipo abstracto apuntando a concreto"
+
+    api_provider_checks:
+      - extends_base_api_provider: "extiende BaseApiProvider"
+      - catch_dio_exception: "captura DioException y retorna Result.failure"
+      - catch_all_exception: "catch-all para errores inesperados"
+      - returns_result: "retorna Result<T> (never throws)"
+      - uses_url_paths: "usa UrlPaths para endpoints (no URLs hardcoded)"
+      - handles_data_array: "extrae primer elemento de response['data'] array"
+
+    dto_checks:
+      - freezed_annotation: "usa @freezed annotation"
+      - location_in_domain: "ubicado en features/{feature}/domain/dtos/"
+      - custom_from_json_response: "response DTOs usan custom fromJson factory"
+      - auto_from_json_request: "request DTOs pueden usar json_serializable auto-generated"
+      - no_entity_classes: "NO crear clases Entity separadas"
+      - no_mapper_classes: "NO crear clases Mapper separadas"
+
+    di_checks:
+      - factory_for_blocs: "registerFactory para BLoCs"
+      - lazy_singleton_for_services: "registerLazySingleton para repositorios, servicios, API providers"
+      - abstract_type_registration: "registrar tipo abstracto (interfaz) no concreto"
+      - feature_grouped: "registrations agrupados por feature en metodos privados"
+      - no_injectable: "NO usar injectable ni auto-DI packages"
+      - no_direct_get_it: "NO acceder getIt directamente desde BLoCs o repositorios"
+
+    routing_checks:
+      - go_router: "usar GoRouter (no auto_route)"
+      - static_const_routes: "rutas como static const String en AppRoutes"
+      - extra_for_params: "parametros complejos via state.extra"
+      - context_go_for_auth: "context.go() para flujos de auth (limpia stack)"
+      - context_push_for_navigation: "context.push() para navegacion normal"
+
+    naming_conventions:
+      files:
+        bloc: "{feature}_bloc.dart"
+        event: "{feature}_event.dart"
+        state: "{feature}_state.dart"
+        helper: "{helper_name}_helper.dart"
+        repository_interface: "{feature}_repository.dart"
+        repository_impl: "{feature}_repository_impl.dart"
+        api_provider: "{feature}_api_provider.dart"
+        service_interface: "{feature}_service.dart"
+        service_impl: "{feature}_service_impl.dart"
+        dto: "{name}_dto.dart o {name}_request_dto.dart / {name}_response_dto.dart"
+        screen: "{screen_name}_screen.dart"
+        widget: "{widget_name}_widget.dart"
+        test: "{source_file}_test.dart"
+        mock: "{feature}_mock.dart"
+      variables:
+        classes: "PascalCase"
+        methods: "camelCase"
+        variables: "camelCase"
+        constants: "camelCase (Dart convention) o UPPER_SNAKE_CASE para compile-time"
+        private_members: "prefijo _ (underscore)"
+        file_names: "snake_case"
+        enum_values: "camelCase"
+
+    security_checks:
+      - no_hardcoded_secrets: "no API keys, tokens o passwords en codigo"
+      - no_sensitive_data_in_logs: "no log de passwords, tokens o datos sensibles"
+      - input_validation: "validacion de inputs del usuario antes de enviar a API"
+      - secure_storage_for_tokens: "tokens almacenados de forma segura"
+      - no_debug_in_production: "no kDebugMode checks que expongan datos en release"
+      - env_variables: "secretos en .env file, no en codigo"
+
+    performance_checks:
+      - const_constructors: "usar const constructors cuando sea posible"
+      - avoid_rebuild: "minimizar rebuilds innecesarios con BlocBuilder buildWhen"
+      - lazy_loading: "carga lazy de pantallas pesadas"
+      - list_builder: "ListView.builder para listas largas (no ListView con children)"
+      - image_caching: "caching de imagenes de red"
+      - dispose_resources: "dispose de controllers, streams, timers en dispose()"
+      - no_sync_heavy_ops: "no operaciones pesadas en el hilo principal"
+
+    code_smells:
+      - god_widget: ">300 lineas de widget (extraer sub-widgets)"
+      - god_bloc: ">200 lineas o >6 event handlers sin helpers (extraer helpers)"
+      - magic_strings: "usar constantes o enums"
+      - hardcoded_text: "usar sistema i18n (.i18n)"
+      - direct_dio_in_bloc: "usar repository -> API provider"
+      - business_logic_in_widget: "extraer a BLoC"
+      - commented_out_code: "codigo comentado sin proposito"
+      - excessive_nesting: ">4 niveles de nesting (extraer widgets o metodos)"
+      - unused_imports: "imports no utilizados"
+      - print_statements: "usar CombinedLogger en lugar de print()"
+
+  step_4_testing_review:
+    input: archivos de test + archivos modificados
+    process: |
+      Verificar que los tests estan en la estructura mirror de lib/.
+      Evaluar calidad de tests por capa (BLoC tests, infrastructure tests,
+      domain tests). Verificar patrones de mock correctos con Mockito + bloc_test.
+      Evaluar cobertura de edge cases.
+    output: analisis de testing con puntaje y hallazgos
+
+    test_location:
+      pattern: "estructura mirror de lib/ en test/"
+      example: |
+        lib/features/auth/application/bloc/auth_bloc.dart
+        -> test/features/auth/application/bloc/auth_bloc_test.dart
+      rule: "test/ mirror de lib/ con sufijo _test.dart"
+
+    testing_by_layer:
+      bloc_tests:
+        weight: "70%"
+        what_to_test:
+          - "estado inicial del BLoC"
+          - "transiciones de estado para cada evento (success y failure)"
+          - "flujos secuenciales de eventos"
+          - "estados desde seed state especifico"
+          - "edge cases (input vacio, null, error states)"
+        rules:
+          - "usar blocTest helper de bloc_test package"
+          - "mockear repositorios con Mockito (@GenerateMocks)"
+          - "usar Fake para analytics/logger (stub all methods)"
+          - "usar Mock para repositorios y servicios (verify calls)"
+          - "provideDummy<Result<T>>() en setUpAll para tipos genericos"
+          - "close BLoC en tearDown"
+          - "testar caso exitoso Y caso de error para cada evento"
+          - "usar seed() para testar transiciones desde estado especifico"
+        coverage_target: "80%+"
+
+      infrastructure_tests:
+        weight: "20%"
+        what_to_test:
+          - "repository implementations delegando a API providers"
+          - "API provider parsing de respuestas"
+          - "API provider manejo de errores (DioException)"
+          - "storage services (save, get, clear)"
+        rules:
+          - "mockear API providers con Mockito"
+          - "testar Result.success y Result.failure paths"
+          - "verificar extraccion correcta de data array del API"
+        coverage_target: "60%+"
+
+      domain_tests:
+        weight: "10%"
+        what_to_test:
+          - "logica de negocio en domain models"
+          - "validaciones en DTOs (si las hay)"
+          - "enums y sus propiedades"
+        rules:
+          - "sin mocks (logica pura)"
+          - "cubrir casos edge"
+        coverage_target: "90%+ (cuando hay logica de dominio)"
+
+    mock_patterns:
+      mockito_generate_mocks:
+        description: "Archivo separado con @GenerateMocks en test/features/{feature}/application/bloc/mocks/"
+        example: |
+          // {feature}_mock.dart
+          @GenerateMocks([{Feature}Repository, SomeService])
+          void main() {}
+      fake_pattern:
+        description: "Fake para servicios donde se necesita stub de todos los metodos"
+        example: |
+          class FakeAnalyticsService extends Fake implements AnalyticsService {
+            @override
+            Future<void> logSomeEvent({required String param}) async {}
+          }
+      mock_pattern:
+        description: "Mock para servicios donde se necesita verify/stub de llamadas especificas"
+        example: |
+          class MockCombinedLogger extends Mock implements CombinedLogger {}
+      provide_dummy:
+        description: "Para tipos genericos complejos que Mockito no puede auto-generar"
+        example: |
+          setUpAll(() {
+            provideDummy<Result<SomeDto>>(
+              Result.failure(RequestError.unknown(message: 'dummy')),
+            );
+          });
+
+  step_5_generate_review:
+    input: analisis de todos los pasos anteriores
+    process: |
+      Consolidar hallazgos en reporte estructurado con puntajes por
+      dimension en encabezados de seccion. Clasificar action items
+      por prioridad. Emitir decision final con justificacion.
+    output: reporte de revision completo en markdown
+
+# =============================================================================
+# REVIEW DIMENSIONS (detailed criteria)
+# =============================================================================
+review_dimensions:
+  architecture:
+    weight: 30%
+    scope:
+      clean_architecture:
+        layers: [presentation, application, domain, infrastructure]
+        dependency_rule: "Presentation -> Application -> Domain <- Infrastructure"
+        domain_purity: "domain layer libre de imports de infrastructure, Flutter, BLoC, Dio, get_it"
+        feature_modularization: "cada feature auto-contenido con sus 4 capas"
+        module_structure: |
+          lib/features/{feature_name}/
+          ├── application/bloc/       # BLoC + events + states + helpers
+          ├── domain/                 # repositories (abstract), services (abstract), dtos, enums, models
+          ├── infrastructure/         # API providers, repo impls, service impls, storage
+          └── presentation/           # screens, widgets
+      solid_principles:
+        single_responsibility: "un BLoC/widget/repository = una responsabilidad"
+        dependency_inversion: "BLoCs dependen de abstracciones (domain interfaces), no de implementaciones"
+        open_closed: "extensible via composicion, no modificacion"
+        interface_segregation: "interfaces de repositorio especificas por feature"
+        liskov_substitution: "implementaciones intercambiables para testing"
+      design_patterns:
+        expected:
+          - "BLoC + Freezed: state management con sealed unions y pattern matching exhaustivo"
+          - "Repository Pattern: abstract en domain/, implementacion en infrastructure/"
+          - "Result<T>: Either-like sealed class para manejo funcional de errores"
+          - "DI via get_it: manual registration con feature-grouped methods"
+          - "API Provider: extends BaseApiProvider para llamadas HTTP"
+          - "Helper Pattern: extraccion de logica compleja de BLoCs (>6 handlers o >200 lineas)"
+          - "DTO Pattern: Freezed classes como data carriers Y domain entities"
+          - "VoltopUI: abstraction layer sobre flutter_components_library"
+        red_flags:
+          - "God Widget: widget con demasiada logica y responsabilidades (>300 lineas)"
+          - "God BLoC: BLoC monolitico sin helpers (>200 lineas o >6 handlers)"
+          - "Direct Dio in BLoC: BLoC llamando Dio directamente sin repository"
+          - "UseCase/Interactor Layer: capa adicional innecesaria entre BLoC y repository"
+          - "Entity Layer: clases Entity separadas de DTOs"
+          - "Mapper Classes: clases Mapper separadas para serialization"
+          - "Cross-feature Infrastructure Import: importar infrastructure/ de otro feature"
+          - "Circular Dependencies: dependencias circulares entre features"
+          - "Direct get_it Access: acceder getIt directamente en BLoCs/repositories"
+          - "Injectable/Auto-DI: uso de injectable u otros packages de DI automatico"
+          - "Abstract Base BLoC: clases BLoC base abstractas"
+          - "Throwing Exceptions in Business Logic: lanzar excepciones en vez de Result.failure"
+
+  code_quality:
+    weight: 40%
+    scope:
+      dart_practices: "null safety, Freezed sealed classes, Result<T> pattern, const constructors"
+      bloc_patterns: "event.map() delegation, private handlers, emit loading first, result.when()"
+      widget_patterns: "BlocBuilder/BlocConsumer/BlocListener, VoltopUI components, no business logic"
+      error_handling: "Result<T> en repositories/API providers, result.when() en BLoCs, sin excepciones en logica"
+      security: "sin secretos hardcoded, sin datos sensibles en logs, validacion de inputs"
+      performance: "const constructors, ListView.builder, dispose resources, no sync heavy ops"
+      i18n: "texto visible via .i18n, nunca hardcoded"
+      formatting: "Dart formatter, analysis_options.yaml rules"
+
+  testing:
+    weight: 30%
+    scope:
+      location: "test/ mirroring lib/ con sufijo _test.dart"
+      coverage_targets:
+        bloc_tests: "80%+"
+        infrastructure_tests: "60%+"
+        domain_logic_tests: "90%+ (cuando hay logica de dominio)"
+      mock_patterns: "Mockito @GenerateMocks, Fake para analytics/logger, provideDummy para Result<T>"
+      test_quality: "testar transiciones de estado, success y failure paths, edge cases"
+
+# =============================================================================
+# TESTING STRATEGY
+# =============================================================================
+testing_strategy:
+  description: |
+    La estrategia de testing se adapta a la capa afectada por los cambios.
+    Los tests siguen estructura mirror de lib/ en test/.
+    Framework: flutter_test + bloc_test + Mockito.
+  bloc_changes:
+    detection: archivos en lib/features/*/application/bloc/
+    required: bloc_test con repositories mockeados via Mockito
+    location: "test/features/{feature}/application/bloc/{feature}_bloc_test.dart"
+    coverage: "80%+"
+    mock_location: "test/features/{feature}/application/bloc/mocks/{feature}_mock.dart"
+  infrastructure_changes:
+    detection: archivos en lib/features/*/infrastructure/
+    required: tests de repositories y API providers con mocks
+    location: "test/features/{feature}/infrastructure/{file}_test.dart"
+    coverage: "60%+"
+  domain_changes:
+    detection: archivos en lib/features/*/domain/ (con logica, no solo interfaces)
+    required: tests unitarios puros sin mocks
+    location: "test/features/{feature}/domain/{file}_test.dart"
+    coverage: "90%+"
+  presentation_changes:
+    detection: archivos en lib/features/*/presentation/
+    required: widget tests con BLoC mockeado (opcional, no obligatorio)
+    coverage: "no mandatorio, pero recomendado para widgets criticos"
+    not_required: "100% de cobertura en presentation, testar funcionalidad critica"
+  common_changes:
+    detection: archivos en lib/common/
+    required: tests segun el tipo de componente (BLoC, service, infrastructure)
+    location: "test/common/{path_mirror}/{file}_test.dart"
+
+# =============================================================================
+# SCORE RULES
+# =============================================================================
+score_rules:
+  authoritative_source: "puntajes en encabezados de seccion (### Architecture (Score: X/10))"
+  consistency: "puntaje debe reflejar el analisis de la seccion"
+  automated_extraction: "sistemas automatizados extraen puntajes de los encabezados"
+  prohibited: "no agregar resumenes de metricas, tablas de puntajes ni secciones colapsables adicionales"
+
+# =============================================================================
+# ANTI-PATTERNS (Reviewer behavior)
+# =============================================================================
+anti_patterns:
+  reviewer_must_not:
+    - "solicitar UseCase/Interactor classes (BLoCs llaman repositories directamente)"
+    - "solicitar Entity classes separadas (DTOs son las entities)"
+    - "solicitar Mapper classes (DTOs manejan su propia serializacion)"
+    - "solicitar injectable u otros auto-DI packages (manual get_it registration)"
+    - "solicitar auto_route (usar GoRouter)"
+    - "solicitar ScreenUtil (usar responsive design nativo de Flutter)"
+    - "solicitar abstract base BLoC classes (cada BLoC es auto-contenido)"
+    - "solicitar data/ layer naming (usar infrastructure/)"
+    - "solicitar core/ o shared/ folders (usar common/)"
+    - "solicitar over-abstracting UI (VoltopUI con named constructors es suficiente)"
+    - "solicitar raw Color values verification innecesaria (VoltopColors es el estandar)"
+    - "solicitar premature optimization (React.memo equivalents sin medir performance)"
+    - "solicitar over-testing de implementation details (no testar que setState fue llamado)"
+    - "pedir future-proofing sin justificacion"
+    - "demandar mas tests que los definidos en la estrategia por capa"
+    - "sugerir refactoring de codigo funcional que no viola principios establecidos"
+    - "solicitar capas o patrones adicionales mas alla de la cadena Widget -> BLoC -> Repository -> ApiProvider"
+    - "solicitar directamente flutter_components_library imports (usar VoltopUI)"
+  reviewer_must:
+    - "enfocarse en cumplimiento de Clean Architecture con 4 capas y feature modularization"
+    - "reportar bugs reales y vulnerabilidades de seguridad"
+    - "verificar tests segun estrategia por capa (BLoC 80%+, infrastructure 60%+, domain 90%+)"
+    - "evaluar solo contra criterios de calidad establecidos"
+    - "verificar Result<T> pattern en repositories y API providers (no throw exceptions)"
+    - "verificar result.when() en BLoC handlers para manejar success/failure"
+    - "verificar Freezed sealed classes para events y states"
+    - "verificar event.map() delegation en BLoC constructors"
+    - "verificar state.when() consumo exhaustivo en widgets"
+    - "verificar DI registration correcta (factory para BLoCs, lazySingleton para servicios)"
+    - "verificar que imports respetan boundaries de capas y features"
+    - "verificar que BLoCs no son demasiado grandes (>6 handlers sin helpers)"
+    - "verificar VoltopUI components en lugar de widgets raw de Flutter"
+    - "verificar VoltopColors en lugar de Color() values crudos"
+    - "verificar i18n (.i18n) para texto visible"
+    - "ser constructivo, especifico, educativo, balanceado, respetuoso y pragmatico"
+
+# =============================================================================
+# APPROVAL CHECKLIST
+# =============================================================================
+approval_checklist:
+  architecture:
+    - "Clean Architecture with 4 layers (presentation, application/BLoC, domain, infrastructure)"
+    - "feature-based modularization (cada feature auto-contenido)"
+    - "no layer violations (domain libre de imports de infrastructure/Flutter/BLoC/Dio)"
+    - "dependency direction respected (Presentation -> Application -> Domain <- Infrastructure)"
+    - "module boundaries respected (no cross-feature infrastructure imports)"
+    - "SOLID principles respected"
+    - "expected patterns used (BLoC+Freezed, Repository, Result<T>, get_it DI, Helper)"
+    - "no circular dependencies"
+    - "clear separation of concerns"
+  code_quality:
+    - "Dart null safety compliance"
+    - "Freezed sealed classes for events and states"
+    - "Result<T> pattern in repositories and API providers (no throw exceptions)"
+    - "result.when() in BLoC handlers for success/failure"
+    - "event.map() delegation in BLoC constructors"
+    - "state.when() exhaustive consumption in widgets"
+    - "VoltopUI components (VoltopButton, VoltopText, VoltopTextField)"
+    - "VoltopColors for all color values"
+    - "no critical security vulnerabilities (no hardcoded secrets)"
+    - "proper widget patterns (BlocBuilder/BlocConsumer/BlocListener)"
+    - "i18n compliance (visible text via .i18n)"
+    - "no obvious performance issues (const constructors, ListView.builder)"
+    - "code is readable and maintainable"
+    - "naming conventions followed (snake_case files, PascalCase classes)"
+    - "DI registration correct (factory for BLoCs, lazySingleton for services)"
+  testing:
+    - "test structure mirrors lib/ in test/"
+    - "coverage targets met per layer (BLoC 80%+, infrastructure 60%+, domain 90%+)"
+    - "bloc_test helper used for BLoC tests"
+    - "Mockito @GenerateMocks for repository mocks"
+    - "Fake for analytics/logger services"
+    - "provideDummy for Result<T> types"
+    - "edge cases covered (empty input, null, error states)"
+    - "BLoC tearDown closes bloc"
+
+# =============================================================================
+# OUTPUT FORMAT
+# =============================================================================
+output_format:
+  template: |
+    ## Code Review Summary
+
+    **Overall Assessment**: [APPROVE | REQUEST_CHANGES | COMMENT]
+
+    **Change Type**: [Feature | Bug Fix | Refactoring | UI Update | Tests Only | etc.]
+    **Risk Level**: [Low | Medium | High]
+    **Estimated Review Time**: [X minutes]
+
+    ---
+
+    ### Architecture (Score: X/10)
+
+    [Analysis of architectural decisions]
+
+    **Strengths**:
+    - [Point 1]
+    - [Point 2]
+
+    **Issues Found**:
+    - [Critical issue] - [Explanation and suggestion]
+    - [Warning] - [Explanation]
+
+    **Recommendations**:
+    - [Specific actionable recommendation]
+
+    ---
+
+    ### Code Quality (Score: X/10)
+
+    [Analysis of code quality]
+
+    **Strengths**:
+    - [Point 1]
+
+    **Issues Found**:
+    - [Issue] at `file.dart:123`
+    - [Warning] at `file.dart:456`
+
+    **Recommendations**:
+    - [Specific actionable recommendation]
+
+    ---
+
+    ### Testing (Score: X/10)
+
+    [Analysis of test coverage and quality]
+
+    **Coverage**: [X%]
+
+    **Strengths**:
+    - [Point 1]
+
+    **Missing Tests**:
+    - [What needs testing]
+
+    **Recommendations**:
+    - Add bloc_test for `{Feature}Bloc` loadData event with success and failure paths
+    - Add infrastructure test for `{Feature}RepositoryImpl` error handling
+
+    ---
+
+    ### Security
+
+    **Findings**:
+    - [None | List of security issues]
+
+    ---
+
+    ### Performance
+
+    **Findings**:
+    - [None | List of performance concerns]
+
+    ---
+
+    ### Action Items
+
+    **Must Fix (Blocking Merge)**:
+    1. [Critical item]
+
+    **Should Fix (High Priority)**:
+    1. [Important item]
+
+    **Consider (Nice to Have)**:
+    1. [Suggestion]
+
+    ---
+
+    ### Decision
+
+    **[APPROVE | REQUEST CHANGES]**
+
+    **Justification**: [Explain why approving or requesting changes]
+
+    **IMPORTANT**: Do NOT add metrics summaries, score tables, or collapsible
+    sections at the end. The GitHub Actions workflow will automatically generate
+    these from your section header scores.
+
+# =============================================================================
+# TONE AND COMMUNICATION
+# =============================================================================
+tone_and_communication:
+  principles:
+    - "Be Constructive: Focus on solutions, not just problems"
+    - "Be Specific: Reference exact files and line numbers"
+    - "Be Educational: Explain WHY something is an issue"
+    - "Be Balanced: Acknowledge good practices too"
+    - "Be Respectful: Remember there's a human behind the code"
+    - "Be Pragmatic: Respect the established quality criteria and avoid over-engineering suggestions"
+  language: English
+  good_examples:
+    - "Great use of the Result<T> pattern here! The result.when() makes error handling very explicit."
+    - "Consider extracting this event handler into a helper class to keep the BLoC focused."
+    - "This BLoC correctly uses event.map() for delegation and emits loading before async ops. Clean implementation."
+  bad_examples:
+    - "This code is bad. (Not specific or helpful)"
+    - "Why did you do it this way? (Sounds accusatory)"
+    - "Just fix this. (No explanation or guidance)"
+
+# =============================================================================
+# REFERENCE TECHNOLOGY STACK
+# =============================================================================
+reference_stack:
+  description: |
+    Stack de referencia probado en produccion. El reviewer debe adaptar sus
+    criterios a las versiones instaladas en el proyecto bajo revision,
+    manteniendo los mismos patrones arquitectonicos.
+  required:
+    framework: "Flutter (iOS + Android)"
+    language: "Dart (SDK ^3.7.2)"
+    state_management: "flutter_bloc ^8.1.6 + Freezed"
+    networking: "Dio ^5.6.0"
+    di: "get_it ^7.7.0"
+    routing: "go_router ^14.2.0"
+    local_storage: "shared_preferences ^2.3.2"
+    testing:
+      unit_test: "flutter_test (Flutter SDK)"
+      bloc_test: "bloc_test ^9.1.7"
+      mocking: "mockito ^5.4.4"
+  recommended:
+    ui_library: "VoltopUI (flutter_components_library wrapper)"
+    icons: "phosphor_flutter ^2.0.0"
+    svg: "flutter_svg ^2.0.10+1"
+    i18n: "i18n_extension ^15.0.4"
+    firebase: "firebase_core, firebase_messaging, cloud_firestore, firebase_analytics, firebase_crashlytics"
+    code_generation: "freezed, json_serializable, build_runner"
+
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
+dependencies:
+  - Read tool: leer archivos del PR y del proyecto para analisis
+  - Glob tool: descubrir estructura del proyecto y patrones de archivos
+  - Grep tool: buscar patrones, imports y dependencias en el codebase
+  - Bash tool: ejecutar gh CLI para obtener informacion del PR, diff y comentarios
