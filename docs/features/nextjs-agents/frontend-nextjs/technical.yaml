@@ -3,20 +3,20 @@
 # =============================================================================
 # Purpose: Standardize frontend development across ALL Next.js projects
 # Origin: Patterns extracted from Voltop Control Tower Front (production-proven)
-# Architecture: Clean Architecture / Hexagonal Architecture
+# Architecture: Two-layer Architecture (Domain + Infrastructure)
 # Framework: Next.js 13+ (App Router) + TypeScript (strict)
-# Version: 1.0.0
+# Version: 2.0.0
 # =============================================================================
 
 agent:
   name: frontend-nextjs
   description: >
-    Agente especializado en desarrollo frontend con Next.js bajo Clean Architecture
-    y patrones hexagonales. Aplicable a CUALQUIER proyecto Next.js para asegurar
-    el estandar de desarrollo y calidad establecido por el equipo de Voltop.
-    Genera codigo consistente, testeable y escalable independientemente del
-    dominio de negocio del proyecto.
-  version: "1.0.0"
+    Agente especializado en desarrollo frontend con Next.js bajo arquitectura
+    de dos capas (domain + infrastructure) con Zustand stores y DataAccess pattern.
+    Aplicable a CUALQUIER proyecto Next.js para asegurar el estandar de desarrollo
+    y calidad establecido por el equipo de Voltop. Genera codigo consistente,
+    testeable y escalable independientemente del dominio de negocio del proyecto.
+  version: "2.0.0"
   purpose: >
     Estandarizar el desarrollo frontend en todos los proyectos Next.js del equipo,
     asegurando la misma calidad arquitectonica, patrones de codigo, estrategia de
@@ -44,14 +44,14 @@ agent:
     when_to_use:
       - "Crear un nuevo proyecto Next.js desde cero con arquitectura solida"
       - "Agregar un nuevo feature/modulo a un proyecto existente"
-      - "Crear componentes, servicios, stores, hooks o tests"
+      - "Crear componentes, data access, stores, hooks o tests"
       - "Revisar codigo para asegurar que sigue los patrones establecidos"
-      - "Migrar codigo legacy a Clean Architecture"
+      - "Migrar codigo legacy a la arquitectura de dos capas"
       - "Definir estructura de proyecto para nuevos equipos"
     adaptability: >
       Las versiones especificas del stack (React 18, Next 13.5, etc.) son las
-      probadas en produccion, pero los PATRONES arquitectonicos (Clean Architecture,
-      Either monad, Ploc, discriminated unions, factory DI) son independientes
+      probadas en produccion, pero los PATRONES arquitectonicos (Either monad,
+      Zustand stores, DataAccess pattern, discriminated unions) son independientes
       de la version y deben aplicarse sin importar el upgrade del framework.
 
 # =============================================================================
@@ -69,11 +69,11 @@ stack:
     language: "TypeScript (strict mode obligatorio)"
     runtime: "React 18+"
     state_management: "Zustand"
-    styling: "Tailwind CSS"
+    styling: "Tailwind CSS v4"
     forms: "React Hook Form + Zod"
     http_client: "Axios"
     testing:
-      framework: "Jest + ts-jest"
+      framework: "Vitest"
       component_testing: "@testing-library/react"
       environment: "jsdom"
 
@@ -95,92 +95,65 @@ stack:
     next: "13.5.11"
     react: "18.2.0"
     zustand: "4.4.1"
-    tailwindcss: "3.3.2"
+    tailwindcss: "4.x"
     react_hook_form: "7.51.5"
     zod: "3.23.8"
     axios: "1.9.0"
-    jest: "29.5.0"
+    vitest: "3.x"
     testing_library_react: "14.0.0"
 
 # =============================================================================
 # ARCHITECTURE RULES
 # =============================================================================
 architecture:
-  pattern: "Clean Architecture / Hexagonal Architecture"
+  pattern: "Two-layer Architecture (Domain + Infrastructure)"
   enforcement: "eslint-plugin-hexagonal-architecture (error level)"
 
   layers:
     domain:
       description: >
         Capa de reglas de negocio puras. No tiene dependencias externas.
-        Define tipos, interfaces (ports), DTOs y modelos del dominio.
+        Define tipos, entidades, DTOs, enums, constantes e interfaces de estado.
       allowed_imports:
         - "Nada externo al dominio del mismo modulo"
         - "Tipos compartidos de @core/common/domain"
-      forbidden_imports:
-        - "infrastructure/*"
-        - "application/* (de otros modulos)"
-        - "React, Next.js, Zustand, Axios"
-
-    application:
-      description: >
-        Capa de logica de negocio y casos de uso. Orquesta operaciones
-        del dominio usando interfaces (ports) definidas en domain.
-      allowed_imports:
-        - "domain/ del mismo modulo"
-        - "@core/common/domain"
-        - "@core/common/application"
       forbidden_imports:
         - "infrastructure/*"
         - "React, Next.js, Zustand, Axios"
 
     infrastructure:
       description: >
-        Capa tecnica que implementa los ports del dominio. Contiene
-        servicios HTTP, stores, adaptadores, componentes UI y hooks.
+        Capa tecnica que contiene data access (HTTP), stores, servicios con
+        logica real, helpers, y componentes UI. Depende de domain/.
       allowed_imports:
         - "domain/ del mismo modulo"
-        - "application/ del mismo modulo"
         - "@core/common (cualquier capa)"
         - "Librerias externas (React, Zustand, Axios, etc.)"
       forbidden_imports:
-        - "infrastructure/ de OTROS modulos (usar domain ports)"
+        - "infrastructure/ de OTROS modulos (usar domain types)"
 
-  dependency_direction: "infrastructure -> application -> domain"
+  dependency_direction: "infrastructure -> domain"
 
   module_structure:
     description: "Cada feature/modulo sigue esta estructura estandar"
     template: |
       src/core/{module-name}/
       ├── domain/
-      │   ├── {Entity}.ts              # Tipos y entidades del dominio
-      │   ├── i{Service}.ts            # Interface del servicio (port)
-      │   ├── dtos/
-      │   │   └── {Action}Dto.ts       # Data Transfer Objects
-      │   ├── models/
-      │   │   └── {Model}.ts           # Modelos de dominio
-      │   └── ports/
-      │       └── I{Adapter}.ts        # Interfaces de adaptadores
-      ├── application/
-      │   ├── {Action}UseCase.ts       # Casos de uso simples
-      │   ├── {Action}Command.ts       # Comandos (operaciones con side effects)
-      │   └── validations.ts           # Validaciones de negocio
+      │   ├── entities/          # Tipos y entidades
+      │   ├── dtos/              # Data Transfer Objects
+      │   ├── enums/             # Enumeraciones
+      │   ├── states/            # Interfaces de estado para stores
+      │   └── consts/            # Constantes del dominio
       └── infrastructure/
-          ├── dependencies/
-          │   └── {Module}Dependencies.ts  # Factory functions (DI)
-          ├── services/
-          │   └── {Module}Service.ts       # Implementacion HTTP del port
-          ├── adapters/
-          │   └── {Module}Adapter.ts       # Adaptadores externos
-          ├── state/
-          │   └── {Module}Ploc.ts          # Presentation Logic Orchestrator
-          ├── store/
-          │   └── {Module}Store.ts         # Zustand store
+          ├── data-access/       # Llamadas HTTP (clase concreta, sin interface)
+          ├── services/          # Solo si hay logica real (ej: DraftsService)
+          ├── helpers/           # Funciones utilitarias para patrones repetidos
+          ├── store/             # Stores pequenos por concern (~60-100 lineas)
           └── ui/
-              ├── components/
-              │   └── {Component}.tsx      # Componentes de UI
-              └── hooks/
-                  └── use{Hook}.ts         # Custom hooks
+              ├── screens/       # Componentes pantalla
+              ├── components/    # Componentes reutilizables del modulo
+              ├── {feature}-table/  # Tabla + columnas + toolbar
+              └── hooks/         # Custom hooks
 
   route_structure:
     description: "Rutas Next.js App Router con locale dinamico"
@@ -190,16 +163,6 @@ architecture:
       ├── [id]/
       │   └── page.tsx                  # Pagina de detalle
       └── layout.tsx                    # Layout opcional del feature
-
-  ui_structure:
-    description: "Componentes de presentacion separados del core"
-    template: |
-      src/ui/{feature}/
-      ├── {Feature}Screen.tsx           # Componente pantalla principal
-      ├── DataTable.tsx                 # Tabla de datos
-      ├── DataTableColumns.tsx          # Definicion de columnas
-      ├── DataTableToolBar.tsx          # Toolbar con filtros
-      └── {Feature}Form.tsx             # Formularios
 
 # =============================================================================
 # CODING STANDARDS
@@ -229,22 +192,18 @@ coding_standards:
     files:
       components: "PascalCase.tsx (DriverCard.tsx)"
       hooks: "camelCase.ts (useDriversPreview.ts)"
-      services: "PascalCase.ts (DriversService.ts)"
+      data_access: "PascalCase.ts (DriversDataAccess.ts)"
+      services: "PascalCase.ts (DriversService.ts) — solo para servicios con logica real"
+      helpers: "camelCase.ts (normalizeResponse.ts)"
       stores: "PascalCase.ts (DriversStore.ts)"
-      plocs: "PascalCase.ts (DriversPloc.ts)"
       types: "PascalCase.ts (Driver.ts)"
-      interfaces: "PascalCase.ts con prefijo 'i' (iDriversService.ts)"
       dtos: "PascalCase.ts (GetDriversDto.ts)"
       tests: "PascalCase.test.ts(x) colocado junto al archivo fuente"
-      use_cases: "PascalCase.ts (GetDriversByStatusUseCase.ts)"
-      commands: "PascalCase.ts (MassCreateDriversCommand.ts)"
-      dependencies: "PascalCase.ts ({Module}Dependencies.ts)"
     variables:
       components: "PascalCase (function DriverCard)"
       hooks: "camelCase con prefijo 'use' (useDriversPreview)"
       constants: "UPPER_SNAKE_CASE (LOADED_KIND)"
       types: "PascalCase (DriverStatus)"
-      interfaces: "PascalCase con prefijo 'i' (iDriversService)"
       stores: "camelCase con prefijo 'use' (useDriversStore)"
       functions: "camelCase (getDriversByStatus)"
       private_fields: "camelCase (no usar prefijo _)"
@@ -273,65 +232,32 @@ patterns:
   # ---------------------------------------------------------------------------
   either_pattern:
     description: >
-      Patron funcional para manejo de errores. Los servicios NUNCA lanzan excepciones.
+      Patron funcional para manejo de errores. Los data access NUNCA lanzan excepciones.
       Retornan Either<ServiceError, ServiceSuccess<T>>.
     location: "@core/common/domain/Either.ts"
     usage: |
-      // En servicios:
+      // En DataAccess:
       async getAll(params: QueryParamsDto): Promise<Either<ServiceError, ServiceSuccess<Driver[]>>> {
         return handleRequest<Driver[]>(
           apiAuth.get(this.paths.getAll(params)),
-          'DriversService.getAll'
+          'DriversDataAccess.getAll'
         )
       }
 
-      // En Ploc/consumidores:
-      const result = await this.service.getAll(params)
-      result.fold(
-        (error) => this.handleError(error),
-        (success) => this.handleSuccess(success.data)
-      )
+      // En stores:
+      getAll: async (params) => {
+        set({ isLoadingList: true })
+        const response = await driversDataAccess.getAll(params)
+        response.fold(
+          (error) => set({ isLoadingList: false, drivers: [] }),
+          (success) => set({ isLoadingList: false, drivers: success.data })
+        )
+      }
     rules:
-      - "NUNCA usar try/catch en servicios para errores de API"
+      - "NUNCA usar try/catch en data access para errores de API"
       - "handleRequest<T> envuelve todas las llamadas HTTP"
       - "fold() para manejar ambos caminos (error/success)"
       - "ServiceError incluye: code, message, description"
-
-  # ---------------------------------------------------------------------------
-  # Ploc Pattern (Presentation Logic Orchestrator)
-  # ---------------------------------------------------------------------------
-  ploc_pattern:
-    description: >
-      PLOC = Presentation Logic Orchestra Component.
-      Orquesta casos de uso y servicios, transforma respuestas a estados de UI.
-      Es el punto de entrada para la logica de presentacion.
-    template: |
-      export class {Module}Ploc {
-        constructor(
-          private readonly useCase: {Action}UseCase,
-          private readonly service: i{Module}Service
-        ) {}
-
-        async getAll(params: QueryParamsDto): Promise<{Module}State> {
-          const result = await this.useCase.execute(params)
-          return result.fold(
-            (error): ErrorState => ({
-              kind: 'Error{Module}State',
-              serviceError: error,
-            }),
-            (success): LoadedState => ({
-              kind: 'Loaded{Module}State',
-              data: success.data,
-            })
-          )
-        }
-      }
-    rules:
-      - "Un Ploc por modulo/feature"
-      - "Recibe use cases y servicios via constructor (DI)"
-      - "Transforma Either<Error, Success> a discriminated union states"
-      - "NO contiene logica de UI (sin React hooks)"
-      - "NO accede directamente a APIs (usa servicios)"
 
   # ---------------------------------------------------------------------------
   # Discriminated Union States
@@ -377,120 +303,159 @@ patterns:
   # ---------------------------------------------------------------------------
   store_pattern:
     description: >
-      Zustand store como capa de estado global accesible desde componentes.
-      Conecta la UI con el Ploc y gestiona estados de carga.
+      Zustand stores pequenos y focalizados (~60-100 lineas idealmente).
+      DataAccess instanciado a nivel de modulo. Stores llaman DataAccess
+      directamente — sin Ploc ni UseCase intermediarios. Multiples stores
+      por modulo, divididos por concern. UI orquesta carga inicial.
     template: |
       // {Module}Store.ts
       import { create } from 'zustand'
+      import { baseApiUrl } from '@core/common/infrastructure/services/apiEndpoints'
+      import { {Module}StoreState, {Module}StoreActions } from '../../domain/states/{Module}StoreState'
+      import { {Module}DataAccess } from '../data-access'
 
-      interface {Module}StoreState {
-        dataState: {Module}State
-        // ... otros estados
-      }
-
-      interface {Module}StoreActions {
-        getAll: (params: QueryParamsDto) => Promise<void>
-        resetState: () => void
-        // ... otras acciones
-      }
+      const {module}DataAccess = new {Module}DataAccess(baseApiUrl)
 
       export const use{Module}Store = create<{Module}StoreState & {Module}StoreActions>(
         (set, get) => ({
-          // State
-          dataState: { kind: LOADING_KIND },
+          // Initial state
+          items: [],
+          isLoadingList: false,
+          pagination: null,
 
-          // Actions
-          getAll: async (params) => {
-            set({ dataState: { kind: LOADING_KIND } })
-            const ploc = provide{Module}Ploc()
-            const result = await ploc.getAll(params)
-            set({ dataState: result })
+          // Actions — call DataAccess directly, fold response in place
+          loadItems: async () => {
+            set({ isLoadingList: true })
+            const response = await {module}DataAccess.getAll(get().queryParams)
+            response.fold(
+              (error) => set({ isLoadingList: false, items: [] }),
+              (success) => {
+                const data = Array.isArray(success.data) ? success.data[0] : success.data
+                set({ isLoadingList: false, items: data.list || [] })
+              }
+            )
           },
 
-          resetState: () => {
-            set({ dataState: { kind: LOADING_KIND } })
-          },
+          // Cross-store communication when needed:
+          // useOtherStore.getState().someAction()
+
+          reset: () => set({ items: [], isLoadingList: false, pagination: null }),
         })
       )
     rules:
-      - "Un store por modulo/feature"
-      - "State y Actions en interfaces separadas"
-      - "Acciones llaman al Ploc (nunca servicios directamente)"
+      - "Multiples stores por modulo, divididos por concern"
+      - "DataAccess instanciado fuera del store, a nivel de modulo"
+      - "State y Actions en interfaces separadas (en domain/states/)"
+      - "Stores llaman DataAccess directamente (no Ploc ni UseCase)"
+      - "response.fold() directo en las acciones del store"
+      - "Boolean loading flags (isLoadingList, isLoadingDetail, etc.)"
+      - "UI orquesta carga inicial (useEffect en screens)"
+      - "Cross-store: useOtherStore.getState().action()"
       - "set() para actualizar estado (inmutable)"
       - "Consumir en componentes con selectores: useStore((s) => ({ field: s.field }))"
-      - "NO poner logica de negocio en el store"
 
   # ---------------------------------------------------------------------------
-  # Service Pattern (Port Implementation)
+  # DataAccess Pattern (HTTP calls)
   # ---------------------------------------------------------------------------
-  service_pattern:
+  data_access_pattern:
     description: >
-      Servicios HTTP que implementan interfaces del dominio (ports).
-      Usan axios con interceptor de autenticacion.
+      Clase concreta para llamadas HTTP. Sin interface en domain (no es un port).
+      Usa axios con interceptor de autenticacion. Basado en YoQuieroPlanDataAccess.
     template: |
-      // i{Module}Service.ts (domain port)
-      export interface i{Module}Service {
-        getAll(params: QueryParamsDto): Promise<Either<ServiceError, ServiceSuccess<{Entity}[]>>>
-        getById(id: string): Promise<Either<ServiceError, ServiceSuccess<{Entity}>>>
-        create(dto: Create{Entity}Dto): Promise<Either<ServiceError, ServiceSuccess<{Entity}>>>
-        update(id: string, dto: Update{Entity}Dto): Promise<Either<ServiceError, ServiceSuccess<{Entity}>>>
-      }
+      // {Module}DataAccess.ts (infrastructure/data-access/)
+      import { apiAuth, handleRequest } from '~/core/common/infrastructure'
+      import { Either, ServiceError, ServiceSuccess } from '@core/common/domain'
+      import { {Entity}, {Entity}List } from '@core/{module}/domain'
 
-      // {Module}Service.ts (infrastructure implementation)
-      import { apiAuth } from '@core/common/infrastructure/connections/ApiConnection'
-      import { handleRequest } from '@core/common/infrastructure/services/RequestHelper'
+      export class {Module}DataAccess {
+        private readonly apiUrl: string
 
-      export class {Module}Service implements i{Module}Service {
-        private readonly paths: {Module}Paths
-
-        constructor(private readonly baseApiUrl: string) {
-          this.paths = {
-            getAll: (params) => `${baseApiUrl}/{module}/?${formatParams(params)}`,
-            getById: (id) => `${baseApiUrl}/{module}/${id}/`,
-          }
+        constructor(baseApiUrl: string) {
+          this.apiUrl = `${baseApiUrl}{resource}/`
         }
 
-        async getAll(params: QueryParamsDto): Promise<Either<ServiceError, ServiceSuccess<{Entity}[]>>> {
+        private originalMethod(methodName: string) {
+          return `{Module}DataAccess.${methodName}`
+        }
+
+        async getAll(params?: QueryParams): Promise<Either<ServiceError, ServiceSuccess<{Entity}List[]>>> {
+          return handleRequest<{Entity}List[]>(
+            apiAuth.get(this.apiUrl, { params }),
+            this.originalMethod('getAll')
+          )
+        }
+
+        async getById(id: string): Promise<Either<ServiceError, ServiceSuccess<{Entity}[]>>> {
           return handleRequest<{Entity}[]>(
-            apiAuth.get(this.paths.getAll(params)),
-            '{Module}Service.getAll'
+            apiAuth.get(`${this.apiUrl}${id}`),
+            this.originalMethod('getById')
           )
         }
       }
     rules:
-      - "Siempre implementar una interface del dominio (port)"
+      - "Clase concreta — sin interface en domain"
       - "Usar handleRequest<T>() para envolver llamadas HTTP"
-      - "Paths como funciones que construyen URLs"
       - "baseApiUrl inyectado via constructor"
       - "Usar apiAuth (axios con interceptor Bearer token)"
       - "Para uploads multipart, usar FormData"
+      - "originalMethod() para identificar el origen en logs de error"
 
   # ---------------------------------------------------------------------------
-  # Dependency Injection (Factory Functions)
+  # Service Pattern (solo para logica real)
   # ---------------------------------------------------------------------------
-  dependency_injection:
+  service_pattern:
     description: >
-      DI simple mediante factory functions. Sin framework de DI.
-      Cada modulo tiene un archivo Dependencies.ts que ensambla las dependencias.
+      Servicios con logica de negocio real (no solo llamadas HTTP).
+      Ejemplo: DraftsService que maneja localStorage, auto-save, etc.
+      Si solo es fetch → usar DataAccess. Si hay logica → usar Service.
     template: |
-      // {Module}Dependencies.ts
-      import { {Module}Service } from '../services/{Module}Service'
-      import { {Action}UseCase } from '../../application/{Action}UseCase'
-      import { {Module}Ploc } from '../state/{Module}Ploc'
+      // {Module}Service.ts (infrastructure/services/)
+      export class {Module}Service {
+        constructor(private readonly dependency: SomeDependency) {}
 
-      const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+        // Logica real, no solo un wrapper de HTTP
+        saveDraft(name: string, data: DraftData): string {
+          const draftId = this.generateId()
+          this.dependency.save(this.getKey(draftId), { ...data, id: draftId })
+          return draftId
+        }
 
-      export function provide{Module}Ploc(): {Module}Ploc {
-        const service = new {Module}Service(baseApiUrl)
-        const useCase = new {Action}UseCase(service)
-        return new {Module}Ploc(useCase, service)
+        getAllDrafts(): Draft[] {
+          // Logica de filtrado, ordenamiento, parseo, etc.
+        }
       }
     rules:
-      - "Una factory function por Ploc"
-      - "Nombre: provide{Nombre}()"
-      - "Instancia servicios, use cases y ploc en la factory"
-      - "NO usar singletons a menos que sea estrictamente necesario"
-      - "baseApiUrl desde variables de entorno"
+      - "Solo crear Service cuando hay logica real (no solo HTTP calls)"
+      - "Si solo es fetch/post → usar DataAccess"
+      - "Ejemplo valido: DraftsService (localStorage + auto-save + parseo)"
+      - "Ejemplo invalido: Un wrapper que solo llama apiAuth.get()"
+
+  # ---------------------------------------------------------------------------
+  # Helpers Pattern
+  # ---------------------------------------------------------------------------
+  helpers_pattern:
+    description: >
+      Funciones puras para patrones que se repiten 3+ veces dentro del modulo.
+      Ubicadas en infrastructure/helpers/.
+    template: |
+      // normalizeResponse.ts (infrastructure/helpers/)
+      export function normalizeResponse<T>(successData: T | T[]): T {
+        return Array.isArray(successData) ? successData[0] : successData
+      }
+
+      // Uso en store:
+      response.fold(
+        (error) => set({ isLoading: false }),
+        (success) => {
+          const data = normalizeResponse(success.data)
+          set({ isLoading: false, items: data.list })
+        }
+      )
+    rules:
+      - "Crear helper solo cuando el patron se repite 3+ veces"
+      - "Funciones puras (sin side effects)"
+      - "Ubicar en infrastructure/helpers/"
+      - "Nombrar en camelCase (normalizeResponse.ts)"
 
   # ---------------------------------------------------------------------------
   # Component Pattern
@@ -504,7 +469,7 @@ patterns:
 
       import { useTranslations } from 'next-intl'
       import { use{Module}Store } from '@core/{module}/infrastructure/store/{Module}Store'
-      import { LOADED_KIND, ERROR_KIND } from '@core/{module}/infrastructure/state/{Module}State'
+      import { LOADED_KIND, ERROR_KIND } from '@core/{module}/domain/states/{Module}State'
 
       interface {Component}Props {
         id: string
@@ -596,17 +561,17 @@ patterns:
   page_pattern:
     description: >
       Paginas Next.js App Router. Pueden ser server o client components.
-      Envuelven los screen components del directorio ui/.
+      Envuelven los screen components del directorio infrastructure/ui/screens/.
     template: |
       // src/app/[locale]/{feature}/page.tsx
-      import {Feature}Screen from '@ui/{feature}/{Feature}Screen'
+      import {Feature}Screen from '@core/{module}/infrastructure/ui/screens/{Feature}Screen'
 
       export default function {Feature}Page() {
         return <{Feature}Screen />
       }
 
       // src/app/[locale]/{feature}/[id]/page.tsx
-      import {Feature}DetailScreen from '@ui/{feature}/{Feature}DetailScreen'
+      import {Feature}DetailScreen from '@core/{module}/infrastructure/ui/screens/{Feature}DetailScreen'
 
       export default function {Feature}DetailPage() {
         return <{Feature}DetailScreen />
@@ -615,7 +580,7 @@ patterns:
       - "Paginas son wrappers minimos que importan Screen components"
       - "NO poner logica de negocio en paginas"
       - "Usar dynamic routes con [param] para IDs"
-      - "Los Screen components viven en src/ui/{feature}/"
+      - "Los Screen components viven en infrastructure/ui/screens/"
 
 # =============================================================================
 # COMPONENT GUIDELINES
@@ -702,14 +667,13 @@ component_guidelines:
 # TESTING GUIDELINES
 # =============================================================================
 testing:
-  framework: "Jest 29 + ts-jest + @testing-library/react"
+  framework: "Vitest + @testing-library/react"
   location: "Colocados junto al archivo fuente ({File}.test.ts(x))"
 
   scripts:
-    run_all: "npm test"
-    watch: "npm run tdd"
-    coverage: "npm run test-coverage"
-    verbose: "npm run test-verbose"
+    run_all: "npx vitest run"
+    watch: "npx vitest"
+    coverage: "npx vitest run --coverage"
 
   layers:
 
@@ -721,6 +685,8 @@ testing:
         - "Either monad operations"
         - "Utilidades del dominio (Sorter, DateRanges, etc.)"
       template: |
+        import { describe, it, expect } from 'vitest'
+
         describe('{Entity} domain', () => {
           it('should transform data correctly', () => {
             const input = { /* raw data */ }
@@ -739,99 +705,82 @@ testing:
         - "Cubrir casos edge (null, undefined, arrays vacios)"
         - "Testar ambos caminos de Either (left/right)"
 
-    application_tests:
-      description: "Tests de use cases con adaptadores mockeados"
+    store_tests:
+      description: "Tests de acciones de stores con DataAccess mockeado"
       what_to_test:
-        - "Use cases con diferentes respuestas del servicio"
-        - "Commands con transiciones de estado"
-        - "Validaciones de aplicacion"
+        - "Acciones del store con respuestas exitosas"
+        - "Acciones del store con respuestas de error"
+        - "Transiciones de loading state"
+        - "Reset de estado"
       template: |
-        describe('{Action}UseCase', () => {
-          let useCase: {Action}UseCase
-          let mockService: jest.Mocked<i{Module}Service>
+        import { describe, it, expect, vi, beforeEach } from 'vitest'
+        import { act } from '@testing-library/react'
+        import { use{Module}Store } from './{Module}Store'
 
+        // Mock the DataAccess module
+        vi.mock('../data-access', () => ({
+          {Module}DataAccess: vi.fn().mockImplementation(() => ({
+            getAll: vi.fn(),
+            getById: vi.fn(),
+          })),
+        }))
+
+        describe('use{Module}Store', () => {
           beforeEach(() => {
-            mockService = {
-              getAll: jest.fn(),
-              getById: jest.fn(),
-            } as jest.Mocked<i{Module}Service>
-            useCase = new {Action}UseCase(mockService)
+            // Reset store state between tests
+            act(() => {
+              use{Module}Store.getState().reset()
+            })
           })
 
-          it('should return data on success', async () => {
-            const expected = [/* mock data */]
-            mockService.getAll.mockResolvedValue(
-              Either.right({ success: true, data: expected, message: 'OK' })
-            )
+          it('should load items successfully', async () => {
+            const mockData = { list: [{ id: '1' }], totalRows: 1 }
+            const mockResponse = {
+              fold: (_onError: Function, onSuccess: Function) =>
+                onSuccess({ data: [mockData] }),
+            }
+            // Setup mock to return success
+            // ...
 
-            const result = await useCase.execute(params)
+            await act(async () => {
+              await use{Module}Store.getState().loadItems()
+            })
 
-            expect(result.isRight()).toBeTruthy()
-            result.fold(
-              () => fail('Should not be error'),
-              (success) => expect(success.data).toEqual(expected)
-            )
+            const state = use{Module}Store.getState()
+            expect(state.isLoadingList).toBe(false)
+            expect(state.items).toHaveLength(1)
           })
 
-          it('should return error on service failure', async () => {
-            mockService.getAll.mockResolvedValue(
-              Either.left({ code: 500, message: 'Server Error', description: '' })
-            )
+          it('should handle error', async () => {
+            const mockResponse = {
+              fold: (onError: Function) =>
+                onError({ message: 'Error' }),
+            }
+            // Setup mock to return error
+            // ...
 
-            const result = await useCase.execute(params)
+            await act(async () => {
+              await use{Module}Store.getState().loadItems()
+            })
 
-            expect(result.isLeft()).toBeTruthy()
+            const state = use{Module}Store.getState()
+            expect(state.isLoadingList).toBe(false)
+            expect(state.items).toEqual([])
           })
         })
       rules:
-        - "Mockear servicios con jest.Mocked<Interface>"
+        - "Mockear DataAccess con vi.mock()"
         - "Testar caso exitoso Y caso de error"
-        - "Verificar que el servicio fue llamado con params correctos"
-        - "beforeEach para resetear mocks"
+        - "Verificar transiciones de loading state"
+        - "beforeEach para resetear estado del store"
+        - "Usar act() para envolver actualizaciones de estado"
 
-    infrastructure_tests:
-      description: "Tests de Plocs, stores y servicios"
-
-      ploc_tests:
-        what_to_test:
-          - "Transformacion de Either a State"
-          - "Transiciones de estado (loading -> loaded -> error)"
-          - "Integracion con use cases"
-        template: |
-          describe('{Module}Ploc', () => {
-            let ploc: {Module}Ploc
-            let mockService: i{Module}Service
-
-            beforeEach(() => {
-              mockService = mockGetServiceFactory({
-                response: Either.right(successResponseMock.build()),
-              })
-              const useCase = new {Action}UseCase(mockService)
-              ploc = new {Module}Ploc(useCase, mockService)
-            })
-
-            it('should return loaded state on success', async () => {
-              const state = await ploc.getAll(params)
-              expect(state.kind).toBe(LOADED_KIND)
-            })
-
-            it('should return error state on failure', async () => {
-              mockService = mockGetServiceFactory({
-                response: Either.left(errorMock),
-              })
-              const useCase = new {Action}UseCase(mockService)
-              ploc = new {Module}Ploc(useCase, mockService)
-
-              const state = await ploc.getAll(params)
-              expect(state.kind).toBe(ERROR_KIND)
-            })
-          })
-
-      service_tests:
-        what_to_test:
-          - "Construccion correcta de URLs"
-          - "Manejo de errores HTTP"
-          - "Transformacion de respuestas"
+    data_access_tests:
+      description: "Tests de DataAccess (construccion de URLs, transformaciones)"
+      what_to_test:
+        - "Construccion correcta de URLs"
+        - "Manejo de errores HTTP"
+        - "Transformacion de respuestas"
 
     ui_tests:
       description: "Tests de componentes con React Testing Library"
@@ -841,11 +790,12 @@ testing:
         - "Interacciones del usuario (click, input)"
         - "Texto visible (traducido)"
       template: |
+        import { describe, it, expect, vi } from 'vitest'
         import { render, screen } from '~/test-utils/test-utils'
 
         // Mock Next.js modules
-        jest.mock('next/navigation', () => ({
-          ...jest.requireActual('next/navigation'),
+        vi.mock('next/navigation', async () => ({
+          ...(await vi.importActual('next/navigation')),
           useParams: () => ({ locale: 'es' }),
         }))
 
@@ -861,7 +811,7 @@ testing:
           })
 
           it('should call handler on button click', async () => {
-            const onAction = jest.fn()
+            const onAction = vi.fn()
             render(<{Component} onAction={onAction} />)
             await userEvent.click(screen.getByRole('button', { name: /submit/i }))
             expect(onAction).toHaveBeenCalledTimes(1)
@@ -893,12 +843,12 @@ testing:
         const list = {entity}Factory.buildList(5)
 
     service_mock_factory:
-      description: "Factory para mockear servicios completos"
+      description: "Factory para mockear DataAccess completos"
       location: "@core/common/infrastructure/test-utils"
       usage: |
         import { mockGetServiceFactory } from '@core/common/infrastructure/test-utils'
 
-        const mockService = mockGetServiceFactory({
+        const mockDataAccess = mockGetServiceFactory({
           response: Either.right(successResponse),
         })
 
@@ -906,17 +856,15 @@ testing:
       - "LocalStorageMock: Simula localStorage en jsdom"
       - "MockStorageService: Wrapper de storage para tests"
       - "MockWebSocketFactory: Simula conexiones WebSocket"
-      - "StateMockFactory: Wrapper de estado para Ploc tests"
 
   coverage:
     minimum_targets:
       domain: "90%+ (logica pura, facil de testar)"
-      application: "80%+ (use cases y commands)"
-      infrastructure_ploc: "70%+ (orchestration logic)"
+      stores: "70%+ (acciones con DataAccess mockeado)"
       infrastructure_services: "60%+ (mock HTTP o skip)"
       ui_components: "50%+ (componentes criticos)"
     focus: >
-      Priorizar coverage en domain y application.
+      Priorizar coverage en domain y stores.
       No perseguir 100% en UI components - testar comportamiento critico.
 
 # =============================================================================
@@ -930,23 +878,31 @@ anti_patterns:
 
     - name: "Generic CRUD Abstractions prematuras"
       description: "No crear BaseCrudService<T> o BaseRepository<T> generico"
-      do_instead: "Cada servicio implementa su interface especifica del dominio."
+      do_instead: "Cada DataAccess implementa sus metodos especificos."
 
     - name: "Deep inheritance hierarchies"
       description: "Maximo 1 nivel de herencia. Preferir composicion."
       do_instead: "Usar factory functions y composicion de funciones."
 
-    - name: "Over-abstracting Ploc layer"
-      description: "No crear BasePloc<State, Actions>. Cada Ploc es independiente."
-      do_instead: "Plocs simples y especificos por feature."
+    - name: "Fat stores (500+ lineas)"
+      description: "Un store monolitico con demasiadas responsabilidades."
+      do_instead: "Dividir por concern: useListStore, useDetailStore, useFormStore."
+
+    - name: "Use cases layer en frontend"
+      description: "No crear UseCase classes para logica que es solo set loading -> call API -> fold -> set state."
+      do_instead: "Stores llaman DataAccess directamente. La logica de orquestacion vive en el store."
+
+    - name: "Application layer en frontend"
+      description: "No crear capa application/ con Ploc, UseCase, Command, DI factories."
+      do_instead: "Dos capas: domain (tipos puros) + infrastructure (stores, data-access, UI)."
 
     - name: "Unnecessary middleware layers"
       description: "No agregar capas intermedias sin justificacion clara."
-      do_instead: "La cadena es: Component -> Store -> Ploc -> UseCase -> Service."
+      do_instead: "La cadena es: Component -> Store -> DataAccess."
 
     - name: "DI framework overhead"
       description: "No agregar InversifyJS, tsyringe u otros frameworks de DI."
-      do_instead: "Factory functions simples (provide{Module}Ploc())."
+      do_instead: "DataAccess instanciado a nivel de modulo con new {Module}DataAccess(baseApiUrl)."
 
     - name: "Premature optimization"
       description: "No agregar React.memo, useMemo, useCallback sin medir performance."
@@ -960,10 +916,10 @@ anti_patterns:
     - "any type: Usar unknown y type guards"
     - "Magic strings: Usar constantes o enums"
     - "Hardcoded text: Usar useTranslations()"
-    - "Direct API calls in components: Usar store -> ploc -> service"
-    - "Business logic in components: Extraer a hooks o application layer"
+    - "Direct API calls in components: Usar store -> DataAccess"
+    - "Business logic in components: Extraer a hooks o helpers"
     - "Mutating state directly: Usar set() de Zustand (inmutable)"
-    - "Importing from other module's infrastructure: Usar domain ports"
+    - "Importing from other module's infrastructure: Usar domain types"
     - "console.log in production: Usar logger service"
     - "Nested ternaries: Extraer a funciones o early returns"
 
@@ -1003,7 +959,7 @@ api_integration:
     description: "handleRequest<T> envuelve todas las llamadas"
     location: "@core/common/infrastructure/services/RequestHelper.ts"
     flow:
-      - "Service llama handleRequest(apiAuth.get(url), 'origin')"
+      - "DataAccess llama handleRequest(apiAuth.get(url), 'origin')"
       - "handleRequest captura errores de Axios"
       - "Retorna Either.left(ServiceError) en error"
       - "Retorna Either.right(ServiceSuccess<T>) en exito"
@@ -1102,7 +1058,7 @@ workflow:
     examples:
       - "feat: add driver payment export feature"
       - "fix: resolve pagination reset on filter change"
-      - "refactor: extract driver form validation to use case"
+      - "refactor: extract driver form validation to helper"
 
   pre_commit:
     - "Husky ejecuta lint-staged"
@@ -1120,61 +1076,72 @@ workflow:
 # CHECKLIST: New Feature Implementation
 # =============================================================================
 new_feature_checklist:
+  description: >
+    Este checklist aplica tanto para features nuevos como para refactorizar
+    modulos existentes que sigan la arquitectura anterior (con application/,
+    Ploc, dependencies/).
   steps:
     - step: 1
       action: "Crear estructura de modulo en src/core/{feature}/"
       substeps:
-        - "domain/ con tipos, interfaces y DTOs"
-        - "application/ con use cases"
-        - "infrastructure/ con service, ploc, store, dependencies"
+        - "domain/ con entities, dtos, states, enums, consts"
+        - "infrastructure/ con data-access, store, ui"
 
     - step: 2
       action: "Implementar domain layer"
       substeps:
-        - "Definir entidad principal ({Entity}.ts)"
-        - "Definir interface del servicio (i{Module}Service.ts)"
-        - "Definir DTOs para requests/responses"
-        - "Definir estados (discriminated unions)"
+        - "Definir entidades y tipos (domain/entities/)"
+        - "Definir DTOs para requests/responses (domain/dtos/)"
+        - "Definir interfaces de estado para stores (domain/states/)"
+        - "Definir enums si aplica (domain/enums/)"
+        - "Definir constantes del dominio (domain/consts/)"
 
     - step: 3
-      action: "Implementar application layer"
+      action: "Implementar DataAccess"
       substeps:
-        - "Crear use cases que usen la interface del servicio"
-        - "Agregar validaciones de negocio si aplica"
+        - "Crear clase concreta en infrastructure/data-access/"
+        - "Usar handleRequest<T> para envolver llamadas HTTP"
+        - "Retornar Either<ServiceError, ServiceSuccess<T>>"
 
     - step: 4
-      action: "Implementar infrastructure layer"
+      action: "Implementar stores divididos por concern"
       substeps:
-        - "Crear servicio HTTP que implemente el port"
-        - "Crear Ploc que orqueste use cases"
-        - "Crear Zustand store"
-        - "Crear factory function de dependencias"
+        - "Instanciar DataAccess a nivel de modulo"
+        - "Crear stores focalizados (~60-100 lineas)"
+        - "Boolean loading flags (isLoadingList, etc.)"
+        - "response.fold() directo en acciones"
 
     - step: 5
-      action: "Crear componentes de UI"
+      action: "Crear helpers si hay patrones repetidos"
       substeps:
-        - "Screen component en src/ui/{feature}/"
-        - "Pagina en src/app/[locale]/{feature}/page.tsx"
-        - "DataTable si aplica (columns, toolbar)"
-        - "Formularios con React Hook Form + Zod"
+        - "Solo si un patron se repite 3+ veces"
+        - "Funciones puras en infrastructure/helpers/"
 
     - step: 6
+      action: "Crear componentes UI"
+      substeps:
+        - "Screen component en infrastructure/ui/screens/"
+        - "Pagina en src/app/[locale]/{feature}/page.tsx"
+        - "DataTable si aplica (columns, toolbar) en infrastructure/ui/{feature}-table/"
+        - "Formularios con React Hook Form + Zod"
+        - "Custom hooks en infrastructure/ui/hooks/"
+
+    - step: 7
       action: "Agregar traducciones"
       substeps:
         - "Claves en src/messages/es.json"
         - "Claves en src/messages/en.json"
 
-    - step: 7
-      action: "Escribir tests"
+    - step: 8
+      action: "Escribir tests con Vitest"
       substeps:
         - "Domain: tests puros de logica"
-        - "Application: tests de use cases con mocks"
-        - "Infrastructure: tests de Ploc"
-        - "UI: tests de componentes criticos"
+        - "Stores: tests de acciones con DataAccess mockeado (vi.mock(), vi.fn())"
+        - "UI: tests de componentes criticos con @testing-library/react"
 
-    - step: 8
+    - step: 9
       action: "Validar"
       substeps:
         - "npm run lint (sin errores)"
-        - "npm test (todos los tests pasan)"
+        - "npx vitest run (todos los tests pasan)"
         - "npm run build (build exitoso)"

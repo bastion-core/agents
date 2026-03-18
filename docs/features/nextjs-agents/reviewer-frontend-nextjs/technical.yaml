@@ -39,17 +39,18 @@ agent_contract:
 review_scope:
   description: >
     Agente especializado en code review de Pull Requests de proyectos frontend
-    Next.js bajo Clean Architecture / Hexagonal Architecture. Evalua calidad
-    arquitectonica, calidad de codigo TypeScript/React y estrategia de testing
-    segun los estandares definidos para proyectos Next.js del equipo.
+    Next.js bajo arquitectura de dos capas (domain + infrastructure) con Zustand
+    stores y DataAccess pattern. Evalua calidad arquitectonica, calidad de codigo
+    TypeScript/React y estrategia de testing segun los estandares definidos para
+    proyectos Next.js del equipo.
   dimensions:
     architecture:
       weight: 30%
       scope:
-        - Cumplimiento de Clean Architecture / Hexagonal Architecture
+        - Cumplimiento de arquitectura de dos capas (domain + infrastructure)
         - Principios SOLID adaptados a frontend TypeScript/React
-        - Patrones de diseno esperados (Either, Ploc, Zustand, Factory DI)
-        - Separacion de capas y direccion de dependencias
+        - Patrones de diseno esperados (Either, Zustand Store, DataAccess, Discriminated Unions)
+        - Separacion de capas y direccion de dependencias (infrastructure -> domain)
         - Estructura de modulos por feature
         - Identificacion de deuda tecnica
     code_quality:
@@ -66,7 +67,7 @@ review_scope:
       scope:
         - Cobertura de tests para codigo nuevo
         - Calidad y completitud de tests
-        - Buenas practicas de testing con Jest + Testing Library
+        - Buenas practicas de testing con Vitest + Testing Library
         - Cobertura de edge cases
         - Patron de tests colocados junto al archivo fuente
 
@@ -95,7 +96,7 @@ out_of_scope_rule:
     - archivos de CI/CD (.github/workflows/)
     - archivos de infraestructura (Dockerfile, docker-compose, k8s manifests)
     - archivos de dependencias (package.json, package-lock.json, yarn.lock)
-    - archivos de configuracion raiz (next.config.js, tailwind.config.js, tsconfig.json, jest.config.ts)
+    - archivos de configuracion raiz (next.config.js, tailwind.config.js, tsconfig.json, vitest.config.ts)
     - archivos de estilos globales (globals.css)
     - archivos de i18n (src/messages/*.json)
     - archivos publicos (public/*)
@@ -159,20 +160,20 @@ pipeline:
   step_2_architecture_review:
     input: archivos modificados + codebase del proyecto
     process: |
-      Validar cumplimiento de Clean Architecture / Hexagonal Architecture
-      (separacion de capas, direccion de dependencias). Verificar principios
-      SOLID adaptados a frontend. Detectar patrones de diseno apropiados e
+      Validar cumplimiento de arquitectura de dos capas (domain + infrastructure,
+      sin capa application). Verificar direccion de dependencias
+      (infrastructure -> domain). Detectar patrones de diseno apropiados e
       inapropiados. Identificar violaciones de capa (domain importando de
       infrastructure, component importando directamente de otro modulo infrastructure).
     output: analisis arquitectonico con puntaje y hallazgos
     checks:
-      - domain_layer_purity: domain no importa de infrastructure, application (otros modulos), React, Next.js, Zustand, Axios
-      - application_layer_purity: application no importa de infrastructure, React, Next.js, Zustand, Axios
-      - dependency_direction: infrastructure -> application -> domain (nunca al reves)
-      - module_boundaries: no importar infrastructure/ de otros modulos (usar domain ports)
-      - module_structure: estructura estandar domain/application/infrastructure por feature
-      - port_implementation: servicios implementan interfaces del dominio
-      - factory_di: dependencias ensambladas en {Module}Dependencies.ts con factory functions
+      - domain_layer_purity: domain no importa de infrastructure, React, Next.js, Zustand, Axios
+      - dependency_direction: infrastructure -> domain (nunca al reves)
+      - module_boundaries: no importar infrastructure/ de otros modulos (usar domain types)
+      - module_structure: estructura estandar domain/infrastructure por feature (sin application/)
+      - data_access_pattern: clase concreta para HTTP, sin interface en domain
+      - store_pattern: stores llaman DataAccess directamente, multiples stores por concern
+      - no_application_layer: no debe existir capa application/ con Ploc, UseCase, Command, Dependencies
 
   step_3_code_quality_review:
     input: archivos modificados
@@ -192,9 +193,9 @@ pipeline:
         - string_enums: "enums para valores de dominio"
         - type_inference: "inferir tipos de Zod schemas con z.infer<typeof schema>"
       either_pattern:
-        - services_never_throw: "servicios retornan Either<ServiceError, ServiceSuccess<T>>, nunca lanzan excepciones"
+        - data_access_never_throw: "DataAccess retorna Either<ServiceError, ServiceSuccess<T>>, nunca lanza excepciones"
         - handle_request_wrapper: "handleRequest<T>() envuelve todas las llamadas HTTP"
-        - fold_for_branching: "fold() para manejar ambos caminos (error/success)"
+        - fold_for_branching: "fold() para manejar ambos caminos (error/success) directo en stores"
         - service_error_structure: "ServiceError incluye: code, message, description"
       state_management:
         - discriminated_union_states: "estados con Loading/Loaded/Error usando campo 'kind'"
@@ -219,47 +220,51 @@ pipeline:
       - return_object: "retornar objeto (no array) para mejor legibilidad"
 
     store_checks:
-      - one_store_per_module: "un Zustand store por modulo/feature"
-      - separate_state_actions_interfaces: "State y Actions en interfaces separadas"
-      - actions_call_ploc: "acciones llaman al Ploc (nunca servicios directamente)"
+      - multiple_stores_per_module: "multiples stores por modulo, divididos por concern (~60-100 lineas)"
+      - separate_state_actions_interfaces: "State y Actions en interfaces separadas (en domain/states/)"
+      - actions_call_data_access: "stores llaman DataAccess directamente (no Ploc ni UseCase)"
+      - fold_in_actions: "response.fold() directo en las acciones del store"
+      - boolean_loading_flags: "boolean loading flags (isLoadingList, isLoadingDetail, etc.)"
       - immutable_set: "set() para actualizar estado"
       - specific_selectors: "consumir con selectores: useStore((s) => ({ field: s.field }))"
-      - no_business_logic: "no poner logica de negocio en el store"
+      - data_access_module_level: "DataAccess instanciado fuera del store, a nivel de modulo"
+      - cross_store_communication: "useOtherStore.getState().action() para comunicacion entre stores"
+      - no_fat_stores: "evitar stores monoliticos de 500+ lineas"
 
-    ploc_checks:
-      - one_per_module: "un Ploc por modulo/feature"
-      - receives_di: "recibe use cases y servicios via constructor (DI)"
-      - transforms_either_to_state: "transforma Either<Error, Success> a discriminated union states"
-      - no_react_hooks: "NO contiene logica de UI (sin React hooks)"
-      - no_direct_api: "NO accede directamente a APIs (usa servicios)"
-
-    service_checks:
-      - implements_domain_port: "siempre implementa una interface del dominio (port)"
+    data_access_checks:
+      - concrete_class: "clase concreta, sin interface en domain (no es un port)"
       - uses_handle_request: "usa handleRequest<T>() para envolver llamadas HTTP"
-      - paths_as_functions: "paths como funciones que construyen URLs"
       - base_url_injected: "baseApiUrl inyectado via constructor"
       - uses_api_auth: "usa apiAuth (axios con interceptor Bearer token)"
+      - original_method: "originalMethod() para identificar el origen en logs de error"
+
+    service_checks:
+      - only_for_real_logic: "solo crear Service cuando hay logica real (no solo HTTP calls)"
+      - not_http_wrapper: "si solo es fetch/post → usar DataAccess en su lugar"
+      - valid_example: "ejemplo valido: DraftsService (localStorage + auto-save + parseo)"
+
+    helpers_checks:
+      - repeat_threshold: "crear helper solo cuando el patron se repite 3+ veces"
+      - pure_functions: "funciones puras (sin side effects)"
+      - proper_location: "ubicar en infrastructure/helpers/"
+      - naming: "nombrar en camelCase (normalizeResponse.ts)"
 
     naming_conventions:
       files:
         components: "PascalCase.tsx"
         hooks: "camelCase.ts con prefijo use"
-        services: "PascalCase.ts"
+        data_access: "PascalCase.ts (DriversDataAccess.ts)"
+        services: "PascalCase.ts — solo para servicios con logica real"
+        helpers: "camelCase.ts (normalizeResponse.ts)"
         stores: "PascalCase.ts"
-        plocs: "PascalCase.ts"
         types: "PascalCase.ts"
-        interfaces: "PascalCase.ts con prefijo 'i' (iDriversService.ts)"
         dtos: "PascalCase.ts"
         tests: "PascalCase.test.ts(x) colocado junto al archivo fuente"
-        use_cases: "PascalCase.ts"
-        commands: "PascalCase.ts"
-        dependencies: "PascalCase.ts ({Module}Dependencies.ts)"
       variables:
         components: "PascalCase"
         hooks: "camelCase con prefijo 'use'"
         constants: "UPPER_SNAKE_CASE"
         types: "PascalCase"
-        interfaces: "PascalCase con prefijo 'i'"
         stores: "camelCase con prefijo 'use'"
         functions: "camelCase"
         private_fields: "camelCase (no usar prefijo _)"
@@ -300,10 +305,10 @@ pipeline:
       - any_type: "usar unknown y type guards en vez de any"
       - magic_strings: "usar constantes o enums"
       - hardcoded_text: "usar useTranslations()"
-      - direct_api_in_components: "usar store -> ploc -> service"
-      - business_logic_in_components: "extraer a hooks o application layer"
+      - direct_api_in_components: "usar store -> DataAccess"
+      - business_logic_in_components: "extraer a hooks o helpers"
       - mutating_state_directly: "usar set() de Zustand (inmutable)"
-      - cross_module_infrastructure_import: "importar de infrastructure de otros modulos (usar domain ports)"
+      - cross_module_infrastructure_import: "importar de infrastructure de otros modulos (usar domain types)"
       - console_log_in_production: "usar logger service"
       - nested_ternaries: "extraer a funciones o early returns"
       - long_components: ">200 lineas (extraer sub-componentes o hooks)"
@@ -315,13 +320,13 @@ pipeline:
     process: |
       Verificar que los tests estan colocados junto al archivo fuente
       ({File}.test.ts(x)). Evaluar calidad de tests por capa
-      (domain, application, infrastructure, UI). Verificar patrones
-      de mock correctos. Evaluar cobertura de edge cases.
+      (domain, stores, data-access, UI). Verificar patrones
+      de mock correctos con Vitest. Evaluar cobertura de edge cases.
     output: analisis de testing con puntaje y hallazgos
 
     test_location:
       pattern: "colocado junto al archivo fuente"
-      example: "GetDriversUseCase.ts -> GetDriversUseCase.test.ts"
+      example: "DriversDataAccess.ts -> DriversDataAccess.test.ts"
       rule: "NO usar directorio tests/ separado"
 
     testing_by_layer:
@@ -335,36 +340,30 @@ pipeline:
           - "sin mocks (logica pura)"
           - "cubrir casos edge (null, undefined, arrays vacios)"
           - "testar ambos caminos de Either (left/right)"
+          - "usar import { describe, it, expect } from 'vitest'"
         coverage_target: "90%+"
 
-      application_tests:
+      store_tests:
         what_to_test:
-          - "use cases con diferentes respuestas del servicio"
-          - "commands con transiciones de estado"
-          - "validaciones de aplicacion"
+          - "acciones del store con respuestas exitosas"
+          - "acciones del store con respuestas de error"
+          - "transiciones de loading state"
+          - "reset de estado"
         rules:
-          - "mockear servicios con jest.Mocked<Interface>"
+          - "mockear DataAccess con vi.mock()"
           - "testar caso exitoso Y caso de error"
-          - "verificar que el servicio fue llamado con params correctos"
-          - "beforeEach para resetear mocks"
-        coverage_target: "80%+"
+          - "verificar transiciones de loading state"
+          - "beforeEach para resetear estado del store"
+          - "usar act() para envolver actualizaciones de estado"
+          - "usar import { describe, it, expect, vi, beforeEach } from 'vitest'"
+        coverage_target: "70%+"
 
-      infrastructure_tests:
-        ploc_tests:
-          what_to_test:
-            - "transformacion de Either a State"
-            - "transiciones de estado (loading -> loaded -> error)"
-            - "integracion con use cases"
-          rules:
-            - "mockear servicios via factory"
-            - "verificar kind del state resultante"
-          coverage_target: "70%+"
-        service_tests:
-          what_to_test:
-            - "construccion correcta de URLs"
-            - "manejo de errores HTTP"
-            - "transformacion de respuestas"
-          coverage_target: "60%+"
+      data_access_tests:
+        what_to_test:
+          - "construccion correcta de URLs"
+          - "manejo de errores HTTP"
+          - "transformacion de respuestas"
+        coverage_target: "60%+"
 
       ui_tests:
         what_to_test:
@@ -378,19 +377,19 @@ pipeline:
           - "buscar por rol, texto o test-id (no por clase CSS)"
           - "testar comportamiento visible, no implementacion interna"
           - "usar screen.getByText, screen.getByRole"
+          - "usar import { describe, it, expect, vi } from 'vitest'"
         coverage_target: "50%+ (componentes criticos)"
 
     mock_patterns:
       factory_pattern: "usar factories (fishery o manual) para generar datos de test consistentes"
-      service_mock_factory: "mockGetServiceFactory para mockear servicios completos con Either"
+      data_access_mock_factory: "mockGetServiceFactory para mockear DataAccess completos con Either"
       custom_mocks:
         - "LocalStorageMock: simula localStorage en jsdom"
         - "MockStorageService: wrapper de storage para tests"
         - "MockWebSocketFactory: simula conexiones WebSocket"
-        - "StateMockFactory: wrapper de estado para Ploc tests"
       next_navigation_mock: |
-        jest.mock('next/navigation', () => ({
-          ...jest.requireActual('next/navigation'),
+        vi.mock('next/navigation', async () => ({
+          ...(await vi.importActual('next/navigation')),
           useParams: () => ({ locale: 'es' }),
         }))
 
@@ -409,32 +408,32 @@ review_dimensions:
   architecture:
     weight: 30%
     scope:
-      clean_architecture:
-        layers: [domain, application, infrastructure]
-        dependency_rule: "infrastructure -> application -> domain (nunca al reves)"
+      two_layer_architecture:
+        layers: [domain, infrastructure]
+        dependency_rule: "infrastructure -> domain (nunca al reves)"
         domain_purity: "domain layer libre de imports de infrastructure, React, Next.js, Zustand, Axios"
-        application_purity: "application layer libre de imports de infrastructure, React, Next.js, Zustand, Axios"
+        no_application_layer: "NO debe existir capa application/ con Ploc, UseCase, Command, Dependencies"
         module_structure: |
           src/core/{module-name}/
-          ├── domain/           # tipos, interfaces (ports), DTOs, modelos
-          ├── application/      # use cases, commands, validaciones
-          └── infrastructure/   # services, plocs, stores, dependencies, ui/
+          ├── domain/           # entities, dtos, states, enums, consts
+          └── infrastructure/   # data-access, services (solo logica real), helpers, store, ui/
       solid_principles:
         single_responsibility: "un componente/clase/modulo = una responsabilidad"
-        dependency_inversion: "depender de abstracciones (interfaces i{Service}), no de implementaciones concretas"
-        open_closed: "extensible via interfaces y composicion, no modificacion"
+        dependency_inversion: "infrastructure depende de domain types, no al reves"
+        open_closed: "extensible via composicion, no modificacion"
         interface_segregation: "interfaces especificas por necesidad (no fat interfaces)"
       design_patterns:
         expected:
-          - "Either Monad: manejo funcional de errores en servicios"
-          - "Ploc: Presentation Logic Orchestrator (transforma Either a State)"
-          - "Zustand Store: estado global reactivo por modulo"
-          - "Factory DI: factory functions en {Module}Dependencies.ts"
+          - "Either Monad: manejo funcional de errores en DataAccess"
+          - "Zustand Store: multiples stores pequenos por modulo (~60-100 lineas), divididos por concern"
+          - "DataAccess: clase concreta para HTTP, sin interface en domain"
           - "Discriminated Unions: estados UI con campo 'kind'"
-          - "Port/Adapter: interfaces de dominio con implementaciones de infrastructure"
+          - "Helpers: funciones puras para patrones repetidos 3+ veces"
         red_flags:
           - "God Component: componente con demasiada logica y responsabilidades"
-          - "Direct API in Component: componente llamando APIs sin pasar por store/ploc/service"
+          - "Fat Store: store monolitico de 500+ lineas con demasiadas responsabilidades"
+          - "Direct API in Component: componente llamando APIs sin pasar por store/DataAccess"
+          - "Application Layer: existencia de capa application/ con Ploc, UseCase, Command"
           - "Cross-module Infrastructure Import: importar de infrastructure/ de otro modulo"
           - "Circular Dependencies: dependencias circulares entre modulos"
           - "Prop Drilling Excesivo: pasar props a traves de muchos niveles (usar store o context)"
@@ -446,8 +445,8 @@ review_dimensions:
       typescript_strictness: "TypeScript strict mode, sin any, discriminated unions, Either pattern"
       component_patterns: "componentes funcionales, props con interface, use client solo cuando necesario"
       hook_patterns: "hooks con prefijo use, retornan objetos, useMemo/useCallback solo cuando justificado"
-      store_patterns: "Zustand con interfaces separadas, acciones via Ploc, selectores especificos"
-      error_handling: "Either monad en servicios, fold() para branching, sin try/catch en servicios para errores de API"
+      store_patterns: "Zustand con interfaces separadas, stores llaman DataAccess directo, multiples stores por concern"
+      error_handling: "Either monad en DataAccess, response.fold() directo en stores, sin try/catch para errores de API"
       security: "sin secretos hardcoded, sin XSS, validacion con Zod, no exponer datos sensibles en client"
       performance: "sin memoizacion prematura, dynamic imports, paginacion server-side, debounce"
       i18n: "todo texto visible via useTranslations(), claves organizadas por feature"
@@ -459,11 +458,10 @@ review_dimensions:
       location: "tests colocados junto al archivo fuente ({File}.test.ts(x))"
       coverage_targets:
         domain: "90%+"
-        application: "80%+"
-        infrastructure_ploc: "70%+"
-        infrastructure_services: "60%+"
+        stores: "70%+"
+        infrastructure_data_access: "60%+"
         ui_components: "50%+ (componentes criticos)"
-      mock_patterns: "jest.Mocked<Interface>, mockGetServiceFactory, factories para datos"
+      mock_patterns: "vi.mock(), vi.fn(), mockGetServiceFactory, factories para datos"
       test_quality: "testar comportamiento visible, no implementacion interna"
 
 # =============================================================================
@@ -473,24 +471,24 @@ testing_strategy:
   description: |
     La estrategia de testing se adapta a la capa afectada por los cambios.
     Los tests SIEMPRE estan colocados junto al archivo fuente, no en
-    directorio separado.
+    directorio separado. Framework: Vitest + @testing-library/react.
   domain_changes:
     detection: archivos en src/core/*/domain/
     required: tests unitarios puros sin mocks
     location: "{File}.test.ts junto al archivo fuente"
     coverage: "90%+"
-  application_changes:
-    detection: archivos en src/core/*/application/
-    required: tests con servicios mockeados (jest.Mocked<Interface>)
+  store_changes:
+    detection: archivos en src/core/*/infrastructure/store/
+    required: tests de acciones con DataAccess mockeado (vi.mock(), vi.fn())
     location: "{File}.test.ts junto al archivo fuente"
-    coverage: "80%+"
+    coverage: "70%+"
   infrastructure_changes:
-    detection: archivos en src/core/*/infrastructure/
-    required: tests de plocs y servicios con mocks
+    detection: archivos en src/core/*/infrastructure/ (data-access, services, helpers)
+    required: tests de DataAccess y servicios con mocks
     location: "{File}.test.ts(x) junto al archivo fuente"
-    coverage: "60-70%+"
+    coverage: "60%+"
   ui_changes:
-    detection: archivos en src/ui/**/*.tsx o src/app/**/*.tsx
+    detection: archivos en src/core/*/infrastructure/ui/**/*.tsx o src/app/**/*.tsx
     required: tests de componentes con React Testing Library
     location: "{File}.test.tsx junto al archivo fuente"
     coverage: "50%+ para componentes criticos"
@@ -513,24 +511,28 @@ anti_patterns:
     - "solicitar abstracciones innecesarias (no Abstract Base Classes a menos que 3+ clases la extiendan)"
     - "solicitar Generic CRUD Abstractions prematuras (no BaseCrudService<T>)"
     - "solicitar deep inheritance hierarchies (maximo 1 nivel)"
-    - "solicitar over-abstracting Ploc layer (no BasePloc<State, Actions>)"
+    - "solicitar capa application/ con Ploc, UseCase, Command o Dependencies"
+    - "solicitar fat stores monoliticos — dividir por concern"
     - "solicitar unnecessary middleware layers"
-    - "solicitar DI frameworks (InversifyJS, tsyringe) — usar factory functions"
+    - "solicitar DI frameworks (InversifyJS, tsyringe) — DataAccess instanciado a nivel de modulo"
     - "solicitar premature optimization (React.memo, useMemo, useCallback sin medir)"
     - "solicitar over-testing de implementation details (no testar que useState fue llamado)"
     - "pedir future-proofing sin justificacion"
     - "demandar mas tests que los definidos en la estrategia por capa"
     - "sugerir refactoring de codigo funcional que no viola principios establecidos"
-    - "solicitar capas o patrones adicionales mas alla de la cadena Component -> Store -> Ploc -> UseCase -> Service"
+    - "solicitar capas o patrones adicionales mas alla de la cadena Component -> Store -> DataAccess"
+    - "solicitar interfaces en domain para DataAccess (son clases concretas, no ports)"
   reviewer_must:
-    - "enfocarse en cumplimiento de Clean Architecture / Hexagonal Architecture definida"
+    - "enfocarse en cumplimiento de arquitectura de dos capas (domain + infrastructure)"
     - "reportar bugs reales y vulnerabilidades de seguridad"
-    - "verificar tests segun estrategia por capa (domain 90%+, application 80%+, etc.)"
+    - "verificar tests segun estrategia por capa (domain 90%+, stores 70%+, etc.)"
     - "evaluar solo contra criterios de calidad establecidos"
-    - "verificar Either pattern en servicios (no try/catch para errores de API)"
+    - "verificar Either pattern en DataAccess (no try/catch para errores de API)"
+    - "verificar response.fold() directo en stores (no Ploc intermediario)"
     - "verificar discriminated unions con campo 'kind' para estados"
     - "verificar i18n (texto visible via useTranslations, nunca hardcoded)"
     - "verificar que imports respetan boundaries de capas y modulos"
+    - "verificar que stores son pequenos y focalizados (~60-100 lineas por concern)"
     - "ser constructivo, especifico, educativo, balanceado, respetuoso y pragmatico"
 
 # =============================================================================
@@ -538,16 +540,19 @@ anti_patterns:
 # =============================================================================
 approval_checklist:
   architecture:
+    - "two-layer architecture: only domain/ and infrastructure/ (no application/)"
     - "no layer violations (domain libre de imports de infrastructure/React/Next.js)"
-    - "dependency direction respected (infrastructure -> application -> domain)"
+    - "dependency direction respected (infrastructure -> domain)"
     - "module boundaries respected (no cross-module infrastructure imports)"
     - "SOLID principles respected"
-    - "expected patterns used (Either, Ploc, Zustand, Factory DI, Discriminated Unions)"
+    - "expected patterns used (Either, Zustand Store, DataAccess, Discriminated Unions)"
+    - "stores are small and focused (~60-100 lines per concern)"
     - "no circular dependencies"
     - "clear separation of concerns"
   code_quality:
     - "TypeScript strict mode compliance (no any)"
-    - "Either pattern in services (no try/catch for API errors)"
+    - "Either pattern in DataAccess (no try/catch for API errors)"
+    - "response.fold() directo en stores (no Ploc intermediario)"
     - "discriminated unions with 'kind' field for states"
     - "no critical security vulnerabilities (no hardcoded secrets, no XSS)"
     - "proper component patterns (use client only when needed, props with interface)"
@@ -558,8 +563,8 @@ approval_checklist:
     - "import order respected"
   testing:
     - "tests colocated with source files ({File}.test.ts(x))"
-    - "coverage targets met per layer"
-    - "mock patterns correct (jest.Mocked<Interface>, factories)"
+    - "coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)"
+    - "mock patterns correct (vi.mock(), vi.fn(), factories)"
     - "edge cases covered"
     - "tests verify behavior, not implementation details"
   forms:
@@ -629,7 +634,7 @@ output_format:
 
     **Recommendations**:
     - Add domain tests for `transformFunction` in `Entity.ts`
-    - Add application tests for `{Action}UseCase` with success and error paths
+    - Add store tests for `use{Module}Store` actions with success and error paths
 
     ---
 
@@ -685,7 +690,7 @@ tone_and_communication:
   good_examples:
     - "Great use of the Either pattern here! The fold() makes error handling very explicit."
     - "Consider extracting this logic into a custom hook to keep the component focused on rendering."
-    - "This Ploc correctly transforms the Either response into discriminated union states. Clean implementation."
+    - "This store correctly folds the Either response from DataAccess into loading/loaded states. Clean implementation."
   bad_examples:
     - "This code is bad. (Not specific or helpful)"
     - "Why did you do it this way? (Sounds accusatory)"
@@ -704,11 +709,11 @@ reference_stack:
     language: "TypeScript (strict mode)"
     runtime: "React 18+"
     state_management: "Zustand"
-    styling: "Tailwind CSS"
+    styling: "Tailwind CSS v4"
     forms: "React Hook Form + Zod"
     http_client: "Axios"
     testing:
-      framework: "Jest + ts-jest"
+      framework: "Vitest"
       component_testing: "@testing-library/react"
       environment: "jsdom"
   recommended:
