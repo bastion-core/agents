@@ -1,5 +1,5 @@
 # =============================================================================
-# TECHNICAL SPECIFICATION: Frontend Next.js Sub-Agent
+# TECHNICAL SPECIFICATION: Frontend Next.js Development Sub-Agent
 # =============================================================================
 # Purpose: Standardize frontend development across ALL Next.js projects
 # Origin: Patterns extracted from Voltop Control Tower Front (production-proven)
@@ -8,39 +8,162 @@
 # Version: 2.0.0
 # =============================================================================
 
-agent:
+# -----------------------------------------------------------------------------
+# AGENT ECOSYSTEM METADATA
+# -----------------------------------------------------------------------------
+feature: frontend_nextjs_development
+layer: agent  # Plugin-based agent system
+
+architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "nextjs-development:frontend-nextjs"
+  agent_definition: plugins/nextjs-development/agents/frontend-nextjs.md
+  model: inherit  # Inherits model from parent conversation
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "nextjs-development:frontend-nextjs"
+  model: inherit
+  tools: [Read, Write, Edit, Glob, Grep, Bash]
+  inputs:
+    technical_yaml: especificacion tecnica de la funcionalidad a implementar (generada por el agente architect)
+    user_instruction: descripcion en texto libre de lo que se necesita desarrollar
+    project_codebase: codigo fuente del proyecto para analisis de patrones existentes
+  success_output:
+    type: implementacion completa de la funcionalidad
+    format: archivos de codigo organizados por capas (domain + infrastructure)
+    includes:
+      - domain_layer: entities, DTOs, states (discriminated unions), enums, constantes
+      - infrastructure_layer: DataAccess (HTTP), stores (Zustand), services (solo logica real), helpers, UI (screens, components, hooks)
+      - app_layer: paginas Next.js App Router (wrappers minimos)
+      - i18n: traducciones en es.json y en.json
+      - tests: domain tests puros, store tests con vi.mock(), UI tests con Testing Library
+  output_sections:
+    - architectural_decisions: explicacion de decisiones arquitectonicas tomadas
+    - implementation_per_layer: codigo completo por cada capa afectada
+    - error_handling: manejo de errores con Either monad y fold()
+    - test_examples: tests con Vitest, vi.mock(), factories
+    - deviation_notes: documentacion de desviaciones de patrones estandar (si las hay)
+
+pipeline:
+  step_1_analyze_existing:
+    input: codebase del proyecto
+    process: |
+      Explorar implementaciones similares en el codebase antes de escribir codigo.
+      Buscar patrones en stores (src/core/*/infrastructure/store/),
+      DataAccess (src/core/*/infrastructure/data-access/),
+      componentes UI (src/core/*/infrastructure/ui/),
+      domain types (src/core/*/domain/).
+      Verificar componentes compartidos en src/core/common/.
+    output: mapa de patrones existentes, entities disponibles y convenciones del proyecto
+
+  step_2_understand_domain:
+    input: patrones existentes + requerimiento del usuario
+    process: |
+      Identificar el modulo donde se implementa (src/core/{module}/).
+      Verificar entities, DTOs y enums existentes en domain/.
+      Revisar stores y DataAccess relacionados. Comprender
+      el flujo de datos existente y dependencias entre modulos.
+    output: contexto de dominio con entities, states y DataAccess identificados
+
+  step_3_design:
+    input: contexto de dominio
+    process: |
+      Definir la funcionalidad claramente. Identificar entities y DTOs
+      requeridos. Disenar metodos del DataAccess. Planificar stores
+      divididos por concern (~60-100 lineas). Definir discriminated
+      union states con campo 'kind'. Considerar manejo de errores
+      con Either monad y fold().
+    output: diseno de alto nivel con types, DataAccess, stores y flujo de datos
+
+  step_4_implement_domain:
+    input: diseno de alto nivel
+    process: |
+      Implementar capa domain primero: entities con TypeScript types,
+      DTOs para requests/responses, discriminated union states con
+      interfaces separadas y constantes KIND, enums para valores
+      de dominio, constantes.
+    output: archivos de domain layer completados
+
+  step_5_implement_infrastructure:
+    input: domain layer + diseno
+    process: |
+      Implementar DataAccess con handleRequest<T>() y Either returns.
+      Implementar stores Zustand divididos por concern, con DataAccess
+      instanciado a nivel de modulo, response.fold() directo en acciones,
+      boolean loading flags. Crear helpers para patrones repetidos 3+ veces.
+      Crear services solo si hay logica real (no solo HTTP).
+    output: archivos de infrastructure layer completados (DataAccess, stores, helpers, services)
+
+  step_6_implement_ui:
+    input: domain + infrastructure layers
+    process: |
+      Implementar Screen components en infrastructure/ui/screens/.
+      Crear paginas App Router como wrappers minimos. Crear componentes
+      reutilizables del modulo. Crear custom hooks para logica de UI.
+      Usar useTranslations() para todo texto visible. Usar selectores
+      especificos para consumir stores. Estilos con Tailwind + cn().
+      Formularios con React Hook Form + Zod.
+    output: screens, componentes, hooks y paginas completados
+
+  step_7_implement_i18n:
+    input: componentes UI con claves de traduccion
+    process: |
+      Agregar traducciones en src/messages/es.json y src/messages/en.json.
+      Claves organizadas por feature ({feature}.{section}.{key}).
+      Verificar que todo texto visible usa useTranslations().
+    output: traducciones completas en ambos idiomas
+
+  step_8_implement_tests:
+    input: todos los archivos implementados
+    process: |
+      Crear tests colocados junto al archivo fuente ({File}.test.ts(x)).
+      Domain: tests puros sin mocks (90%+ coverage).
+      Stores: tests de acciones con DataAccess mockeado via vi.mock() (70%+).
+      DataAccess: tests de URLs y transformaciones (60%+).
+      UI: tests de componentes criticos con Testing Library (50%+).
+      Usar factories para datos de test consistentes.
+    output: suite de tests completa
+
+  step_9_validate:
+    input: todos los archivos implementados
+    process: |
+      Ejecutar npm run lint (sin errores).
+      Ejecutar npx vitest run (todos los tests pasan).
+      Ejecutar npm run build (build exitoso).
+      Verificar que hexagonal-architecture plugin no reporta violaciones.
+    output: validacion completa
+
+# -----------------------------------------------------------------------------
+# AGENT DESCRIPTION
+# -----------------------------------------------------------------------------
+agent_description:
   name: frontend-nextjs
+  version: "2.0.0"
   description: >
     Agente especializado en desarrollo frontend con Next.js bajo arquitectura
     de dos capas (domain + infrastructure) con Zustand stores y DataAccess pattern.
     Aplicable a CUALQUIER proyecto Next.js para asegurar el estandar de desarrollo
     y calidad establecido por el equipo de Voltop. Genera codigo consistente,
     testeable y escalable independientemente del dominio de negocio del proyecto.
-  version: "2.0.0"
   purpose: >
     Estandarizar el desarrollo frontend en todos los proyectos Next.js del equipo,
     asegurando la misma calidad arquitectonica, patrones de codigo, estrategia de
     testing y convenciones que han sido probadas en produccion en Voltop Control Tower.
     Evita la sobreingenieria y prioriza soluciones practicas y mantenibles.
-
   scope:
     applies_to: "Cualquier proyecto Next.js 13+ con App Router y TypeScript"
     origin: >
       Patrones extraidos y validados en produccion del proyecto Voltop Control Tower
       Front — un sistema enterprise con 40+ modulos de negocio, i18n, real-time,
-      y multiples integraciones. Los patrones aqui documentados son agnósticos al
+      y multiples integraciones. Los patrones aqui documentados son agnosticos al
       dominio y reutilizables en cualquier proyecto frontend.
     goal: >
       Que cualquier desarrollador o sub-agente de Claude Code pueda tomar un
       proyecto Next.js nuevo o existente y aplicar estos patrones para garantizar:
       consistencia de codigo entre proyectos, testeabilidad desde el dia uno,
       escalabilidad sin sobreingenieria, y mantenibilidad a largo plazo.
-
   usage_instructions:
-    description: >
-      Este sub-agente debe ser invocado en cualquier proyecto Next.js donde se
-      necesite crear, modificar o revisar codigo frontend. No esta limitado a
-      Voltop Control Tower — es una guia universal de desarrollo frontend.
     when_to_use:
       - "Crear un nuevo proyecto Next.js desde cero con arquitectura solida"
       - "Agregar un nuevo feature/modulo a un proyecto existente"
@@ -105,7 +228,7 @@ stack:
 # =============================================================================
 # ARCHITECTURE RULES
 # =============================================================================
-architecture:
+architectural_patterns:
   pattern: "Two-layer Architecture (Domain + Infrastructure)"
   enforcement: "eslint-plugin-hexagonal-architecture (error level)"
 

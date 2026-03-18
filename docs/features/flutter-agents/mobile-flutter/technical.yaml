@@ -1,34 +1,157 @@
 # =============================================================================
-# FLUTTER MOBILE DEVELOPMENT AGENT - TECHNICAL SPECIFICATION
+# TECHNICAL SPECIFICATION: Flutter Mobile Development Sub-Agent
 # =============================================================================
-# This file is the single source of truth for a Claude sub-agent that guides
-# Flutter development on the Voltop Charging App project.
-#
-# Project: Voltop Charging App (EV Charging Mobile App)
-# Platform: Flutter (iOS + Android)
-# Dart SDK: ^3.7.2
-# Flutter Version: Latest stable
-# App Version: 1.7.1+12
+# Purpose: Standardize Flutter mobile development with Clean Architecture
+# Origin: Patterns extracted from Voltop Charging App (production-proven)
+# Architecture: Clean Architecture with Feature-Based Modularization
+# Framework: Flutter (iOS + Android) + Dart SDK ^3.7.2
+# Version: 1.0.0
 # =============================================================================
 
-agent_metadata:
-  name: "flutter-mobile-architect"
-  version: "1.0.0"
-  description: >
-    Specialized Claude sub-agent for guiding Flutter mobile development on the
-    Voltop Charging App. This agent enforces Clean Architecture with feature-based
-    modularization, BLoC + Freezed state management, and project-specific patterns.
-    It provides architectural decisions, code review guidance, and generates new
-    features following established conventions.
-  target: "Flutter mobile (iOS + Android)"
-  language: "Dart"
-  sdk: "^3.7.2"
-  app_package: "voltop_charging_app"
+# -----------------------------------------------------------------------------
+# AGENT ECOSYSTEM METADATA
+# -----------------------------------------------------------------------------
+feature: mobile_flutter_development
+layer: agent  # Plugin-based agent system
 
-# =============================================================================
-# ARCHITECTURE
-# =============================================================================
 architecture:
+  pattern: Prompt-driven Agent (Plugin System)
+  entry: Task tool with subagent_type "flutter-development:mobile-flutter"
+  agent_definition: plugins/flutter-development/agents/mobile-flutter.md
+  model: inherit  # Inherits model from parent conversation
+  tools_access: All tools
+
+agent_contract:
+  invocation: Task tool subagent_type "flutter-development:mobile-flutter"
+  model: inherit
+  tools: [Read, Write, Edit, Glob, Grep, Bash]
+  inputs:
+    technical_yaml: especificacion tecnica de la funcionalidad a implementar (generada por el agente architect)
+    user_instruction: descripcion en texto libre de lo que se necesita desarrollar
+    project_codebase: codigo fuente del proyecto para analisis de patrones existentes
+  success_output:
+    type: implementacion completa de la funcionalidad
+    format: archivos de codigo organizados por capas (domain, application/BLoC, infrastructure, presentation)
+    includes:
+      - domain_layer: DTOs (Freezed), repository interfaces (abstract), service interfaces (abstract), enums, models
+      - application_layer: BLoC con Freezed events/states, helper classes (si aplica)
+      - infrastructure_layer: API providers (BaseApiProvider), repository implementations, service implementations, storage services
+      - presentation_layer: screens, widgets con BlocBuilder/BlocConsumer/BlocListener
+      - settings: DI registration (di.dart), routes (app_routes.dart), URL paths (url_paths.dart)
+      - tests: BLoC tests con bloc_test + Mockito, infrastructure tests
+  output_sections:
+    - architectural_decisions: explicacion de decisiones arquitectonicas tomadas
+    - implementation_per_layer: codigo completo por cada capa afectada
+    - error_handling: manejo de errores con Result<T> y RequestError
+    - test_examples: BLoC tests con mocks, fakes y provideDummy
+    - deviation_notes: documentacion de desviaciones de patrones estandar (si las hay)
+
+pipeline:
+  step_1_analyze_existing:
+    input: codebase del proyecto
+    process: |
+      Explorar implementaciones similares en el codebase antes de escribir codigo.
+      Buscar patrones en BLoCs (lib/features/*/application/bloc/*_bloc.dart),
+      repositorios (lib/features/*/domain/repositories/*_repository.dart),
+      API providers (lib/features/*/infrastructure/*_api_provider.dart),
+      DTOs (lib/features/*/domain/dtos/*_dto.dart).
+      Verificar componentes compartidos en common/.
+    output: mapa de patrones existentes, DTOs disponibles y convenciones del proyecto
+
+  step_2_understand_domain:
+    input: patrones existentes + requerimiento del usuario
+    process: |
+      Identificar el feature module donde se implementa.
+      Verificar DTOs y enums existentes en el feature o en common/.
+      Revisar repositorios y servicios relacionados. Comprender
+      el flujo de datos existente y dependencias entre features.
+    output: contexto de dominio con DTOs, repositorios y servicios identificados
+
+  step_3_design:
+    input: contexto de dominio
+    process: |
+      Definir la funcionalidad claramente. Identificar DTOs requeridos
+      (request/response). Disenar metodos de la interfaz del repositorio.
+      Planificar eventos y estados del BLoC. Considerar escenarios de
+      error con Result<T>. Determinar si se requieren helpers para BLoCs
+      complejos o servicios para logica que no es CRUD.
+    output: diseno de alto nivel con interfaces, DTOs, eventos/estados y flujo de datos
+
+  step_4_implement_domain:
+    input: diseno de alto nivel
+    process: |
+      Implementar capa de dominio primero: DTOs con Freezed (request con
+      json_serializable, response con custom fromJson), repository interfaces
+      como abstract classes, service interfaces como abstract classes (si aplica),
+      enums y models.
+    output: archivos de domain layer completados
+
+  step_5_implement_infrastructure:
+    input: domain layer + diseno
+    process: |
+      Implementar capa de infraestructura: API providers extendiendo
+      BaseApiProvider con Result<T> returns, repository implementations
+      delegando a API providers, service implementations (si aplica),
+      storage services con SharedPreferences (si aplica).
+      Agregar URL paths en settings/url_paths.dart.
+    output: archivos de infrastructure layer completados
+
+  step_6_implement_application:
+    input: domain + infrastructure layers
+    process: |
+      Implementar BLoC con Freezed events y states. Usar event.map()
+      para delegation a handlers privados. Emitir loading antes de
+      operaciones async. Usar result.when() para manejar success/failure.
+      Extraer helpers si el BLoC tiene >6 event handlers o >200 lineas.
+      Inyectar dependencias via constructor (abstract types).
+    output: BLoC, events, states y helpers completados
+
+  step_7_implement_presentation:
+    input: BLoC + domain types
+    process: |
+      Ejecutar UI Discovery Rule: descubrir la capa de abstraccion de UI del proyecto
+      (common/ui/, shared/widgets/, etc.), identificar componentes wrapper, libreria
+      subyacente (pubspec.yaml), constantes de colores e iconos.
+      Aplicar Component Resolution Flow: si el componente existe en la abstraccion, usarlo;
+      si existe en la libreria subyacente, crear tarea de customizacion (wrap + theme + named constructors);
+      si no existe en ninguno, construir desde Flutter widgets en common/ui/.
+      Implementar screens y widgets usando BlocBuilder para rebuilds,
+      BlocConsumer para side effects + rebuilds, BlocListener para
+      side effects puros. Textos via .i18n.
+    output: screens y widgets completados
+
+  step_8_register_dependencies:
+    input: todos los archivos implementados
+    process: |
+      Registrar dependencias en settings/di.dart: API provider como
+      lazySingleton, repository como lazySingleton (abstract type),
+      service como lazySingleton (si aplica), BLoC como factory.
+      Agregar ruta en settings/app_routes.dart.
+    output: DI y routing configurados
+
+  step_9_implement_tests:
+    input: todos los archivos implementados
+    process: |
+      Crear mock file con @GenerateMocks en test/features/{feature}/application/bloc/mocks/.
+      Crear BLoC tests con blocTest helper: testar estado inicial, success y
+      failure para cada evento, flujos secuenciales, edge cases.
+      Usar Fake para analytics/logger, Mock para repositorios.
+      provideDummy<Result<T>>() en setUpAll. Close BLoC en tearDown.
+      Ejecutar build_runner para generar mocks. Ejecutar flutter test.
+    output: suite de tests completa
+
+  step_10_code_generation:
+    input: todos los archivos con @freezed y @GenerateMocks
+    process: |
+      Ejecutar dart run build_runner build --delete-conflicting-outputs
+      para generar archivos .freezed.dart, .g.dart y .mocks.dart.
+      Verificar que no hay errores de generacion.
+    output: archivos generados actualizados
+
+# =============================================================================
+# ARCHITECTURAL PATTERNS
+# =============================================================================
+architectural_patterns:
   pattern: "Clean Architecture with Feature-Based Modularization (Hybrid)"
   style: "Modular Monolith (single Flutter app)"
   description: >
@@ -148,13 +271,13 @@ folder_structure:
         - path: "domain/services/"
           description: "Shared abstract service interfaces"
         - path: "infrastructure/"
-          description: "Shared infrastructure (BaseApiProvider, VoltopChargingInterceptor, Result type, AppVersionService)"
+          description: "Shared infrastructure (BaseApiProvider, custom interceptor, Result type, AppVersionService)"
         - path: "infrastructure/networking/"
           description: "Result<T> and RequestError sealed classes"
         - path: "presentation/widgets/"
           description: "Shared widgets (ConnectivityListener, etc.)"
         - path: "ui/"
-          description: "VoltopUI abstraction layer (VoltopButton, VoltopText, VoltopTextField, VoltopPhoneField, VoltopSnackbar, VoltopBottomSheet)"
+          description: "Project UI abstraction layer (discovered at runtime: {Project}Button, {Project}Text, {Project}TextField, {Project}Snackbar, {Project}BottomSheet)"
 
     - path: "features/"
       description: "Feature modules. Each feature is self-contained."
@@ -194,8 +317,8 @@ folder_structure:
           description: "Environment enum (production, staging, local)"
         - path: "url_paths.dart"
           description: "Centralized API endpoint URL paths"
-        - path: "voltop_colors.dart"
-          description: "Color constants matching the design system"
+        - path: "{project}_colors.dart"
+          description: "Color constants matching the design system (discovered at runtime)"
         - path: "translations/"
           description: "i18n translation files"
 
@@ -467,7 +590,7 @@ state_management:
             listener: (context, state) {
               state.whenOrNull(
                 success: (_) => context.go(AppRoutes.home),
-                error: (message) => VoltopSnackbar.showError(context, message),
+                error: (message) => {Project}Snackbar.showError(context, message),
               );
             },
             builder: (context, state) {
@@ -486,7 +609,7 @@ state_management:
           BlocListener<{Feature}Bloc, {Feature}State>(
             listener: (context, state) {
               state.whenOrNull(
-                error: (message) => VoltopSnackbar.showError(context, message),
+                error: (message) => {Project}Snackbar.showError(context, message),
               );
             },
             child: SomeWidget(),
@@ -498,7 +621,7 @@ state_management:
 networking:
   http_client: "Dio ^5.6.0"
   base_url_management: "UrlPaths class with environment-based host switching"
-  interceptor: "VoltopChargingInterceptor"
+  interceptor: "Custom Dio Interceptor (project-specific, discovered at runtime)"
 
   interceptor_behavior:
     on_request:
@@ -731,7 +854,7 @@ routing:
           required bool isLoggedIn,
           List<NavigatorObserver>? observers,
         }) {
-          VoltopChargingInterceptor.navigatorKey = navigatorKey;
+          // Set navigator key on custom interceptor if needed
 
           return GoRouter(
             navigatorKey: navigatorKey,
@@ -771,106 +894,171 @@ routing:
 # UI COMPONENTS
 # =============================================================================
 ui_components:
-  abstraction_layer: "VoltopUI (common/ui/voltop_ui.dart)"
-  underlying_library: "flutter_components_library (private git package v.1.3.1)"
-  icon_pack: "phosphor_flutter ^2.0.0"
-  svg_rendering: "flutter_svg ^2.0.10+1"
-  theme: "Dark theme with Poppins font via AppTheme"
-
+  approach: "Parametric (Discovery + Resolution Flow + Reference Example)"
   description: >
-    The VoltopUI layer wraps flutter_components_library widgets with project-specific
-    defaults. Always use Voltop* components instead of raw Flutter or library widgets.
-    Each component uses named factory constructors for variants.
+    The agent discovers the project's UI abstraction layer at runtime instead of
+    hardcoding a specific library. This ensures the agent is reusable across
+    different Flutter projects, each with its own design system.
 
-  components:
-    - name: "VoltopButton"
-      variants:
-        - "VoltopButton.primary(text:, onPressed:) - Gradient CTA button"
-        - "VoltopButton.secondary(text:, onPressed:) - Secondary action button"
-        - "VoltopButton.neutral(text:, onPressed:) - Neutral/inactive button"
-        - "VoltopButton.text(text:, onPressed:) - Tertiary text button"
-        - "VoltopButton.small(text:, onPressed:) - Small button for reduced spaces"
-      optional_params: "isLoading, leadingIcon, trailingIcon"
+  discovery_rule:
+    description: >
+      Mandatory first step before writing ANY UI code. The agent must discover
+      the project's UI abstraction layer by searching the codebase.
+    steps:
+      - "Search for a shared UI folder: common/ui/, common/presentation/widgets/, shared/widgets/, core/design_system/"
+      - "Identify wrapper components: project-prefixed widgets (e.g., {Project}Button, {Project}Text, {Project}TextField)"
+      - "Identify the underlying library: check pubspec.yaml for UI packages (private git package, design system library)"
+      - "Identify color constants: centralized colors file ({project}_colors.dart, app_colors.dart, theme_colors.dart)"
+      - "Identify icon pack: icon packages in pubspec.yaml (phosphor_flutter, font_awesome_flutter, material_icons)"
+    output: "Map of discovered components, colors, icons, and the underlying library"
 
-    - name: "VoltopText"
-      variants:
-        - "VoltopText.display(text) - Large hero text"
-        - "VoltopText.title(text) - Screen titles (24px)"
-        - "VoltopText.subtitle(text) - Section subtitles (16px)"
-        - "VoltopText.heading(text) - Section headers (h3)"
-        - "VoltopText.subheading(text) - Minor subtitles (16px)"
-        - "VoltopText.body(text) - Paragraph text (14px)"
-        - "VoltopText.secondary(text) - Supporting text (12px, textSecondary color)"
-        - "VoltopText.caption(text) - Labels/metadata (textHint color)"
-        - "VoltopText.label(text) - Form labels (primary cyan color)"
-        - "VoltopText.hint(text) - Placeholders/helper text"
-      optional_params: "color, textAlign, maxLines, overflow, fontWeight, fontSize"
+  component_resolution_flow:
+    description: >
+      When the agent needs a UI component for a feature, it follows this decision
+      flow to determine how to obtain or create it.
+    steps:
+      - condition: "Project's UI abstraction has the component"
+        action: "Use it directly (e.g., {Project}DatePicker)"
+      - condition: "Underlying library has a suitable component but no project wrapper exists"
+        action: >
+          Create a customization task:
+          1. Wrap the library component in a project-prefixed widget
+          2. Place it in common/ui/ or common/presentation/widgets/
+          3. Apply project theme defaults (colors, typography, spacing)
+          4. Expose named constructors for common variants
+          5. Document the new component
+      - condition: "Neither the abstraction nor the library has the component"
+        action: >
+          Build from raw Flutter widgets:
+          1. Create a reusable widget in common/ui/ or common/presentation/widgets/
+          2. Use the project's color constants and typography
+          3. Follow existing naming conventions ({Project}ComponentName)
+          4. Add named constructors for variants
+    critical_rule: "NEVER use a raw library component directly in feature code. Always wrap it first in the project's UI abstraction layer."
 
-    - name: "VoltopTextField"
-      variants:
-        - "VoltopTextField() - Generic text field"
-        - "VoltopTextField.phone() - Phone input with validation"
-        - "VoltopTextField.password() - Password/PIN field with toggle"
-        - "VoltopTextField.pin(exactLength:) - PIN field with exact length validation"
-        - "VoltopTextField.otp(exactLength:) - OTP verification code field"
-        - "VoltopTextField.email() - Email field with validation"
-
-    - name: "VoltopPhoneField"
-      variants:
-        - "VoltopPhoneField() - Phone with country code selector"
-        - "VoltopPhoneField.latinAmerica() - Default Colombia, LATAM favorites"
-
-    - name: "VoltopSnackbar"
-      methods:
-        - "VoltopSnackbar.showSuccess(context, message)"
-        - "VoltopSnackbar.showError(context, message)"
-        - "VoltopSnackbar.showInfo(context, message)"
-        - "VoltopSnackbar.showWelcome(context, userName)"
-
-    - name: "VoltopBottomSheet"
-      methods:
-        - "VoltopBottomSheet.show(context:, child:, isDismissible:, enableDrag:)"
-      helpers:
-        - "VoltopBottomSheetContainer(child:, heightFactor:) - Styled container"
-        - "VoltopBottomSheetHeader(title:, onClose:) - Header with close button"
-
-  colors:
-    file: "settings/voltop_colors.dart"
-    description: "All color constants. NEVER use raw Color values in widgets."
+  expected_component_categories:
+    description: >
+      A well-structured project should have these component categories. During
+      discovery, map the project's components to these categories.
     categories:
-      base:
-        - "VoltopColors.background (#0A0F1A) - Main background"
-        - "VoltopColors.surface (#111827) - Container/card background"
-        - "VoltopColors.surfaceHover (#1A2233) - Elevated surfaces"
-        - "VoltopColors.textPrimary (#E6E9EE) - Primary text"
-        - "VoltopColors.textSecondary (#A3B2C3) - Secondary text"
-        - "VoltopColors.textHint (#6B7684) - Hint/placeholder text"
-      brand:
-        - "VoltopColors.primary (#0FC7E1) - Volt Cyan (CTA, accents)"
-        - "VoltopColors.secondary (#51D9B2) - Eco Mint (secondary actions)"
-        - "VoltopColors.primaryHover (#17A7D6) - Electric Blue (hover state)"
-      feedback:
-        - "VoltopColors.error (#E2555A) - Error/danger"
-        - "VoltopColors.warning (#F6B756) - Warning"
-        - "VoltopColors.success (#3BD398) - Success"
-        - "VoltopColors.info (#17A7D6) - Information"
-      border:
-        - "VoltopColors.border (#1E2635) - Default border"
-        - "VoltopColors.borderFocus (#0FC7E1) - Focus indicator"
-      navigation:
-        - "VoltopColors.navBarBackground (#052B44) - Bottom nav background"
-      gradients:
-        - "VoltopColors.gradientPrimary - LinearGradient for hero/CTA"
-        - "VoltopColors.gradientSecondary - LinearGradient for cards"
+      - category: "Buttons"
+        purpose: "User actions"
+        example: "{Project}Button.primary(), .secondary(), .text(), .small()"
+      - category: "Typography"
+        purpose: "Text display"
+        example: "{Project}Text.title(), .body(), .caption(), .label()"
+      - category: "Inputs"
+        purpose: "Data entry"
+        example: "{Project}TextField(), .password(), .email(), .phone()"
+      - category: "Feedback"
+        purpose: "Notifications"
+        example: "{Project}Snackbar.showSuccess(), .showError(), .showInfo()"
+      - category: "Overlays"
+        purpose: "Modal content"
+        example: "{Project}BottomSheet.show(), {Project}Dialog()"
+      - category: "Colors"
+        purpose: "Centralized palette"
+        example: "{Project}Colors.primary, .background, .error, .border"
+      - category: "Icons"
+        purpose: "Iconography"
+        example: "Icon pack from pubspec.yaml (PhosphorIcons, FontAwesome, etc.)"
+
+  reference_example:
+    description: >
+      The following is a REFERENCE EXAMPLE of a well-structured UI abstraction
+      (Voltop Charging App). Projects may use different names, variants, and colors.
+      Use this as a model for understanding WHAT a good UI layer looks like.
+    project: "Voltop Charging App"
+    location: "common/ui/voltop_ui.dart"
+    underlying_library: "flutter_components_library (private git package v.1.3.1)"
+    icon_pack: "phosphor_flutter ^2.0.0"
+    svg_rendering: "flutter_svg ^2.0.10+1"
+    theme: "Dark theme with Poppins font via AppTheme"
+    components:
+      - name: "VoltopButton"
+        variants:
+          - "VoltopButton.primary(text:, onPressed:) - Gradient CTA button"
+          - "VoltopButton.secondary(text:, onPressed:) - Secondary action button"
+          - "VoltopButton.neutral(text:, onPressed:) - Neutral/inactive button"
+          - "VoltopButton.text(text:, onPressed:) - Tertiary text button"
+          - "VoltopButton.small(text:, onPressed:) - Small button for reduced spaces"
+        optional_params: "isLoading, leadingIcon, trailingIcon"
+      - name: "VoltopText"
+        variants:
+          - "VoltopText.display(text) - Large hero text"
+          - "VoltopText.title(text) - Screen titles (24px)"
+          - "VoltopText.subtitle(text) - Section subtitles (16px)"
+          - "VoltopText.heading(text) - Section headers (h3)"
+          - "VoltopText.subheading(text) - Minor subtitles (16px)"
+          - "VoltopText.body(text) - Paragraph text (14px)"
+          - "VoltopText.secondary(text) - Supporting text (12px, textSecondary color)"
+          - "VoltopText.caption(text) - Labels/metadata (textHint color)"
+          - "VoltopText.label(text) - Form labels (primary cyan color)"
+          - "VoltopText.hint(text) - Placeholders/helper text"
+        optional_params: "color, textAlign, maxLines, overflow, fontWeight, fontSize"
+      - name: "VoltopTextField"
+        variants:
+          - "VoltopTextField() - Generic text field"
+          - "VoltopTextField.phone() - Phone input with validation"
+          - "VoltopTextField.password() - Password/PIN field with toggle"
+          - "VoltopTextField.pin(exactLength:) - PIN field with exact length validation"
+          - "VoltopTextField.otp(exactLength:) - OTP verification code field"
+          - "VoltopTextField.email() - Email field with validation"
+      - name: "VoltopPhoneField"
+        variants:
+          - "VoltopPhoneField() - Phone with country code selector"
+          - "VoltopPhoneField.latinAmerica() - Default Colombia, LATAM favorites"
+      - name: "VoltopSnackbar"
+        methods:
+          - "VoltopSnackbar.showSuccess(context, message)"
+          - "{Project}Snackbar.showError(context, message)"
+          - "VoltopSnackbar.showInfo(context, message)"
+          - "VoltopSnackbar.showWelcome(context, userName)"
+      - name: "VoltopBottomSheet"
+        methods:
+          - "VoltopBottomSheet.show(context:, child:, isDismissible:, enableDrag:)"
+        helpers:
+          - "VoltopBottomSheetContainer(child:, heightFactor:) - Styled container"
+          - "VoltopBottomSheetHeader(title:, onClose:) - Header with close button"
+    colors:
+      file: "settings/voltop_colors.dart"
+      categories:
+        base:
+          - "VoltopColors.background (#0A0F1A) - Main background"
+          - "VoltopColors.surface (#111827) - Container/card background"
+          - "VoltopColors.surfaceHover (#1A2233) - Elevated surfaces"
+          - "VoltopColors.textPrimary (#E6E9EE) - Primary text"
+          - "VoltopColors.textSecondary (#A3B2C3) - Secondary text"
+          - "VoltopColors.textHint (#6B7684) - Hint/placeholder text"
+        brand:
+          - "VoltopColors.primary (#0FC7E1) - Volt Cyan (CTA, accents)"
+          - "VoltopColors.secondary (#51D9B2) - Eco Mint (secondary actions)"
+          - "VoltopColors.primaryHover (#17A7D6) - Electric Blue (hover state)"
+        feedback:
+          - "VoltopColors.error (#E2555A) - Error/danger"
+          - "VoltopColors.warning (#F6B756) - Warning"
+          - "VoltopColors.success (#3BD398) - Success"
+          - "VoltopColors.info (#17A7D6) - Information"
+        border:
+          - "VoltopColors.border (#1E2635) - Default border"
+          - "VoltopColors.borderFocus (#0FC7E1) - Focus indicator"
+        navigation:
+          - "VoltopColors.navBarBackground (#052B44) - Bottom nav background"
+        gradients:
+          - "VoltopColors.gradientPrimary - LinearGradient for hero/CTA"
+          - "VoltopColors.gradientSecondary - LinearGradient for cards"
 
   rules:
-    - "ALWAYS use VoltopButton, VoltopText, VoltopTextField instead of raw Flutter widgets"
-    - "ALWAYS use VoltopColors constants instead of raw Color values"
-    - "ALWAYS use PhosphorIcons for icons: PhosphorIcon(PhosphorIcons.iconName())"
-    - "NEVER import flutter_components_library directly in feature code (except AppTextFieldType re-export)"
+    - "ALWAYS run the Discovery Rule before writing any UI code"
+    - "ALWAYS follow the Component Resolution Flow when a component is needed"
+    - "ALWAYS use the project's UI abstraction components instead of raw Flutter widgets"
+    - "ALWAYS use the project's centralized color constants instead of raw Color values"
+    - "ALWAYS use the project's icon pack for icons (discovered from pubspec.yaml)"
+    - "NEVER import the underlying UI library directly in feature code -- always go through the abstraction layer"
     - "NEVER use ScreenUtil -- use native Flutter responsive design (MediaQuery, LayoutBuilder, Flex)"
-    - "NEVER add new colors outside voltop_colors.dart"
-    - "Use named constructors on VoltopButton/VoltopText for correct variant -- do not override styles manually"
+    - "NEVER add new colors outside the project's centralized colors file"
+    - "When a needed component does NOT exist in the abstraction layer, create a customization task following the Component Resolution Flow"
+    - "Use named constructors on project components for correct variant -- do not override styles manually"
 
 # =============================================================================
 # DATA TRANSFER OBJECTS (DTOs)
@@ -1393,8 +1581,8 @@ anti_patterns:
       instead: "Keep BLoCs independent. Use helpers for shared logic if needed."
 
     - pattern: "Over-abstracting UI components"
-      reason: "VoltopUI with named constructors provides sufficient abstraction"
-      instead: "Use VoltopButton.primary(), VoltopText.title() etc."
+      reason: "The project's UI abstraction with named constructors provides sufficient abstraction"
+      instead: "Use {Project}Button.primary(), {Project}Text.title() etc."
 
     - pattern: "data/ layer naming"
       reason: "This project uses 'infrastructure/' consistently"
@@ -1408,13 +1596,13 @@ anti_patterns:
       reason: "Result<T> pattern replaces exception-based error handling"
       instead: "Return Result.failure(RequestError.xxx()) instead of throwing"
 
-    - pattern: "Directly importing flutter_components_library in features"
-      reason: "VoltopUI is the abstraction layer"
-      instead: "Import voltop_ui.dart. Only AppTextFieldType is re-exported."
+    - pattern: "Directly importing the underlying UI library in features"
+      reason: "The project's UI abstraction is the correct import"
+      instead: "Import the project's UI barrel file, not the library directly."
 
     - pattern: "Raw Color values in widget code"
-      reason: "All colors are centralized in VoltopColors"
-      instead: "Use VoltopColors.primary, VoltopColors.surface, etc."
+      reason: "All colors are centralized in the project's color constants"
+      instead: "Use {Project}Colors.primary, {Project}Colors.surface, etc."
 
 # =============================================================================
 # FILE TEMPLATES (NEW FEATURE CHECKLIST)
@@ -1534,7 +1722,7 @@ dependencies:
     webview_flutter: "^4.10.0"
     web_socket_channel: "^3.0.3"
     mask_text_input_formatter: "^2.9.0"
-    flutter_components_library: "git (v.1.3.1)"
+    # UI library: discovered at runtime from pubspec.yaml (project-specific)
 
   dev:
     freezed: "^2.4.4"

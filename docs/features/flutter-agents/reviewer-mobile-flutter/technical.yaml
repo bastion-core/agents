@@ -1,4 +1,16 @@
-# technical.yaml
+# =============================================================================
+# TECHNICAL SPECIFICATION: Flutter Mobile Code Reviewer Sub-Agent
+# =============================================================================
+# Purpose: Code review for Flutter mobile PRs with Clean Architecture
+# Origin: Review criteria based on Voltop Charging App patterns
+# Architecture: Prompt-driven Agent (Plugin System)
+# Framework: Flutter (iOS + Android) + Dart SDK ^3.7.2
+# Version: 1.0.0
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# AGENT ECOSYSTEM METADATA
+# -----------------------------------------------------------------------------
 feature: reviewer_mobile_flutter
 layer: agent  # Plugin-based agent system
 
@@ -167,6 +179,9 @@ pipeline:
       (Presentation -> Application -> Domain <- Infrastructure).
       Detectar patrones de diseno apropiados e inapropiados. Identificar violaciones
       de capa (domain importando de infrastructure, presentation con logica de negocio).
+      Si el PR incluye archivos de presentation: ejecutar UI Discovery Rule para
+      descubrir la capa de abstraccion de UI del proyecto y validar que el PR
+      la utiliza correctamente.
     output: analisis arquitectonico con puntaje y hallazgos
     checks:
       - domain_layer_purity: domain no importa de infrastructure, Flutter, BLoC, Dio, get_it
@@ -223,9 +238,9 @@ pipeline:
       - bloc_listener_for_navigation: "BlocListener para side effects puros (navegacion, snackbar)"
       - state_when_exhaustive: "state.when() para cubrir todos los estados exhaustivamente"
       - no_business_logic: "widgets NO contienen logica de negocio"
-      - voltop_components: "usar VoltopButton, VoltopText, VoltopTextField en lugar de widgets raw"
-      - voltop_colors: "usar VoltopColors en lugar de valores Color() crudos"
-      - phosphor_icons: "usar PhosphorIcons para iconografia"
+      - ui_abstraction_components: "usar los componentes de la capa de abstraccion de UI del proyecto ({Project}Button, {Project}Text, {Project}TextField) en lugar de widgets raw (descubrir via UI Discovery Rule)"
+      - ui_abstraction_colors: "usar las constantes de color centralizadas del proyecto ({Project}Colors) en lugar de valores Color() crudos"
+      - project_icons: "usar el icon pack del proyecto (descubierto desde pubspec.yaml) para iconografia"
       - screen_naming: "screens nombrados como {name}_screen.dart"
       - widget_naming: "widgets nombrados como {name}_widget.dart o descriptivamente"
 
@@ -417,6 +432,28 @@ pipeline:
     output: reporte de revision completo en markdown
 
 # =============================================================================
+# UI DISCOVERY RULE (for review validation)
+# =============================================================================
+ui_discovery_rule:
+  description: >
+    Before reviewing UI-related code in a PR, the reviewer must discover the
+    project's UI abstraction layer to validate that the PR uses it correctly.
+    This ensures the reviewer validates against the actual project components
+    rather than hardcoded library names.
+  steps:
+    - "Search for a shared UI folder: common/ui/, common/presentation/widgets/, shared/widgets/, core/design_system/"
+    - "Identify wrapper components: project-prefixed widgets (e.g., {Project}Button, {Project}Text, {Project}TextField)"
+    - "Identify the underlying library: check pubspec.yaml for UI packages (private git package, design system library)"
+    - "Identify color constants: centralized colors file ({project}_colors.dart, app_colors.dart, theme_colors.dart)"
+    - "Identify icon pack: icon packages in pubspec.yaml (phosphor_flutter, font_awesome_flutter, material_icons)"
+  validation_criteria:
+    - "PR code uses discovered project components instead of raw Flutter widgets"
+    - "PR code uses discovered color constants instead of raw Color() values"
+    - "PR code imports the abstraction barrel file, NOT the underlying library directly"
+    - "PR code uses the discovered icon pack consistently"
+    - "New components follow the project's naming convention ({Project}ComponentName)"
+
+# =============================================================================
 # REVIEW DIMENSIONS (detailed criteria)
 # =============================================================================
 review_dimensions:
@@ -449,7 +486,7 @@ review_dimensions:
           - "API Provider: extends BaseApiProvider para llamadas HTTP"
           - "Helper Pattern: extraccion de logica compleja de BLoCs (>6 handlers o >200 lineas)"
           - "DTO Pattern: Freezed classes como data carriers Y domain entities"
-          - "VoltopUI: abstraction layer sobre flutter_components_library"
+          - "UI Abstraction Layer: capa de abstraccion de UI del proyecto sobre libreria subyacente (descubierta via UI Discovery Rule)"
         red_flags:
           - "God Widget: widget con demasiada logica y responsabilidades (>300 lineas)"
           - "God BLoC: BLoC monolitico sin helpers (>200 lineas o >6 handlers)"
@@ -469,7 +506,7 @@ review_dimensions:
     scope:
       dart_practices: "null safety, Freezed sealed classes, Result<T> pattern, const constructors"
       bloc_patterns: "event.map() delegation, private handlers, emit loading first, result.when()"
-      widget_patterns: "BlocBuilder/BlocConsumer/BlocListener, VoltopUI components, no business logic"
+      widget_patterns: "BlocBuilder/BlocConsumer/BlocListener, project's UI abstraction components (discovered at runtime), no business logic"
       error_handling: "Result<T> en repositories/API providers, result.when() en BLoCs, sin excepciones en logica"
       security: "sin secretos hardcoded, sin datos sensibles en logs, validacion de inputs"
       performance: "const constructors, ListView.builder, dispose resources, no sync heavy ops"
@@ -544,15 +581,15 @@ anti_patterns:
     - "solicitar abstract base BLoC classes (cada BLoC es auto-contenido)"
     - "solicitar data/ layer naming (usar infrastructure/)"
     - "solicitar core/ o shared/ folders (usar common/)"
-    - "solicitar over-abstracting UI (VoltopUI con named constructors es suficiente)"
-    - "solicitar raw Color values verification innecesaria (VoltopColors es el estandar)"
+    - "solicitar over-abstracting UI (la capa de abstraccion de UI del proyecto con named constructors es suficiente)"
+    - "solicitar raw Color values verification innecesaria (las constantes de color centralizadas del proyecto son el estandar)"
     - "solicitar premature optimization (React.memo equivalents sin medir performance)"
     - "solicitar over-testing de implementation details (no testar que setState fue llamado)"
     - "pedir future-proofing sin justificacion"
     - "demandar mas tests que los definidos en la estrategia por capa"
     - "sugerir refactoring de codigo funcional que no viola principios establecidos"
     - "solicitar capas o patrones adicionales mas alla de la cadena Widget -> BLoC -> Repository -> ApiProvider"
-    - "solicitar directamente flutter_components_library imports (usar VoltopUI)"
+    - "solicitar directamente imports de la libreria de UI subyacente (usar la capa de abstraccion del proyecto)"
   reviewer_must:
     - "enfocarse en cumplimiento de Clean Architecture con 4 capas y feature modularization"
     - "reportar bugs reales y vulnerabilidades de seguridad"
@@ -566,8 +603,8 @@ anti_patterns:
     - "verificar DI registration correcta (factory para BLoCs, lazySingleton para servicios)"
     - "verificar que imports respetan boundaries de capas y features"
     - "verificar que BLoCs no son demasiado grandes (>6 handlers sin helpers)"
-    - "verificar VoltopUI components en lugar de widgets raw de Flutter"
-    - "verificar VoltopColors en lugar de Color() values crudos"
+    - "verificar uso de la capa de abstraccion de UI del proyecto en lugar de widgets raw de Flutter (descubrir via UI Discovery Rule)"
+    - "verificar uso de constantes de color centralizadas del proyecto en lugar de Color() values crudos"
     - "verificar i18n (.i18n) para texto visible"
     - "ser constructivo, especifico, educativo, balanceado, respetuoso y pragmatico"
 
@@ -592,8 +629,8 @@ approval_checklist:
     - "result.when() in BLoC handlers for success/failure"
     - "event.map() delegation in BLoC constructors"
     - "state.when() exhaustive consumption in widgets"
-    - "VoltopUI components (VoltopButton, VoltopText, VoltopTextField)"
-    - "VoltopColors for all color values"
+    - "project's UI abstraction components ({Project}Button, {Project}Text, {Project}TextField) discovered via UI Discovery Rule"
+    - "project's centralized color constants for all color values"
     - "no critical security vulnerabilities (no hardcoded secrets)"
     - "proper widget patterns (BlocBuilder/BlocConsumer/BlocListener)"
     - "i18n compliance (visible text via .i18n)"
@@ -756,7 +793,7 @@ reference_stack:
       bloc_test: "bloc_test ^9.1.7"
       mocking: "mockito ^5.4.4"
   recommended:
-    ui_library: "VoltopUI (flutter_components_library wrapper)"
+    ui_library: "Project's UI abstraction layer (discovered at runtime via UI Discovery Rule)"
     icons: "phosphor_flutter ^2.0.0"
     svg: "flutter_svg ^2.0.10+1"
     i18n: "i18n_extension ^15.0.4"

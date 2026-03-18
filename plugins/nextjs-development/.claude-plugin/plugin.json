@@ -1,0 +1,10 @@
+{
+  "name": "nextjs-development",
+  "version": "1.0.0",
+  "description": "Next.js frontend development agents for building and reviewing apps with Two-layer Architecture, Zustand stores, DataAccess pattern, and Either monad error handling",
+  "author": {
+    "name": "Grinest",
+    "url": "https://github.com/Grinest"
+  },
+  "license": "MIT"
+}

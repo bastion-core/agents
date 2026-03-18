@@ -1,132 +1,50 @@
 # Flutter Development Plugin
 
-Specialized agents for Flutter and Dart development, covering mobile app development and code review workflows.
+Specialized agents for Flutter and Dart mobile development and code review, enforcing Clean Architecture with Feature-Based Modularization, BLoC+Freezed state management, and Result<T> error handling.
 
 ## Available Agents
 
-### Code Review Agents
+### Development Agents
 
-#### reviewer-flutter-app.md
-Comprehensive code reviewer for Flutter application PRs. Analyzes Flutter/Dart code for best practices, performance, state management, and mobile-specific concerns.
+#### mobile-flutter.md
+Flutter Mobile Development Agent specializing in Clean Architecture with Feature-Based Modularization for production-ready Flutter apps (iOS + Android).
 
 **Use cases**:
-- Automated Flutter PR reviews in CI/CD
-- Widget architecture validation
-- State management pattern enforcement
-- Performance optimization analysis
-- Flutter best practices compliance
+- Implement new features following Clean Architecture (4 layers)
+- Create BLoCs with Freezed events/states
+- Build API integrations with Result<T> error handling
+- Set up dependency injection with get_it
+- Generate comprehensive BLoC tests
 
-**Review focus areas**:
-- Widget composition and reusability
-- State management (Provider, Riverpod, Bloc, etc.)
-- Navigation and routing
-- Performance and optimization
-- Platform-specific considerations
-- Accessibility
-- Testing coverage
+**Architecture**: Clean Architecture with 4 layers (Presentation, Application/BLoC, Domain, Infrastructure)
+
+### Code Review Agents
+
+#### reviewer-mobile-flutter.md
+Comprehensive code reviewer for Flutter mobile PRs, combining architecture analysis, code quality validation, and testing coverage assessment.
+
+**Review dimensions**:
+- Architecture (30%): Clean Architecture compliance, dependency direction, layer separation
+- Code Quality (40%): Dart/Freezed patterns, BLoC checks, repository/API/DTO/DI validation
+- Testing (30%): BLoC tests with bloc_test, mock patterns, coverage targets
+
+#### reviewer-flutter-app.md (legacy)
+General Flutter code reviewer. Superseded by reviewer-mobile-flutter for projects using Clean Architecture with BLoC+Freezed.
+
+## Technology Stack
+
+- **Framework**: Flutter SDK + Dart SDK ^3.7.2
+- **State Management**: flutter_bloc ^8.1.6 + Freezed
+- **HTTP Client**: Dio ^5.6.0
+- **DI**: get_it ^7.7.0
+- **Routing**: go_router ^14.2.0
+- **Error Handling**: Result<T> sealed class
+- **Testing**: bloc_test + Mockito
 
 ## Usage
 
-### Installing Agents
-
 ```bash
-# Install Flutter reviewer agent
+# Install agents
 ./scripts/sync-agents.sh
-# Select: reviewer-flutter-app
+# Select: mobile-flutter, reviewer-mobile-flutter
 ```
-
-## Flutter Best Practices
-
-The Flutter reviewer agent evaluates code based on:
-
-### 1. Widget Architecture
-- Proper widget composition
-- StatelessWidget vs StatefulWidget usage
-- Widget tree optimization
-- Const constructors for performance
-
-### 2. State Management
-- Appropriate state management solution
-- State scope and lifecycle
-- Avoiding unnecessary rebuilds
-- Proper use of keys
-
-### 3. Code Quality
-- Dart best practices and conventions
-- Null safety
-- Immutability where appropriate
-- Error handling
-
-### 4. Performance
-- Build method optimization
-- Lazy loading and pagination
-- Image optimization
-- Memory leak prevention
-
-### 5. Testing
-- Widget tests
-- Integration tests
-- Golden tests (screenshot testing)
-- Test coverage
-
-### 6. Platform Integration
-- Native platform channels (if applicable)
-- Platform-specific UI considerations
-- Permissions handling
-- Responsive design
-
-## Code Review Criteria
-
-Flutter reviewers evaluate PRs on:
-
-1. **Architecture** (30%):
-   - Widget organization
-   - Separation of concerns
-   - State management patterns
-
-2. **Code Quality** (30%):
-   - Dart conventions
-   - Readability
-   - Error handling
-   - Null safety
-
-3. **Performance** (20%):
-   - Build efficiency
-   - Resource management
-   - Optimization techniques
-
-4. **Testing** (20%):
-   - Test coverage
-   - Widget test quality
-   - Integration tests
-
-## Integration with Git Workflows
-
-Flutter reviewer agents integrate with GitHub Actions:
-
-```yaml
-# .github/workflows/flutter-code-review.yml
-- name: Review Flutter App PR
-  uses: ./.github/actions/code-review
-  with:
-    agent: reviewer-flutter-app
-```
-
-See `git-workflows/flutter/` for complete workflow configurations.
-
-## Future Agents
-
-The Flutter plugin will expand to include:
-
-- **flutter-dev**: Flutter development agent for building features
-- **flutter-qa**: QA agent for Flutter testing strategies
-- **flutter-performance**: Performance optimization specialist
-
-## Organization
-
-Flutter agents follow mobile development best practices:
-- Widget-based architecture
-- Responsive and adaptive design
-- Platform-specific considerations
-- Performance-first approach
-- Comprehensive testing strategies

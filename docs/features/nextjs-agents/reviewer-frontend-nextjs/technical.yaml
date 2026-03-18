@@ -1,4 +1,16 @@
-# technical.yaml
+# =============================================================================
+# TECHNICAL SPECIFICATION: Frontend Next.js Code Reviewer Sub-Agent
+# =============================================================================
+# Purpose: Code review for Next.js frontend PRs with two-layer architecture
+# Origin: Review criteria based on Voltop Control Tower patterns
+# Architecture: Prompt-driven Agent (Plugin System)
+# Framework: Next.js 13+ (App Router) + TypeScript (strict)
+# Version: 1.0.0
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# AGENT ECOSYSTEM METADATA
+# -----------------------------------------------------------------------------
 feature: frontend_nextjs_code_review
 layer: agent  # Plugin-based agent system
 
