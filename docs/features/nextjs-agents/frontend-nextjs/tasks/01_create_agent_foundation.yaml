@@ -1,0 +1,62 @@
+# tasks/01_create_agent_foundation.yaml
+task: create_agent_foundation
+phase: 1 - Foundation
+level: L1
+parent: technical.yaml
+status: PENDING
+depends_on: []
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Crear el archivo base del agente frontend-nextjs.md en plugins/nextjs-development/agents/.
+  Incluir el frontmatter YAML (name, description, model, color) y la seccion de introduccion
+  del agente que define su rol, expertise y mision. Cubrir las secciones del technical.yaml:
+
+  - agent_contract: definir el agente como especialista Next.js con Two-layer Architecture
+  - agent_description: name, version 2.0.0, purpose, scope, usage_instructions
+  - Rol principal: implementar funcionalidades Next.js siguiendo Domain + Infrastructure pattern
+  - Herramientas disponibles: Read, Write, Edit, Glob, Grep, Bash
+  - Inputs esperados: technical_yaml, user_instruction, project_codebase
+  - Output esperado: implementacion completa por capas (domain + infrastructure + app)
+  - Adaptabilidad: patrones agnosticos a version del framework
+
+  Incluir la seccion de Technology Stack Expertise basada en stack.required y
+  stack.recommended del technical.yaml:
+  - Core: Next.js 13+ (App Router), TypeScript strict, React 18+, Zustand, Tailwind CSS v4
+  - Forms: React Hook Form + Zod
+  - HTTP: Axios
+  - Testing: Vitest + @testing-library/react
+  - Recommended: shadcn/ui, next-intl, TanStack Table, Recharts, Leaflet, date-fns, lucide-react
+
+  Tomar como referencia la estructura del backend-py.md para el formato y tono del agente.
+  El frontmatter debe seguir el formato:
+  ---
+  name: frontend-nextjs
+  description: Frontend Next.js Development Agent...
+  model: inherit
+  color: blue
+  ---
+
+files_to_create:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - frontmatter: name frontend-nextjs, description, model inherit, color blue
+  - agent_role: especialista Next.js con Two-layer Architecture (Domain + Infrastructure)
+  - technology_stack: Next.js 13+ App Router, TypeScript strict, React 18+, Zustand
+  - mission_statement: estandarizar desarrollo frontend en proyectos Next.js
+  - adaptability: patrones independientes de version del framework
+
+acceptance:
+  - archivo frontend-nextjs.md creado con frontmatter YAML valido
+  - seccion de introduccion define rol del agente como especialista Next.js
+  - menciona Two-layer Architecture (Domain + Infrastructure) como patron principal
+  - lista las herramientas disponibles (Read, Write, Edit, Glob, Grep, Bash)
+  - define inputs esperados (technical_yaml, user_instruction, project_codebase)
+  - define outputs esperados (implementacion por capas: domain, infrastructure, app, i18n, tests)
+  - incluye Technology Stack con core y recommended separados
+  - tono y formato consistentes con backend-py.md
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # agent_contract, agent_description, stack
+  - plugins/python-development/agents/backend-py.md  # referencia de formato y estructura

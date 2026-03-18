@@ -1,0 +1,60 @@
+# tasks/05_implement_dart_and_freezed_quality_checks.yaml
+task: implement_dart_and_freezed_quality_checks
+phase: 4 - Code Quality Review
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [04_implement_architecture_review_rules]
+assigned_subagent: flutter-development:reviewer-mobile-flutter
+
+scope: |
+  Agregar al agente reviewer-mobile-flutter.md la primera parte de Step 3: Code Quality Review,
+  cubriendo las verificaciones de Dart best practices, null safety y Freezed patterns.
+  Cubrir las secciones del technical.yaml:
+  - pipeline.step_3_code_quality_review (dart_checks: null_safety, freezed_pattern, result_pattern)
+
+  Contenido a incluir:
+
+  1. Dart Null Safety checks:
+     - sound_null_safety: null safety habilitado, no usar late innecesariamente
+     - required_keyword: usar required para parametros obligatorios en named params
+     - null_assertions: evitar ! operator, preferir null check con if o ?? operator
+     - nullable_types: usar String? solo cuando null es un valor valido de negocio
+
+  2. Freezed Pattern checks:
+     - sealed_classes_for_events: eventos como @freezed sealed class con const factory
+     - sealed_classes_for_states: estados como @freezed sealed class con const factory
+     - part_directives: part directive para archivos .freezed.dart (y .g.dart si aplica)
+     - event_map_handler: event.map() para delegation en BLoC constructor
+     - state_when_consumption: state.when() para consumo exhaustivo en UI
+
+  3. Result<T> Pattern checks:
+     - repository_returns_result: repositorios SIEMPRE retornan Result<T>
+     - api_provider_returns_result: API providers SIEMPRE retornan Result<T>
+     - result_when_consumption: result.when(success:, failure:) para manejar ambos caminos
+     - no_throw_in_business: NUNCA lanzar excepciones en logica de negocio
+     - catch_dio_exception: SIEMPRE catch DioException en API providers
+
+  Incluir ejemplos buenos y malos para cada patron, siguiendo el estilo del
+  reviewer-backend-py.md con bloques de codigo marcados con GOOD y BAD.
+
+files_to_modify:
+  - plugins/flutter-development/agents/reviewer-mobile-flutter.md
+
+patterns:
+  - null_safety: 4 reglas de null safety para Dart
+  - freezed_sealed_classes: eventos y estados como @freezed sealed classes
+  - result_pattern: Result<T> como retorno obligatorio de repos y API providers
+  - no_exceptions: nunca lanzar excepciones en logica de negocio
+
+acceptance:
+  - prompt incluye las 4 reglas de null safety con ejemplos buenos/malos
+  - prompt incluye las 5 reglas de Freezed pattern con ejemplos
+  - prompt incluye las 5 reglas de Result<T> pattern con ejemplos
+  - prompt muestra event.map() como patron obligatorio para delegation
+  - prompt muestra state.when() como consumo exhaustivo obligatorio
+  - prompt muestra result.when() como manejo de success/failure obligatorio
+  - prompt indica que repositorios y API providers SIEMPRE retornan Result<T>
+
+context_files:
+  - docs/features/flutter-agents/reviewer-mobile-flutter/technical.yaml  # step_3 dart_checks

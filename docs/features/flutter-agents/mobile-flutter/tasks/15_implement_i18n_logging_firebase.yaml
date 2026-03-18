@@ -1,0 +1,52 @@
+# tasks/15_implement_i18n_logging_firebase.yaml
+task: implement_i18n_logging_firebase
+phase: 8 - Cross-Cutting Concerns
+level: L1
+parent: technical.yaml
+status: PENDING
+depends_on: [01_create_agent_foundation]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar las secciones de Internationalization, Logging & Analytics, y Firebase Services
+  al agente mobile-flutter.md. Estas son secciones cortas que cubren:
+
+  1. Internationalization (i18n):
+     - Libreria: i18n_extension ^15.0.4
+     - Ubicacion: settings/translations/
+     - Uso: 'key'.i18n para traducciones simples, 'key'.i18n.fill([param]) para parametrizadas
+     - Locales soportados: en_US, es_ES (primary), pt_BR
+
+  2. Logging (CombinedLogger):
+     - Ubicacion: logs/ folder
+     - Wrappea console logging, Firebase Crashlytics, TokenService y PackageInfo
+     - Metodos: logInfo, logWarning, logError (Crashlytics), logDebug
+
+  3. Analytics (AnalyticsService):
+     - Firebase Analytics wrapper con metodos tipados
+     - Eventos: login, registration, QR scan, charging start/stop, payment, connectivity
+
+  4. Firebase Services:
+     - firebase_core ^3.0.0 (initialization)
+     - firebase_messaging ^15.1.3 (push notifications)
+     - cloud_firestore ^5.0.0 (remote config)
+     - firebase_analytics ^11.3.0 (event analytics)
+     - firebase_crashlytics ^4.0.0 (crash reporting)
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - i18n_extension: 'key'.i18n y 'key'.i18n.fill() para traducciones
+  - combined_logger: wraps console + Crashlytics + context info
+  - analytics_service: Firebase Analytics con typed event methods
+  - firebase_integration: 5 Firebase packages con sus roles
+
+acceptance:
+  - prompt incluye uso de i18n_extension con ejemplos de .i18n y .i18n.fill()
+  - prompt incluye metodos de CombinedLogger (logInfo, logWarning, logError, logDebug)
+  - prompt incluye descripcion de AnalyticsService
+  - prompt lista Firebase packages con sus roles
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # internationalization, logging, firebase sections

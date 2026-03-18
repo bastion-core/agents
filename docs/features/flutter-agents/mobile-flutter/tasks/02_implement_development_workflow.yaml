@@ -1,0 +1,48 @@
+# tasks/02_implement_development_workflow.yaml
+task: implement_development_workflow
+phase: 1 - Foundation
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [01_create_agent_foundation]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Development Workflow al agente mobile-flutter.md.
+  Cubrir el pipeline secuencial de 10 pasos definido en el technical.yaml (pipeline:).
+  Cada paso debe describir claramente el input, proceso y output esperado:
+
+  1. Analyze Existing (explorar codebase para patrones existentes)
+  2. Understand Domain (identificar feature module, DTOs, repos existentes)
+  3. Design (definir funcionalidad, DTOs, interfaces, eventos/estados BLoC)
+  4. Implement Domain (DTOs Freezed, repository interfaces, service interfaces)
+  5. Implement Infrastructure (API providers, repo impls, service impls, storage)
+  6. Implement Application (BLoC con Freezed events/states, helpers)
+  7. Implement Presentation (screens, widgets con BlocBuilder/BlocConsumer)
+  8. Register Dependencies (DI en di.dart, rutas en app_routes.dart)
+  9. Implement Tests (mock files, BLoC tests con bloc_test)
+  10. Code Generation (build_runner para .freezed.dart, .g.dart, .mocks.dart)
+
+  Incluir tambien la seccion "Analyze Existing Implementation" con comandos Glob/Grep
+  para explorar patrones en el codebase antes de escribir codigo, similar a la seccion
+  equivalente en backend-py.md.
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - pipeline_steps: 10 pasos secuenciales con input/process/output
+  - analyze_first: explorar codebase antes de implementar (Glob, Grep, Read)
+  - implementation_order: domain -> infrastructure -> application -> presentation -> settings -> tests
+  - codebase_exploration: patrones para buscar BLoCs, repos, DTOs, API providers existentes
+
+acceptance:
+  - prompt incluye los 10 pasos del pipeline con descripcion clara de cada uno
+  - paso 1 (Analyze Existing) incluye comandos/patrones para explorar el codebase
+  - orden de implementacion respeta la dependency flow (domain primero, tests al final)
+  - cada paso indica que archivos se crean/modifican y en que carpetas
+  - paso 10 incluye el comando de build_runner
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # pipeline section
+  - plugins/python-development/agents/backend-py.md  # Development Workflow section

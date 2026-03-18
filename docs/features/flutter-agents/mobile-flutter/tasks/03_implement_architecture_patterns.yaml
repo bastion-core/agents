@@ -1,0 +1,53 @@
+# tasks/03_implement_architecture_patterns.yaml
+task: implement_architecture_patterns
+phase: 2 - Architecture
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [01_create_agent_foundation]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Architecture Understanding al agente mobile-flutter.md.
+  Cubrir la seccion architectural_patterns del technical.yaml que define:
+
+  1. Patron principal: Clean Architecture with Feature-Based Modularization (Hybrid)
+  2. Estilo: Modular Monolith (single Flutter app)
+  3. Las 4 capas con sus responsabilidades, paths y dependencias:
+     - presentation: UI screens/widgets, consume BLoC states
+     - application: BLoCs que orquestan logica, reemplazan UseCases/Interactors
+     - domain: contratos e interfaces, DTOs, enums, models (ZERO dependencies)
+     - infrastructure: implementaciones concretas, API providers, repos, storage
+  4. Dependency flow: Presentation -> Application (BLoC) -> Domain <- Infrastructure
+  5. Las 5 decisiones arquitectonicas criticas:
+     - No separate Entity layer (DTOs ARE entities)
+     - No UseCase/Interactor classes (BLoCs call repos directly)
+     - No mapper classes (DTOs handle serialization)
+     - DTOs live in domain/
+     - Helper classes for complex BLoCs (>5-6 handlers or >200 lines)
+
+  Esta seccion es CRITICA porque establece las reglas fundamentales que todas las
+  demas secciones del agente deben respetar. Cada decision debe incluir el rationale
+  y la regla explicita de "NEVER create..." o "ALWAYS use...".
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - clean_architecture: 4 capas con responsabilidades claras y dependency flow
+  - feature_based: organizacion feature-first, luego por capas dentro de cada feature
+  - architectural_decisions: 5 decisiones con rationale y reglas explicitas
+  - dependency_direction: domain no depende de nada, infrastructure implementa domain
+  - layer_diagram: diagrama ASCII o descripcion del flujo de dependencias
+
+acceptance:
+  - prompt define las 4 capas con paths, responsabilidades y dependencias
+  - prompt incluye el dependency flow completo (Presentation -> Application -> Domain <- Infrastructure)
+  - prompt incluye las 5 decisiones arquitectonicas con rationale y reglas NEVER/ALWAYS
+  - prompt establece que domain tiene ZERO dependencies en otras capas
+  - prompt indica que BLoCs reemplazan UseCase/Interactor y llaman repos directamente
+  - prompt indica cuando usar helper classes (>5-6 handlers, >200 lineas)
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # architectural_patterns section
+  - plugins/python-development/agents/backend-py.md  # Architecture Understanding section

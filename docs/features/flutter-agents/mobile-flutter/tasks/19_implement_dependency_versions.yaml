@@ -1,0 +1,52 @@
+# tasks/19_implement_dependency_versions.yaml
+task: implement_dependency_versions
+phase: 8 - Cross-Cutting Concerns
+level: L1
+parent: technical.yaml
+status: PENDING
+depends_on: [01_create_agent_foundation]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Technology Stack / Dependency Versions al agente mobile-flutter.md.
+  Cubrir la seccion dependencies del technical.yaml que lista todas las dependencias
+  del proyecto con sus versiones:
+
+  Runtime dependencies:
+  - flutter_sdk (latest stable), dart_sdk ^3.7.2
+  - bloc ^8.1.4, flutter_bloc ^8.1.6
+  - dio ^5.6.0, freezed_annotation ^2.4.4, json_annotation ^4.9.0
+  - get_it ^7.7.0, go_router ^14.2.0, shared_preferences ^2.3.2
+  - connectivity_plus ^6.0.5, equatable ^2.0.7
+  - phosphor_flutter ^2.0.0, flutter_svg ^2.0.10+1
+  - i18n_extension ^15.0.4, flutter_dotenv ^5.1.0
+  - Firebase packages (core, messaging, firestore, analytics, crashlytics)
+  - geolocator ^13.0.0, google_maps_flutter ^2.10.0
+  - mobile_scanner ^7.1.4, url_launcher ^6.3.2
+  - webview_flutter ^4.10.0, web_socket_channel ^3.0.3
+  - mask_text_input_formatter ^2.9.0
+  - flutter_components_library (git v.1.3.1)
+
+  Dev dependencies:
+  - freezed ^2.4.4, json_serializable ^6.8.0, build_runner ^2.4.9
+  - bloc_test ^9.1.7, mockito ^5.4.4, flutter_lints ^5.0.0
+
+  Similar a "Technology Stack Expertise" en backend-py.md pero con las tecnologias
+  Flutter especificas. Organizar en Core Technologies y Supporting Technologies.
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - tech_stack: listar core y supporting technologies con versiones
+  - runtime_vs_dev: separar runtime y dev dependencies
+  - version_pinning: versiones con caret (^) syntax
+
+acceptance:
+  - prompt incluye todas las runtime dependencies con versiones
+  - prompt incluye todas las dev dependencies con versiones
+  - prompt organiza tecnologias en categorias claras (Core, Data, UI, Testing, etc.)
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # dependencies section
+  - plugins/python-development/agents/backend-py.md  # Technology Stack section

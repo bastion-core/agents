@@ -1,0 +1,64 @@
+# tasks/10_implement_score_rules_and_severity_system.yaml
+task: implement_score_rules_and_severity_system
+phase: 6 - Scoring & Severity
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [04_implement_architecture_review_rules, 05_implement_dart_and_freezed_quality_checks, 09_implement_testing_review_rules]
+assigned_subagent: flutter-development:reviewer-mobile-flutter
+
+scope: |
+  Agregar al agente reviewer-mobile-flutter.md las reglas de puntaje y el sistema
+  de severidad para clasificar hallazgos. Cubrir las secciones del technical.yaml:
+  - score_rules
+  - output_format (seccion de action_items con clasificacion de severidad)
+
+  Contenido a incluir:
+
+  1. Score Rules:
+     - authoritative_source: puntajes en encabezados de seccion
+       (### Architecture (Score: X/10))
+     - consistency: puntaje debe reflejar el analisis de la seccion
+     - automated_extraction: sistemas automatizados extraen puntajes de los encabezados
+     - prohibited: no agregar resumenes de metricas, tablas de puntajes ni secciones
+       colapsables adicionales
+
+  2. Scoring Guidelines:
+     - Escala 1-10 para cada dimension (Architecture, Code Quality, Testing)
+     - El puntaje debe ser coherente con los hallazgos reportados
+     - Score alto (8-10): pocos o ningun issue, buenas practicas presentes
+     - Score medio (5-7): algunos issues no criticos, areas de mejora
+     - Score bajo (1-4): issues criticos, violaciones de principios
+
+  3. Severity Classification para action items:
+     - Must Fix (Blocking Merge): issues criticos que impiden el merge
+       (layer violations, security vulnerabilities, broken patterns)
+     - Should Fix (High Priority): issues importantes pero no bloqueantes
+       (missing tests, naming violations, performance concerns)
+     - Consider (Nice to Have): sugerencias de mejora, optimizaciones opcionales
+
+  4. Decision Criteria:
+     - APPROVE: ningun Must Fix, architecture y code quality >= 6/10
+     - REQUEST_CHANGES: algun Must Fix presente, o puntaje < 6 en alguna dimension
+     - COMMENT: solo sugerencias sin issues criticos
+
+files_to_modify:
+  - plugins/flutter-development/agents/reviewer-mobile-flutter.md
+
+patterns:
+  - score_in_headers: puntaje autoritativo en encabezados de seccion (Score: X/10)
+  - no_extra_summaries: prohibido agregar tablas de metricas o secciones colapsables
+  - severity_classification: Must Fix (blocking), Should Fix (high), Consider (nice to have)
+  - decision_criteria: APPROVE vs REQUEST_CHANGES basado en puntajes y severity
+
+acceptance:
+  - prompt incluye reglas de score con puntajes en encabezados de seccion
+  - prompt incluye prohibicion de resumenes de metricas adicionales
+  - prompt incluye guia de escala de puntaje (1-4 bajo, 5-7 medio, 8-10 alto)
+  - prompt incluye 3 niveles de severidad con criterios y ejemplos
+  - prompt incluye criterios de decision APPROVE vs REQUEST_CHANGES
+  - prompt indica que sistemas automatizados extraen puntajes de encabezados
+
+context_files:
+  - docs/features/flutter-agents/reviewer-mobile-flutter/technical.yaml  # score_rules, output_format.action_items
+  - plugins/python-development/agents/reviewer-backend-py.md  # Score Consistency section

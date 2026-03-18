@@ -1,0 +1,73 @@
+# tasks/11_implement_approval_checklist.yaml
+task: implement_approval_checklist
+phase: 8 - Approval Criteria
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [10_implement_score_rules_anti_patterns]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar la seccion de Approval Checklist al agente reviewer-frontend-nextjs.md.
+  Cubrir la seccion approval_checklist del technical.yaml. Este checklist define
+  los criterios que deben cumplirse para emitir APPROVE.
+
+  1. Architecture Checklist (9 criterios):
+     - two-layer architecture: only domain/ and infrastructure/ (no application/)
+     - no layer violations (domain libre de imports de infrastructure/React/Next.js)
+     - dependency direction respected (infrastructure -> domain)
+     - module boundaries respected (no cross-module infrastructure imports)
+     - SOLID principles respected
+     - expected patterns used (Either, Zustand Store, DataAccess, Discriminated Unions)
+     - stores are small and focused (~60-100 lines per concern)
+     - no circular dependencies
+     - clear separation of concerns
+
+  2. Code Quality Checklist (11 criterios):
+     - TypeScript strict mode compliance (no any)
+     - Either pattern in DataAccess (no try/catch for API errors)
+     - response.fold() directo en stores (no Ploc intermediario)
+     - discriminated unions with 'kind' field for states
+     - no critical security vulnerabilities (no hardcoded secrets, no XSS)
+     - proper component patterns (use client only when needed, props with interface)
+     - i18n compliance (visible text via useTranslations)
+     - no obvious performance issues
+     - code is readable and maintainable
+     - naming conventions followed
+     - import order respected
+
+  3. Testing Checklist (5 criterios):
+     - tests colocated with source files ({File}.test.ts(x))
+     - coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)
+     - mock patterns correct (vi.mock(), vi.fn(), factories)
+     - edge cases covered
+     - tests verify behavior, not implementation details
+
+  4. Forms Checklist (3 criterios):
+     - Zod schema for validation
+     - zodResolver integration with React Hook Form
+     - types inferred from schema (z.infer)
+
+  El checklist debe estar en formato de checkbox markdown para facil referencia.
+  Los criterios son acumulativos: TODOS deben cumplirse para APPROVE.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - approval_gate: todos los criterios deben cumplirse para APPROVE
+  - four_categories: architecture, code quality, testing, forms
+  - checkbox_format: formato de checkbox markdown [ ] para cada criterio
+  - blocking_criteria: cualquier criterio no cumplido = REQUEST_CHANGES
+
+acceptance:
+  - prompt incluye los 9 criterios de arquitectura en formato checkbox
+  - prompt incluye los 11 criterios de calidad de codigo en formato checkbox
+  - prompt incluye los 5 criterios de testing en formato checkbox
+  - prompt incluye los 3 criterios de forms en formato checkbox
+  - prompt indica que TODOS los criterios deben cumplirse para APPROVE
+  - prompt es facilmente escaneable como referencia rapida
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # approval_checklist
+  - plugins/python-development/agents/reviewer-backend-py.md  # Approval Checklist section

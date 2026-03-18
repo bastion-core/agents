@@ -1,0 +1,62 @@
+# tasks/12_implement_routing.yaml
+task: implement_routing
+phase: 6 - Settings & Configuration
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [11_implement_dependency_injection]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Routing al agente mobile-flutter.md.
+  Cubrir la seccion routing del technical.yaml que define:
+
+  1. Libreria: go_router ^14.2.0
+  2. Archivo: settings/app_routes.dart
+
+  3. Convenciones:
+     - Route names como static const String fields en AppRoutes class
+     - Global navigator key para programmatic navigation e interceptor access
+     - Initial location dinamica basada en isLoggedIn
+     - Redirect para version check (force-update screen)
+     - Route parameters via state.extra (Map<String, dynamic> o typed objects)
+
+  4. AppRoutes class template:
+     - GlobalKey<NavigatorState> navigatorKey
+     - Static const route names (login, home, featureScreen)
+     - createRouter() factory method con isLoggedIn y observers
+     - VoltopChargingInterceptor.navigatorKey assignment
+     - GoRouter con navigatorKey, initialLocation, routes
+
+  5. Navigation usage:
+     - context.push() para navigation normal (con state.extra para params)
+     - context.go() para auth flows (reemplaza todo el stack)
+     - context.pop() para volver atras
+     - Regla: context.go('/') para logout
+
+  6. Reglas:
+     - ALWAYS definir paths como static const String
+     - ALWAYS pasar parametros complejos via state.extra
+     - NEVER usar auto_route
+     - NEVER usar named routes con parametros en el path
+     - ALWAYS usar context.go('/') para logout
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - go_router: declarative flat route list con named constants
+  - static_route_names: static const String en AppRoutes class
+  - state_extra: parametros via state.extra
+  - navigator_key: GlobalKey para interceptor access
+  - go_vs_push: go() para auth flows, push() para normal navigation
+
+acceptance:
+  - prompt incluye template de AppRoutes class con createRouter()
+  - prompt incluye convenciones de route names como static const
+  - prompt diferencia context.go() vs context.push() con criterios de uso
+  - prompt incluye patron de state.extra para pasar parametros
+  - prompt incluye todas las reglas de routing.rules
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # routing section

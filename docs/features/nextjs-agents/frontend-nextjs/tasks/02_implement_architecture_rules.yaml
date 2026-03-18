@@ -1,0 +1,60 @@
+# tasks/02_implement_architecture_rules.yaml
+task: implement_architecture_rules
+phase: 2 - Architecture
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [01_create_agent_foundation]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Architecture Understanding al agente frontend-nextjs.md.
+  Cubrir la seccion architectural_patterns del technical.yaml. Esta es una seccion
+  CRITICA porque establece las reglas fundamentales que todas las demas secciones
+  del agente deben respetar.
+
+  1. Patron principal: Two-layer Architecture (Domain + Infrastructure)
+  2. Enforcement: eslint-plugin-hexagonal-architecture (error level)
+  3. Las 2 capas con sus responsabilidades, imports permitidos y prohibidos:
+
+     Domain layer:
+     - Reglas de negocio puras, sin dependencias externas
+     - Contiene: entities, DTOs, states, enums, constantes
+     - Allowed: nada externo al dominio del mismo modulo, tipos compartidos de @core/common/domain
+     - Forbidden: infrastructure/*, React, Next.js, Zustand, Axios
+
+     Infrastructure layer:
+     - Capa tecnica: data access (HTTP), stores, services, helpers, UI
+     - Contiene: data-access, store, services, helpers, ui (screens, components, hooks)
+     - Allowed: domain/ del mismo modulo, @core/common, librerias externas
+     - Forbidden: infrastructure/ de OTROS modulos
+
+  4. Dependency direction: infrastructure -> domain (NUNCA al reves)
+  5. Diferencias clave vs backend (NO hay application layer, NO hay UseCase/Interactor,
+     NO hay ports/interfaces para DataAccess, stores llaman DataAccess directamente)
+
+  Incluir diagrama ASCII o descripcion del flujo:
+  Component -> Store -> DataAccess -> API
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - two_layer: domain (puro) + infrastructure (tecnico) con dependency direction estricta
+  - layer_boundaries: imports permitidos y prohibidos por capa
+  - enforcement: eslint-plugin-hexagonal-architecture en error level
+  - no_application_layer: stores llaman DataAccess directamente, sin Ploc ni UseCase
+  - data_flow: Component -> Store -> DataAccess -> API
+
+acceptance:
+  - prompt define las 2 capas con responsabilidades, imports permitidos y prohibidos
+  - prompt incluye dependency direction infrastructure -> domain
+  - prompt indica enforcement via eslint-plugin-hexagonal-architecture
+  - prompt establece que domain NO importa nada de infrastructure, React, Next.js, etc.
+  - prompt indica que NO hay application layer, UseCase ni Interactor
+  - prompt incluye diagrama de flujo de datos (Component -> Store -> DataAccess -> API)
+  - prompt diferencia reglas de imports entre modulos (infrastructure de otros modulos prohibido)
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # architectural_patterns section
+  - plugins/python-development/agents/backend-py.md  # Architecture Understanding section

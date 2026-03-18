@@ -1,0 +1,65 @@
+# tasks/14_implement_component_guidelines.yaml
+task: implement_component_guidelines
+phase: 8 - Component Guidelines
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [12_implement_component_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Component Guidelines al agente frontend-nextjs.md.
+  Cubrir la seccion component_guidelines del technical.yaml completa:
+
+  1. shadcn/ui:
+     - Usar componentes shadcn/ui como base. NO crear componentes basicos propios.
+     - Location: src/components/ui/
+     - Import: import { Button } from '@components/ui/button'
+     - Componentes disponibles: Accordion, Button, Checkbox, Dialog, DropdownMenu,
+       Input, Label, NavigationMenu, Popover, Progress, RadioGroup, Select,
+       Separator, Switch, Tabs, Table, Toast, Tooltip
+
+  2. Tailwind Utilities:
+     - cn() function para clases condicionales (import from '@/lib/utils')
+     - NUNCA template literals para clases condicionales
+     - Preferir clases Tailwind sobre CSS custom
+     - Dark mode via 'dark:' prefix
+     - Responsive con breakpoints: sm:, md:, lg:, xl:
+     - Ejemplo de cn() con multiples condiciones
+
+  3. Data Tables (TanStack React Table):
+     - Estructura: DataTable.tsx, DataTableColumns.tsx, DataTableToolBar.tsx, TablePagination
+     - Columnas con ColumnDef<Entity> de TanStack
+     - Paginacion server-side (no client-side para grandes datasets)
+     - Toolbar con filtros que actualizan query params del store
+     - Ubicacion: infrastructure/ui/{feature}-table/
+
+  4. Forms (React Hook Form + Zod):
+     - Zod schema SIEMPRE para validacion
+     - zodResolver para integrar Zod con React Hook Form
+     - Inferir tipos del schema: z.infer<typeof schema>
+     - Mensajes de error i18n cuando sea posible
+     - Template completo con register, handleSubmit, errors
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - shadcn_ui: componentes base de shadcn/ui, no crear propios
+  - cn_function: cn() para clases condicionales de Tailwind
+  - data_table: TanStack Table con columnas tipadas y paginacion server-side
+  - forms: React Hook Form + Zod con zodResolver
+  - responsive: breakpoints de Tailwind para responsive design
+
+acceptance:
+  - prompt incluye guia de shadcn/ui con import pattern y componentes disponibles
+  - prompt incluye ejemplo de cn() con multiples condiciones
+  - prompt indica NUNCA template literals para clases condicionales
+  - prompt incluye estructura de DataTable con 4 archivos
+  - prompt indica paginacion server-side para tablas
+  - prompt incluye template de formulario con React Hook Form + Zod
+  - prompt indica zodResolver y z.infer<typeof schema>
+  - prompt indica mensajes de error i18n cuando sea posible
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # component_guidelines section

@@ -1,0 +1,63 @@
+# tasks/16_implement_i18n_rules.yaml
+task: implement_i18n_rules
+phase: 9 - Cross-cutting Concerns
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [12_implement_component_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de i18n Rules al agente frontend-nextjs.md.
+  Cubrir la seccion i18n del technical.yaml:
+
+  1. Libreria: next-intl 2.14
+  2. Locales soportados: ["es", "en"]
+  3. Default locale: "es"
+  4. Message files:
+     - src/messages/es.json
+     - src/messages/en.json
+
+  5. Key structure:
+     - Patron: {feature}.{section}.{key}
+     - Ejemplo:
+       {
+         "drivers": {
+           "title": "Conductores",
+           "table": { "name": "Nombre", "status": "Estado" },
+           "actions": { "create": "Crear conductor", "edit": "Editar" }
+         }
+       }
+
+  6. Uso en componentes:
+     - const t = useTranslations('{feature}')
+     - <h1>{t('title')}</h1>
+     - <span>{t('table.name')}</span>
+
+  7. Reglas:
+     - NUNCA hardcodear texto visible en componentes
+     - Agregar traducciones en AMBOS archivos (es.json y en.json)
+     - Claves en ingles, valores en el idioma correspondiente
+     - Usar namespace del feature: useTranslations('{feature}')
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - next_intl: next-intl como libreria de i18n
+  - key_structure: {feature}.{section}.{key} para organizacion de claves
+  - dual_locale: traducciones en AMBOS archivos es.json y en.json
+  - use_translations: useTranslations('{feature}') en componentes
+  - no_hardcoded_text: NUNCA texto visible hardcoded
+
+acceptance:
+  - prompt incluye configuracion de next-intl con locales y default
+  - prompt incluye estructura de claves con ejemplo completo
+  - prompt incluye ejemplo de uso en componentes con useTranslations
+  - prompt indica NUNCA hardcodear texto visible
+  - prompt indica agregar traducciones en AMBOS archivos
+  - prompt indica patron de claves: {feature}.{section}.{key}
+  - prompt indica ubicacion de archivos: src/messages/es.json y en.json
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # i18n section

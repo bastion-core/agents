@@ -1,0 +1,51 @@
+# tasks/10_implement_bloc_ui_consumption.yaml
+task: implement_bloc_ui_consumption
+phase: 5 - Application Layer
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [09_implement_state_management_bloc]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de BLoC UI Consumption al agente mobile-flutter.md.
+  Cubrir la sub-seccion ui_consumption de state_management del technical.yaml:
+
+  1. BlocBuilder:
+     - Usar para: rebuilding widgets basado en state changes
+     - Template con state.when() para pattern matching exhaustivo
+     - Ejemplo: initial -> SizedBox.shrink(), loading -> CircularProgressIndicator,
+       loaded -> DataWidget, error -> ErrorWidget
+
+  2. BlocConsumer:
+     - Usar para: side effects (navigation, snackbars) + widget rebuilds
+     - listener: para side effects (context.go, VoltopSnackbar.showError)
+     - builder: para widget rebuilds
+     - Usa state.whenOrNull() en listener para side effects selectivos
+
+  3. BlocListener:
+     - Usar para: side effects puros (sin widget rebuild)
+     - Solo listener, tiene child widget
+     - Usa state.whenOrNull() para side effects selectivos
+
+  Debe quedar claro cuando usar cada widget y la diferencia entre ellos.
+  Incluir templates con ejemplos de codigo completos.
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - bloc_builder: state.when() para rebuilds basados en estado
+  - bloc_consumer: listener + builder, side effects con navigation/snackbar
+  - bloc_listener: solo side effects, sin rebuild
+  - when_vs_whenOrNull: when() para exhaustive matching, whenOrNull() para selectivo
+
+acceptance:
+  - prompt incluye template de BlocBuilder con state.when()
+  - prompt incluye template de BlocConsumer con listener y builder
+  - prompt incluye template de BlocListener con child
+  - prompt diferencia claramente cuando usar cada widget
+  - prompt muestra uso de state.when() vs state.whenOrNull()
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # state_management.ui_consumption

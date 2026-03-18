@@ -1,0 +1,66 @@
+# tasks/13_implement_ui_components.yaml
+task: implement_ui_components
+phase: 7 - Presentation Layer
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [10_implement_bloc_ui_consumption]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de UI Components al agente mobile-flutter.md.
+  Cubrir la seccion ui_components del technical.yaml que define:
+
+  1. Abstraction layer: VoltopUI (common/ui/voltop_ui.dart)
+  2. Underlying library: flutter_components_library (private git package v.1.3.1)
+  3. Icon pack: phosphor_flutter ^2.0.0
+  4. SVG rendering: flutter_svg ^2.0.10+1
+  5. Theme: Dark theme con Poppins font via AppTheme
+
+  6. Componentes disponibles con todas sus variantes:
+     - VoltopButton: primary, secondary, neutral, text, small (+ isLoading, icons)
+     - VoltopText: display, title, subtitle, heading, subheading, body, secondary,
+       caption, label, hint (+ color, textAlign, maxLines, overflow, fontWeight, fontSize)
+     - VoltopTextField: generic, phone, password, pin, otp, email
+     - VoltopPhoneField: default, latinAmerica
+     - VoltopSnackbar: showSuccess, showError, showInfo, showWelcome
+     - VoltopBottomSheet: show (+ VoltopBottomSheetContainer, VoltopBottomSheetHeader)
+
+  7. VoltopColors catalog completo:
+     - Base: background, surface, surfaceHover, textPrimary, textSecondary, textHint
+     - Brand: primary (Volt Cyan), secondary (Eco Mint), primaryHover (Electric Blue)
+     - Feedback: error, warning, success, info
+     - Border: border, borderFocus
+     - Navigation: navBarBackground
+     - Gradients: gradientPrimary, gradientSecondary
+
+  8. Reglas criticas:
+     - ALWAYS usar VoltopButton, VoltopText, VoltopTextField en lugar de raw Flutter widgets
+     - ALWAYS usar VoltopColors constants en lugar de raw Color values
+     - ALWAYS usar PhosphorIcons para iconografia
+     - NEVER importar flutter_components_library directamente en features
+     - NEVER usar ScreenUtil (usar MediaQuery, LayoutBuilder, Flex nativo)
+     - NEVER agregar colores fuera de voltop_colors.dart
+     - Usar named constructors para variantes correctas
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - voltop_ui: abstraction layer sobre flutter_components_library
+  - named_constructors: VoltopButton.primary(), VoltopText.title() para variantes
+  - voltop_colors: constantes centralizadas para todos los colores
+  - phosphor_icons: PhosphorIcon(PhosphorIcons.iconName()) para iconografia
+  - no_screen_util: responsive design nativo con MediaQuery, LayoutBuilder, Flex
+
+acceptance:
+  - prompt incluye catalogo completo de VoltopButton con todas las variantes
+  - prompt incluye catalogo completo de VoltopText con todas las variantes
+  - prompt incluye catalogo de VoltopTextField, VoltopPhoneField, VoltopSnackbar, VoltopBottomSheet
+  - prompt incluye catalogo completo de VoltopColors con hex codes y categorias
+  - prompt incluye reglas de uso de PhosphorIcons
+  - prompt incluye todas las reglas de ui_components.rules
+  - prompt enfatiza NEVER usar raw Color values o raw Flutter widgets
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # ui_components section

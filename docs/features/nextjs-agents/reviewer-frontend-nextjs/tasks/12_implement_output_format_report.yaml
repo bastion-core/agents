@@ -1,0 +1,92 @@
+# tasks/12_implement_output_format_report.yaml
+task: implement_output_format_report
+phase: 9 - Output Format
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [11_implement_approval_checklist]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar Step 5 (Generate Review) y la seccion de Output Format al agente
+  reviewer-frontend-nextjs.md. Cubrir las secciones step_5_generate_review
+  y output_format del technical.yaml.
+
+  1. Step 5 - Generate Review:
+     - Input: analisis de todos los pasos anteriores
+     - Proceso: consolidar hallazgos en reporte estructurado con puntajes por
+       dimension en encabezados de seccion
+     - Clasificar action items por prioridad
+     - Emitir decision final con justificacion
+
+  2. Output Format Template (exacto del technical.yaml):
+     El reporte debe seguir esta estructura precisa:
+
+     a) Code Review Summary:
+        - Overall Assessment: APPROVE | REQUEST_CHANGES | COMMENT
+        - Change Type: Feature | Bug Fix | Refactoring | UI Update | Tests Only | etc.
+        - Risk Level: Low | Medium | High
+        - Estimated Review Time: X minutes
+
+     b) Architecture (Score: X/10):
+        - Analisis de decisiones arquitectonicas
+        - Strengths (lista)
+        - Issues Found (con explicacion y sugerencia)
+        - Recommendations (accionables y especificas)
+
+     c) Code Quality (Score: X/10):
+        - Analisis de calidad de codigo
+        - Strengths (lista)
+        - Issues Found (con File.tsx:123 y File.ts:456)
+        - Recommendations
+
+     d) Testing (Score: X/10):
+        - Analisis de cobertura y calidad de tests
+        - Coverage: X%
+        - Strengths, Missing Tests, Recommendations
+
+     e) Security:
+        - Findings: None o lista de issues
+
+     f) Performance:
+        - Findings: None o lista de concerns
+
+     g) Action Items:
+        - Must Fix (Blocking Merge): items criticos
+        - Should Fix (High Priority): items importantes
+        - Consider (Nice to Have): sugerencias
+
+     h) Decision:
+        - APPROVE o REQUEST CHANGES
+        - Justification: explicacion de la decision
+
+  3. Regla IMPORTANTE:
+     - NO agregar metrics summaries, score tables o collapsible sections al final
+     - El GitHub Actions workflow genera estos automaticamente de los header scores
+
+  4. Output Sections (del agent_contract):
+     - overall_assessment, architecture_score, code_quality_score, testing_score,
+       security_findings, performance_findings, action_items, decision
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - structured_report: 8 secciones con formato markdown preciso
+  - scores_in_headers: puntajes X/10 en encabezados de seccion
+  - three_priority_levels: must fix, should fix, consider
+  - file_line_references: issues con File.tsx:123
+  - no_extra_sections: no agregar tablas o resumenes adicionales
+
+acceptance:
+  - prompt incluye el template completo de output con las 8 secciones
+  - prompt muestra formato exacto de encabezados con puntajes (Score: X/10)
+  - prompt incluye los 3 niveles de action items (must fix, should fix, consider)
+  - prompt indica formato de referencia a archivos (File.tsx:123)
+  - prompt indica que no se deben agregar secciones extra al final
+  - prompt incluye ejemplo de Decision con APPROVE y REQUEST CHANGES
+  - prompt es copy-pasteable como template de referencia
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # step_5, output_format, agent_contract.output_sections
+  - plugins/python-development/agents/reviewer-backend-py.md  # Step 6: Generate Review, output format

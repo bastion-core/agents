@@ -1,0 +1,77 @@
+# tasks/22_implement_testing_ui_and_mocks.yaml
+task: implement_testing_ui_and_mocks
+phase: 12 - Testing
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [21_implement_testing_domain_stores, 12_implement_component_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar las secciones de UI Testing y Mock Patterns al agente frontend-nextjs.md.
+  Cubrir las secciones testing.layers.ui_tests y testing.mock_patterns del technical.yaml.
+
+  1. UI Tests (50%+ coverage para componentes criticos):
+     Que testar:
+     - Renderizado correcto con datos
+     - Estados de loading, error, empty
+     - Interacciones del usuario (click, input)
+     - Texto visible (traducido)
+
+     Template completo:
+     - import render, screen de ~/test-utils/test-utils (custom con NextIntlProvider)
+     - Mock de next/navigation con vi.mock()
+     - Tests con screen.getByText, screen.getByRole
+     - userEvent para interacciones (click, type)
+     - Buscar por rol, texto o test-id (NO por clase CSS)
+     - Testar comportamiento visible, no implementacion interna
+
+     Reglas:
+     - Usar render custom de test-utils (incluye NextIntlProvider)
+     - Mockear next/navigation cuando se usen hooks de router
+     - Buscar por rol, texto o test-id (no por clase CSS)
+     - Testar comportamiento visible, no implementacion interna
+
+  2. Mock Patterns:
+
+     a. Factory pattern:
+        - Usar fishery o patron manual para generar datos consistentes
+        - Factory.Sync.makeFactory<Entity>({...})
+        - .build({ override }) para single, .buildList(n) para listas
+
+     b. Service mock factory:
+        - mockGetServiceFactory de @core/common/infrastructure/test-utils
+        - Crear mocks de DataAccess completos con Either responses
+
+     c. Custom mocks:
+        - LocalStorageMock: simula localStorage en jsdom
+        - MockStorageService: wrapper de storage para tests
+        - MockWebSocketFactory: simula conexiones WebSocket
+
+  3. Regla general de testing:
+     - Priorizar coverage en domain y stores
+     - No perseguir 100% en UI -- testar comportamiento critico
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - ui_test_template: render custom + screen queries + userEvent
+  - next_navigation_mock: vi.mock('next/navigation') con useParams
+  - factory_pattern: fishery o manual para datos de test consistentes
+  - service_mock_factory: mockGetServiceFactory para Either responses
+  - custom_mocks: LocalStorageMock, MockStorageService, MockWebSocketFactory
+  - behavior_testing: testar comportamiento visible, no implementacion
+
+acceptance:
+  - prompt incluye template completo de UI test con render, screen, userEvent
+  - prompt muestra como mockear next/navigation
+  - prompt indica buscar por rol/texto/test-id (no clase CSS)
+  - prompt incluye factory pattern con fishery o manual
+  - prompt incluye patron de mockGetServiceFactory
+  - prompt lista custom mocks disponibles (localStorage, storage, WebSocket)
+  - prompt indica priorizar domain y stores sobre UI en coverage
+  - prompt indica testar comportamiento visible, no implementacion interna
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # testing.layers.ui_tests, testing.mock_patterns

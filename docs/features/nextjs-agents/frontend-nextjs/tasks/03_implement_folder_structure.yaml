@@ -1,0 +1,66 @@
+# tasks/03_implement_folder_structure.yaml
+task: implement_folder_structure
+phase: 2 - Architecture
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [02_implement_architecture_rules]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Folder Structure al agente frontend-nextjs.md.
+  Cubrir las secciones module_structure y route_structure del technical.yaml.
+
+  1. Module structure estandar (src/core/{module-name}/):
+     domain/:
+     - entities/          # Tipos y entidades
+     - dtos/              # Data Transfer Objects
+     - enums/             # Enumeraciones
+     - states/            # Interfaces de estado para stores
+     - consts/            # Constantes del dominio
+
+     infrastructure/:
+     - data-access/       # Llamadas HTTP (clase concreta, sin interface)
+     - services/          # Solo si hay logica real (ej: DraftsService)
+     - helpers/           # Funciones utilitarias para patrones repetidos
+     - store/             # Stores pequenos por concern (~60-100 lineas)
+     - ui/:
+       - screens/         # Componentes pantalla
+       - components/      # Componentes reutilizables del modulo
+       - {feature}-table/ # Tabla + columnas + toolbar
+       - hooks/           # Custom hooks
+
+  2. Route structure (App Router con locale):
+     src/app/[locale]/{feature}/
+     - page.tsx                    # Pagina principal (server component wrapper)
+     - [id]/page.tsx               # Pagina de detalle
+     - layout.tsx                  # Layout opcional del feature
+
+  3. Shared code location: src/core/common/ (domain y infrastructure compartidos)
+
+  4. Path aliases: ~/* -> ./src/*, @ui/*, @components/*, @core/*, public/*
+
+  Incluir el arbol de directorios completo como template que el agente debe
+  replicar al crear un nuevo modulo.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - module_template: arbol completo de directorios domain/ + infrastructure/
+  - route_template: App Router con [locale] y dynamic routes
+  - shared_code: src/core/common/ para codigo compartido
+  - path_aliases: configuracion de aliases del proyecto
+
+acceptance:
+  - prompt incluye arbol de directorios completo del modulo con domain/ e infrastructure/
+  - prompt incluye cada subcarpeta con su proposito (entities, dtos, states, etc.)
+  - prompt incluye estructura de rutas App Router con [locale]
+  - prompt indica que data-access es clase concreta sin interface
+  - prompt indica que services solo se crean con logica real
+  - prompt indica que stores son pequenos (~60-100 lineas)
+  - prompt incluye path aliases (~/, @ui/, @components/, @core/, public/)
+  - prompt menciona src/core/common/ como ubicacion de codigo compartido
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # module_structure, route_structure, path_aliases

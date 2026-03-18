@@ -1,0 +1,77 @@
+# tasks/08_implement_security_performance_code_smells.yaml
+task: implement_security_performance_code_smells
+phase: 5 - Code Quality Review (Part 4)
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [07_implement_data_access_service_naming_checks]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar la cuarta y ultima parte del Step 3 (Code Quality Review) al agente
+  reviewer-frontend-nextjs.md. Esta tarea cubre los checks de seguridad,
+  rendimiento y code smells del technical.yaml (secciones security_checks,
+  performance_checks, code_smells del step_3).
+
+  1. Security Checks (6 reglas):
+     - no_hardcoded_secrets: no API keys, tokens o passwords en codigo
+     - xss_prevention: no usar dangerouslySetInnerHTML sin sanitizacion
+     - input_validation: validacion con Zod en formularios
+     - no_sensitive_data_in_client: no exponer datos sensibles en client components
+     - env_variables: secretos en variables de entorno
+       (NEXT_PUBLIC_ solo para datos publicos)
+     - no_eval: nunca usar eval() o Function() con strings dinamicos
+
+  2. Performance Checks (8 reglas):
+     - no_premature_memoization: no usar React.memo, useMemo, useCallback
+       sin medir performance
+     - dynamic_imports: dynamic() import para componentes pesados (maps, charts)
+     - server_side_pagination: paginacion server-side para listas grandes
+     - debounce_search: debounce en campos de busqueda (300ms)
+     - next_image: usar next/image para optimizacion de imagenes
+     - no_full_data_load: no cargar todos los datos de una vez
+     - cancel_previous_requests: cancelar requests anteriores al cambiar filtros
+     - lazy_load_modals: lazy load modals y sidebars no visibles inicialmente
+
+  3. Code Smells (13 indicadores):
+     - any_type: usar unknown y type guards en vez de any
+     - magic_strings: usar constantes o enums
+     - hardcoded_text: usar useTranslations()
+     - direct_api_in_components: usar store -> DataAccess
+     - business_logic_in_components: extraer a hooks o helpers
+     - mutating_state_directly: usar set() de Zustand (inmutable)
+     - cross_module_infrastructure_import: importar de infrastructure de
+       otros modulos (usar domain types)
+     - console_log_in_production: usar logger service
+     - nested_ternaries: extraer a funciones o early returns
+     - long_components: >200 lineas (extraer sub-componentes o hooks)
+     - too_many_props: >7 props (considerar composicion o context)
+     - commented_out_code: codigo comentado sin proposito
+     - (implicit) i18n violations: texto hardcoded en componentes
+
+  Incluir ejemplos concretos de codigo correcto e incorrecto para
+  seguridad y performance, con explicacion del impacto de cada issue.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - security_non_negotiable: seguridad siempre es blocking
+  - performance_pragmatic: performance sin memoizacion prematura
+  - code_smells_list: 13 indicadores con umbral y alternativa
+  - xss_prevention: dangerouslySetInnerHTML es red flag
+  - env_variables: NEXT_PUBLIC_ solo para datos publicos
+
+acceptance:
+  - prompt incluye las 6 reglas de seguridad con explicaciones
+  - prompt incluye las 8 reglas de performance
+  - prompt incluye los 13 code smells con alternativa correcta
+  - prompt muestra ejemplo de vulnerabilidad XSS y prevencion
+  - prompt muestra ejemplo de secreto hardcoded vs variable de entorno
+  - prompt muestra ejemplo de memoizacion prematura vs justificada
+  - prompt indica que issues de seguridad son siempre blocking
+  - prompt indica umbrales concretos (>200 lineas, >7 props, 300ms debounce)
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # step_3.security_checks, performance_checks, code_smells
+  - plugins/python-development/agents/reviewer-backend-py.md  # Security, Performance sections

@@ -1,0 +1,67 @@
+# tasks/12_implement_component_pattern.yaml
+task: implement_component_pattern
+phase: 7 - UI Layer
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [06_implement_discriminated_union_states, 10_implement_zustand_store_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Component Pattern al agente frontend-nextjs.md.
+  Cubrir la seccion patterns.component_pattern del technical.yaml.
+
+  Define como se construyen los componentes React en la arquitectura.
+
+  1. Template del componente:
+     - 'use client' SOLO cuando el componente usa hooks, eventos o estado
+     - import useTranslations de next-intl
+     - import store con selector especifico
+     - import constantes KIND del domain/states/
+     - Props definidas con interface (no type alias para props)
+     - Verificar state.kind antes de acceder a datos
+     - Estilos con clases Tailwind, usar cn() para condicionales
+
+  2. Reglas:
+     - 'use client' SOLO cuando necesario (hooks, eventos, estado)
+     - Props definidas con interface (no type alias)
+     - Texto visible SIEMPRE via useTranslations() (nunca hardcoded)
+     - Estado del store via selectores especificos (no desestructurar todo)
+     - Verificar state.kind antes de acceder a datos
+     - Estilos con clases Tailwind, usar cn() para condicionales
+     - Exportar como default para paginas, named para componentes reutilizables
+
+  3. Patron de consumo de store:
+     const { dataState } = useModuleStore((s) => ({
+       dataState: s.dataState,
+     }))
+     NO hacer: const { everything } = useModuleStore()
+
+  4. Patron de type narrowing con kind:
+     if (dataState.kind === ERROR_KIND) return <ErrorHandler ... />
+     const data = dataState.kind === LOADED_KIND ? dataState.data : []
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - use_client: solo cuando hay hooks, eventos o estado
+  - props_interface: props con interface, no type alias
+  - translations: useTranslations() para todo texto visible
+  - selector_pattern: selectores especificos al consumir stores
+  - kind_narrowing: verificar state.kind antes de acceder datos
+  - tailwind_cn: estilos con Tailwind + cn() para condicionales
+  - export_conventions: default para paginas, named para reutilizables
+
+acceptance:
+  - prompt incluye template completo de componente con 'use client', imports, props, render
+  - prompt indica 'use client' SOLO cuando hay hooks/eventos/estado
+  - prompt indica props con interface (no type alias)
+  - prompt indica SIEMPRE useTranslations() para texto visible
+  - prompt muestra patron de selectores especificos para stores
+  - prompt muestra type narrowing con state.kind === CONSTANT
+  - prompt indica cn() para clases condicionales de Tailwind
+  - prompt diferencia export default (paginas) vs named export (componentes)
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # patterns.component_pattern

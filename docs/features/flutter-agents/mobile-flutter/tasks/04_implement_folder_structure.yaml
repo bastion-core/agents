@@ -1,0 +1,63 @@
+# tasks/04_implement_folder_structure.yaml
+task: implement_folder_structure
+phase: 2 - Architecture
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [03_implement_architecture_patterns]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Folder Structure al agente mobile-flutter.md.
+  Cubrir la seccion folder_structure del technical.yaml que define:
+
+  1. Root layout completo de lib/:
+     - main.dart (entry point)
+     - common/ (cross-cutting concerns: shared BLoCs, services, infrastructure, UI)
+     - features/ (feature modules self-contained)
+     - settings/ (DI, routes, config, environment, url_paths, colors, translations)
+     - logs/ (logging and analytics services)
+
+  2. Feature module structure interna (las 4 capas):
+     - application/bloc/ (BLoC + events + states + helpers)
+     - domain/dtos/, domain/enums/, domain/models/, domain/repositories/, domain/services/
+     - infrastructure/ (API providers, repo impls, service impls, storage)
+     - presentation/screens/, presentation/widgets/
+
+  3. Common/ structure interna:
+     - application/bloc/ (shared BLoCs como ConnectivityBloc)
+     - domain/services/ (shared abstract service interfaces)
+     - infrastructure/ (BaseApiProvider, interceptor, Result type)
+     - infrastructure/networking/ (Result<T> and RequestError)
+     - presentation/widgets/ (shared widgets)
+     - ui/ (VoltopUI abstraction layer)
+
+  4. Test layout: mirror de lib/ con mocks/ subfolder
+
+  5. Reglas de naming:
+     - Screens: {screen_name}_screen.dart
+     - Widgets: {widget_name}_widget.dart
+     - BLoC: {feature}_bloc.dart, {feature}_event.dart, {feature}_state.dart
+     - Tests: {source_file}_test.dart
+     - NEVER create core/, shared/, data/ folders
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - folder_tree: arbol completo de directorios con descripcion de cada carpeta
+  - naming_rules: convenciones de nombres para screens, widgets, BLoCs, tests
+  - forbidden_folders: core/, shared/, data/ nunca deben crearse
+  - common_vs_features: criterio claro de que va en common/ vs en features/
+
+acceptance:
+  - prompt incluye arbol de directorios completo con descripcion de cada carpeta
+  - prompt define la estructura interna de cada feature module con las 4 capas
+  - prompt define la estructura de common/ con todas sus subcarpetas
+  - prompt incluye reglas de naming para screens, widgets, BLoCs y tests
+  - prompt incluye las reglas de folders prohibidos (core/, shared/, data/)
+  - prompt define el test layout como mirror de lib/
+  - prompt indica que shared code va en common/, NUNCA en features especificos
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # folder_structure section

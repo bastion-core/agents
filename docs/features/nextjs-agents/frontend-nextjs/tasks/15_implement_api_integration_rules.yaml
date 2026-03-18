@@ -1,0 +1,58 @@
+# tasks/15_implement_api_integration_rules.yaml
+task: implement_api_integration_rules
+phase: 9 - Cross-cutting Concerns
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [08_implement_data_access_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de API Integration Rules al agente frontend-nextjs.md.
+  Cubrir la seccion api_integration del technical.yaml:
+
+  1. Authentication:
+     - Bearer token via axios interceptor
+     - Location: @core/common/infrastructure/connections/ApiConnection.ts
+     - Usage: import { apiAuth } from '@core/common/infrastructure/connections/ApiConnection'
+
+  2. Error Handling flow:
+     - DataAccess llama handleRequest(apiAuth.get(url), 'origin')
+     - handleRequest captura errores de Axios
+     - Retorna Either.left(ServiceError) en error
+     - Retorna Either.right(ServiceSuccess<T>) en exito
+     - Location: @core/common/infrastructure/services/RequestHelper.ts
+
+  3. Query Params:
+     - QueryParamsFormatterHelper formatea filtros y paginacion
+     - Location: @core/common/infrastructure/services/
+     - Incluye: page, perPage, sort, order, search, searchType, dateRange, filters
+
+  4. URL Patterns:
+     - GET /{resource}/?params -> Listar con filtros
+     - GET /{resource}/{id}/ -> Obtener por ID
+     - POST /{resource}/ -> Crear
+     - PATCH /{resource}/{id}/ -> Actualizar parcial
+     - DELETE /{resource}/{id}/ -> Eliminar
+     - Trailing slash OBLIGATORIO en todas las URLs
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - bearer_auth: Bearer token via axios interceptor con apiAuth
+  - handle_request_flow: flujo completo de handleRequest con Either
+  - query_params: QueryParamsFormatterHelper para filtros y paginacion
+  - url_patterns: 5 patrones de URL REST con trailing slash
+  - trailing_slash: slash final obligatorio
+
+acceptance:
+  - prompt incluye autenticacion con Bearer token via interceptor
+  - prompt incluye flujo completo de error handling con handleRequest
+  - prompt incluye query params con page, perPage, sort, order, search, dateRange, filters
+  - prompt incluye los 5 patrones de URL REST
+  - prompt indica trailing slash obligatorio en todas las URLs
+  - prompt indica ubicacion de apiAuth y handleRequest en @core/common
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # api_integration section

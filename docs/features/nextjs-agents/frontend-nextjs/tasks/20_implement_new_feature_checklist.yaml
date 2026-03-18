@@ -1,0 +1,80 @@
+# tasks/20_implement_new_feature_checklist.yaml
+task: implement_new_feature_checklist
+phase: 11 - Workflow
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [19_implement_development_workflow]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de New Feature Checklist al agente frontend-nextjs.md.
+  Cubrir la seccion new_feature_checklist del technical.yaml.
+
+  Este checklist aplica tanto para features nuevos como para refactorizar
+  modulos existentes que sigan la arquitectura anterior (con application/,
+  Ploc, dependencies/).
+
+  9 pasos secuenciales con substeps:
+
+  1. Crear estructura de modulo en src/core/{feature}/
+     - domain/ con entities, dtos, states, enums, consts
+     - infrastructure/ con data-access, store, ui
+
+  2. Implementar domain layer
+     - Entidades y tipos (domain/entities/)
+     - DTOs para requests/responses (domain/dtos/)
+     - Interfaces de estado para stores (domain/states/)
+     - Enums si aplica (domain/enums/)
+     - Constantes del dominio (domain/consts/)
+
+  3. Implementar DataAccess
+     - Clase concreta en infrastructure/data-access/
+     - handleRequest<T> para envolver llamadas HTTP
+     - Either<ServiceError, ServiceSuccess<T>> como retorno
+
+  4. Implementar stores divididos por concern
+     - DataAccess instanciado a nivel de modulo
+     - Stores focalizados (~60-100 lineas)
+     - Boolean loading flags
+     - response.fold() directo en acciones
+
+  5. Crear helpers si hay patrones repetidos (3+ veces)
+
+  6. Crear componentes UI
+     - Screen component en infrastructure/ui/screens/
+     - Pagina en src/app/[locale]/{feature}/page.tsx
+     - DataTable si aplica
+     - Formularios con React Hook Form + Zod
+     - Custom hooks en infrastructure/ui/hooks/
+
+  7. Agregar traducciones (es.json y en.json)
+
+  8. Escribir tests con Vitest
+     - Domain: tests puros
+     - Stores: DataAccess mockeado (vi.mock(), vi.fn())
+     - UI: componentes criticos con @testing-library/react
+
+  9. Validar (lint, vitest, build)
+
+  Cada paso debe referenciar los patrones y templates definidos en secciones anteriores.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - feature_checklist: 9 pasos secuenciales con archivos y patrones
+  - step_by_step: cada paso indica archivos a crear y template a seguir
+  - domain_first_implementation: domain antes de infrastructure y UI
+  - validate_at_end: lint + vitest + build como paso final
+
+acceptance:
+  - prompt incluye los 9 pasos con substeps detallados
+  - cada paso referencia el template/patron correcto de secciones anteriores
+  - prompt indica archivos especificos a crear en cada paso
+  - prompt indica que aplica tanto para features nuevos como refactorizacion
+  - prompt incluye validacion final con lint, vitest y build
+  - prompt esta organizado como checklist facilmente seguible
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # new_feature_checklist section

@@ -1,0 +1,82 @@
+# tasks/18_implement_testing_patterns.yaml
+task: implement_testing_patterns
+phase: 10 - Testing
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [09_implement_state_management_bloc, 07_implement_networking_error_handling, 14_implement_code_generation]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Testing Patterns al agente mobile-flutter.md.
+  Cubrir la seccion testing del technical.yaml. Esta es una seccion CRITICA
+  y extensa que define toda la estrategia de testing:
+
+  1. Librerias: flutter_test, bloc_test ^9.1.7, mockito ^5.4.4
+  2. Focus: BLoC tests (70%), infrastructure tests (20%), domain logic tests (10%)
+  3. Patron: AAA (Arrange-Act-Assert)
+  4. Grouping: group() por event type o scenario
+  5. Naming: strings descriptivos ('emits [loading, success] when...')
+
+  6. BLoC test template completo:
+     - Imports necesarios (bloc_test, flutter_test, mockito, Result)
+     - Fake class para analytics/logger (extends Fake implements Service)
+     - Mock class para repositories (extends Mock implements Repository)
+     - main() con late declarations para mocks, fakes y BLoC
+     - setUpAll: provideDummy<Result<T>>() para tipos genericos complejos
+     - setUp: crear mock/fake instances y BLoC
+     - tearDown: bloc.close()
+
+  7. Test patterns por tipo:
+     - Initial state test: expect(bloc.state, const State.initial())
+     - Success path: blocTest con build (when/thenAnswer), act (add event), expect states
+     - Failure path: blocTest con Result.failure, expect error states
+     - Reset from state: blocTest con seed(), act reset, expect initial
+     - Sequential events: blocTest con Future.delayed entre eventos
+     - Verify calls: verify(mock.method()).called(1) en verify: callback
+
+  8. Mock generation:
+     - Archivo: test/features/{feature}/application/bloc/mocks/{feature}_mock.dart
+     - @GenerateMocks([Repository, Service])
+     - Comando: dart run build_runner build --delete-conflicting-outputs
+
+  9. Testing patterns clave:
+     - provideDummy: para Result<T> y tipos genericos que Mockito no auto-genera
+     - seed: para iniciar test desde un estado especifico
+     - sequential_events: Future.delayed(Duration(milliseconds: 100)) entre eventos
+     - fake_vs_mock: Fake para services con no-op (analytics), Mock para repos con verify
+     - verifyNever: para assert que un metodo NO fue llamado
+
+  10. Reglas:
+     - ALWAYS test initial state
+     - ALWAYS test success y failure paths para cada evento
+     - ALWAYS provideDummy para Result<T> en setUpAll
+     - ALWAYS close BLoC en tearDown
+     - ALWAYS usar blocTest helper
+     - Fake para analytics/logger, Mock para repos
+     - Test edge cases: empty input, null values, error states
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - bloc_test: template completo con blocTest helper
+  - fake_class: extends Fake implements Service para no-op stubs
+  - mock_class: extends Mock implements Repository para verify/stub
+  - provide_dummy: provideDummy<Result<T>>() en setUpAll
+  - seed_state: seed() para iniciar desde estado especifico
+  - sequential: Future.delayed entre eventos secuenciales
+  - mock_generation: @GenerateMocks en archivo separado + build_runner
+
+acceptance:
+  - prompt incluye template completo de BLoC test con todos los imports
+  - prompt incluye ejemplo de Fake class con all methods stubbed
+  - prompt incluye patron de setUp/tearDown con late declarations
+  - prompt incluye ejemplo de provideDummy para Result<T>
+  - prompt incluye tests de success, failure, reset, sequential events
+  - prompt incluye patron de mock generation con @GenerateMocks
+  - prompt diferencia Fake vs Mock con criterios claros
+  - prompt incluye todas las reglas de testing.rules
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # testing section

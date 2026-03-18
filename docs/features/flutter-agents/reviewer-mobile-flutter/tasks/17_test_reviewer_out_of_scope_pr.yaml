@@ -1,0 +1,53 @@
+# tasks/17_test_reviewer_out_of_scope_pr.yaml
+task: test_reviewer_out_of_scope_pr
+phase: 12 - Validation
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [15_implement_reference_stack_and_mission]
+assigned_subagent: flutter-development:reviewer-mobile-flutter
+
+scope: |
+  Validar que el agente reviewer-mobile-flutter.md genera la respuesta correcta
+  de Out of Scope cuando se le presenta un PR que solo contiene archivos
+  fuera del scope de revision tecnica.
+
+  Escenario de test:
+  Simular un PR que solo modifica archivos como:
+  - pubspec.yaml, pubspec.lock
+  - .github/workflows/*.yml
+  - README.md
+  - assets/images/*.png
+  - android/app/build.gradle
+  - ios/Runner/Info.plist
+  - archivos generados (*.freezed.dart, *.g.dart)
+
+  Verificar que el agente:
+  1. Ejecuta el scope check y determina que NO hay archivos revisables
+  2. NO ejecuta el pipeline de revision (steps 1-5)
+  3. Genera la respuesta Out of Scope con el template exacto
+  4. La decision es APPROVE
+  5. El comentario esta en ingles
+  6. Lista los archivos modificados en el PR
+  7. NO incluye secciones de Architecture Score, Code Quality Score ni Testing Score
+  8. Indica que no se requiere analisis tecnico
+
+files_to_modify: []
+
+patterns:
+  - out_of_scope_detection: detectar PR sin archivos revisables
+  - out_of_scope_response: respuesta con template exacto y APPROVE
+  - no_review_pipeline: no ejecutar steps 1-5 del pipeline
+
+acceptance:
+  - respuesta generada sigue el template exacto de out_of_scope_rule.comment_template
+  - decision es APPROVE
+  - idioma es English
+  - lista archivos modificados del PR
+  - NO incluye secciones de Score para ninguna dimension
+  - NO ejecuta analisis de arquitectura, codigo ni testing
+  - incluye firma del agente ("Automated review by Flutter Mobile Code Reviewer Agent")
+
+context_files:
+  - plugins/flutter-development/agents/reviewer-mobile-flutter.md  # agente completo
+  - docs/features/flutter-agents/reviewer-mobile-flutter/technical.yaml  # out_of_scope_rule

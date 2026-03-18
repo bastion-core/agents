@@ -1,0 +1,58 @@
+# tasks/16_test_reviewer_in_scope_pr.yaml
+task: test_reviewer_in_scope_pr
+phase: 12 - Validation
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [15_implement_reference_stack_and_mission]
+assigned_subagent: flutter-development:reviewer-mobile-flutter
+
+scope: |
+  Validar que el agente reviewer-mobile-flutter.md genera un reporte de revision
+  completo y correcto cuando se le presenta un PR con archivos dentro del scope.
+
+  Escenario de test:
+  Simular un PR que modifica archivos en lib/features/ y test/features/ para
+  verificar que el agente:
+
+  1. Ejecuta el scope check y determina que hay archivos revisables
+  2. Identifica correctamente el tipo de cambio
+  3. Genera seccion de Architecture con Score: X/10
+  4. Genera seccion de Code Quality con Score: X/10
+  5. Genera seccion de Testing con Score: X/10
+  6. Genera seccion de Security Findings
+  7. Genera seccion de Performance Findings
+  8. Genera Action Items clasificados en Must Fix, Should Fix, Consider
+  9. Emite Decision con Justification
+  10. No agrega tablas de metricas ni secciones colapsables al final
+
+  Verificar que el reporte:
+  - Esta en ingles
+  - Sigue el template exacto del output_format
+  - Los puntajes estan en encabezados de seccion
+  - Los issues tienen referencias a file:line
+  - Las recomendaciones son especificas y accionables
+  - No solicita UseCase/Interactor, Entity, Mapper classes
+  - No solicita injectable ni auto-DI
+  - Respeta la cadena Widget -> BLoC -> Repository -> ApiProvider
+
+files_to_modify: []
+
+patterns:
+  - full_review_pipeline: ejecutar pipeline completo para PR in-scope
+  - template_compliance: reporte sigue template exacto del output_format
+  - anti_pattern_compliance: no solicita patrones prohibidos
+
+acceptance:
+  - reporte generado con las 8 secciones obligatorias del template
+  - puntajes en encabezados de seccion (Score: X/10) para 3 dimensiones
+  - issues con file:line references cuando aplique
+  - action items clasificados correctamente por severidad
+  - decision con justification coherente con hallazgos
+  - no se solicitan UseCase/Interactor, Entity, Mapper classes
+  - idioma del reporte es English
+  - no hay tablas de metricas ni secciones colapsables adicionales
+
+context_files:
+  - plugins/flutter-development/agents/reviewer-mobile-flutter.md  # agente completo
+  - docs/features/flutter-agents/reviewer-mobile-flutter/technical.yaml  # output_format, anti_patterns

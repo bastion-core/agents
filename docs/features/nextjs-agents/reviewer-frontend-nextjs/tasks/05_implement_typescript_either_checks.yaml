@@ -1,0 +1,60 @@
+# tasks/05_implement_typescript_either_checks.yaml
+task: implement_typescript_either_checks
+phase: 5 - Code Quality Review (Part 1)
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [04_implement_architecture_review_rules]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar la primera parte del Step 3 (Code Quality Review) al agente
+  reviewer-frontend-nextjs.md. Esta tarea cubre los checks de TypeScript
+  strict mode, Either pattern y state management del technical.yaml
+  (secciones typescript_checks del step_3_code_quality_review).
+
+  1. TypeScript Strict Mode Checks:
+     - no_any_type: no usar 'any', preferir 'unknown' con type guards
+     - discriminated_unions: estados con campo 'kind' como discriminador
+     - proper_generics: genericos para utilidades reutilizables (Either<E,A>, handleRequest<T>)
+     - string_enums: enums para valores de dominio
+     - type_inference: inferir tipos de Zod schemas con z.infer<typeof schema>
+
+  2. Either Pattern Checks:
+     - data_access_never_throw: DataAccess retorna Either<ServiceError, ServiceSuccess<T>>,
+       nunca lanza excepciones
+     - handle_request_wrapper: handleRequest<T>() envuelve todas las llamadas HTTP
+     - fold_for_branching: fold() para manejar ambos caminos (error/success)
+       directo en stores
+     - service_error_structure: ServiceError incluye code, message, description
+
+  3. State Management Checks:
+     - discriminated_union_states: estados con Loading/Loaded/Error usando campo 'kind'
+     - kind_constants: constantes LOADING_KIND, LOADED_KIND, ERROR_KIND
+       en vez de magic strings
+     - state_check_before_access: verificar state.kind antes de acceder a datos
+
+  Incluir ejemplos concretos de codigo correcto e incorrecto para cada check.
+  Usar el formato de reviewer-backend-py.md con marcadores de buenas/malas practicas.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - typescript_strict: 5 reglas de TypeScript strict mode
+  - either_monad: 4 reglas del Either pattern
+  - discriminated_unions: 3 reglas de state management con 'kind'
+  - no_exceptions_for_api: DataAccess retorna Either, no lanza excepciones
+
+acceptance:
+  - prompt incluye las 5 reglas de TypeScript strict mode con ejemplos
+  - prompt incluye las 4 reglas del Either pattern con ejemplos
+  - prompt incluye las 3 reglas de state management con discriminated unions
+  - prompt muestra ejemplo de DataAccess retornando Either (no throw)
+  - prompt muestra ejemplo de fold() directo en store actions
+  - prompt muestra ejemplo de discriminated union con campo 'kind'
+  - prompt usa marcadores visuales de buenas/malas practicas (similar a backend-py)
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # step_3.typescript_checks
+  - plugins/python-development/agents/reviewer-backend-py.md  # Step 3: Code Quality Review

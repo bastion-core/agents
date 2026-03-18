@@ -1,0 +1,81 @@
+# tasks/10_implement_zustand_store_pattern.yaml
+task: implement_zustand_store_pattern
+phase: 6 - State Management
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [06_implement_discriminated_union_states, 08_implement_data_access_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Zustand Store Pattern al agente frontend-nextjs.md.
+  Cubrir la seccion patterns.store_pattern del technical.yaml.
+
+  Este es uno de los patrones MAS CRITICOS del agente porque define como se manejan
+  todos los estados y acciones async en la aplicacion. Los stores son el nucleo
+  de la capa infrastructure y orquestan el flujo DataAccess -> State.
+
+  1. Template completo del store:
+     - import create from 'zustand'
+     - import baseApiUrl desde @core/common/infrastructure/services/apiEndpoints
+     - import types de estado de domain/states/
+     - import DataAccess de infrastructure/data-access/
+     - DataAccess instanciado a nivel de modulo (fuera del store): const dataAccess = new DataAccess(baseApiUrl)
+     - create<StoreState & StoreActions>((set, get) => ({ ... }))
+
+  2. Reglas CRITICAS del store:
+     - Multiples stores por modulo, divididos por concern (list, detail, form)
+     - DataAccess instanciado FUERA del store, a nivel de modulo
+     - State y Actions en interfaces SEPARADAS (en domain/states/)
+     - Stores llaman DataAccess directamente (NO Ploc, NO UseCase)
+     - response.fold() DIRECTO en las acciones del store
+     - Boolean loading flags (isLoadingList, isLoadingDetail, etc.)
+     - UI orquesta carga inicial (useEffect en screens)
+     - Cross-store: useOtherStore.getState().action()
+     - set() para actualizar estado (inmutable)
+     - Consumir en componentes con selectores: useStore((s) => ({ field: s.field }))
+
+  3. Tamano ideal: ~60-100 lineas por store. Si crece mas, dividir por concern.
+
+  4. Ejemplo de accion con fold:
+     loadItems: async () => {
+       set({ isLoadingList: true })
+       const response = await dataAccess.getAll(get().queryParams)
+       response.fold(
+         (error) => set({ isLoadingList: false, items: [] }),
+         (success) => {
+           const data = Array.isArray(success.data) ? success.data[0] : success.data
+           set({ isLoadingList: false, items: data.list || [] })
+         }
+       )
+     }
+
+  5. Reset pattern: reset: () => set({ items: [], isLoadingList: false, pagination: null })
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - zustand_create: create<State & Actions>((set, get) => ({ ... }))
+  - module_level_data_access: DataAccess instanciado fuera del store
+  - fold_in_actions: response.fold() directo en acciones del store
+  - boolean_loading: flags booleanos para loading states
+  - store_per_concern: multiples stores por modulo (~60-100 lineas)
+  - cross_store: useOtherStore.getState().action() para comunicacion
+  - selector_consumption: useStore((s) => ({ field: s.field }))
+  - state_actions_separation: interfaces separadas en domain/states/
+
+acceptance:
+  - prompt incluye template completo del store con imports, instanciacion y create
+  - prompt incluye DataAccess instanciado FUERA del store a nivel de modulo
+  - prompt muestra response.fold() directo en acciones
+  - prompt indica multiples stores por modulo divididos por concern
+  - prompt indica tamano ideal ~60-100 lineas
+  - prompt indica NO Ploc, NO UseCase (stores llaman DataAccess directamente)
+  - prompt muestra patron de cross-store communication
+  - prompt muestra como consumir con selectores en componentes
+  - prompt indica que State y Actions van en interfaces separadas en domain/states/
+  - prompt incluye ejemplo de reset pattern
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # patterns.store_pattern

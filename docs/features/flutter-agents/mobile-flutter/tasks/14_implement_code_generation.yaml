@@ -1,0 +1,57 @@
+# tasks/14_implement_code_generation.yaml
+task: implement_code_generation
+phase: 8 - Cross-Cutting Concerns
+level: L1
+parent: technical.yaml
+status: PENDING
+depends_on: [05_implement_domain_layer_dtos, 09_implement_state_management_bloc]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Code Generation al agente mobile-flutter.md.
+  Cubrir la seccion code_generation del technical.yaml que define:
+
+  1. Librerias:
+     - freezed ^2.4.4 (immutable data classes y sealed unions)
+     - json_serializable ^6.8.0 (JSON serialization para request DTOs simples)
+     - build_runner ^2.4.9 (code generation runner)
+
+  2. Comandos:
+     - Build: dart run build_runner build --delete-conflicting-outputs
+     - Watch: dart run build_runner watch --delete-conflicting-outputs
+
+  3. Archivos generados:
+     - *.freezed.dart (copyWith, equality, pattern matching)
+     - *.g.dart (fromJson/toJson de json_serializable)
+     - *.mocks.dart (Mockito mock classes)
+
+  4. Part directives:
+     - Freezed only: part '{filename}.freezed.dart';
+     - Freezed + JSON: part '{filename}.freezed.dart'; part '{filename}.g.dart';
+     - Mock file: no part directive (genera archivo separado .mocks.dart)
+
+  5. Reglas:
+     - ALWAYS ejecutar build_runner despues de crear/modificar @freezed classes
+     - ALWAYS ejecutar build_runner despues de crear/modificar @GenerateMocks
+     - Generated files son version-controlled
+     - Usar --delete-conflicting-outputs para evitar stale code
+     - Agregar part directives en el header del archivo fuente
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - build_runner: comando con --delete-conflicting-outputs
+  - part_directives: diferencia entre freezed_only y freezed_with_json
+  - generated_files: .freezed.dart, .g.dart, .mocks.dart
+  - when_to_run: despues de cada @freezed o @GenerateMocks creado/modificado
+
+acceptance:
+  - prompt incluye comando de build_runner con flag correcto
+  - prompt diferencia cuando usar .g.dart (solo request DTOs con json_serializable)
+  - prompt incluye las 3 variantes de part directives
+  - prompt indica que archivos generados son version-controlled
+  - prompt incluye regla de ejecutar build_runner como paso final
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # code_generation section

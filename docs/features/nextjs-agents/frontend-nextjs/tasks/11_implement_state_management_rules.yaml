@@ -1,0 +1,56 @@
+# tasks/11_implement_state_management_rules.yaml
+task: implement_state_management_rules
+phase: 6 - State Management
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [10_implement_zustand_store_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de State Management Rules al agente frontend-nextjs.md.
+  Cubrir la seccion state_management del technical.yaml.
+
+  Esta seccion define CUANDO usar cada tipo de estado, lo cual es critico
+  para evitar el anti-patron de poner todo en stores globales.
+
+  1. Cuando usar Zustand store:
+     - Datos compartidos entre multiples componentes
+     - Datos que persisten entre navegaciones
+     - Estado de entidades del dominio (drivers, vehicles, etc.)
+     - Estado de operaciones async (loading, error, success)
+     - Datos paginados o filtrados server-side
+
+  2. Cuando usar estado local (useState):
+     - Estado de UI temporal (modal abierto/cerrado, tab activo)
+     - Estado de formularios (React Hook Form lo maneja)
+     - Busqueda/filtro local (dentro de un componente)
+     - Toggle, hover, focus states
+     - Valores derivados con useMemo
+
+  3. Cuando usar URL state (searchParams):
+     - Filtros que deben ser compartibles via URL
+     - Paginacion (page, perPage)
+     - Parametros de ruta ([id], [locale])
+
+  Presentar como guia de decision clara tipo tabla o checklist.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - store_state: datos compartidos, persistentes, async, paginados
+  - local_state: UI temporal, formularios, toggles
+  - url_state: filtros compartibles, paginacion, parametros de ruta
+  - decision_guide: cuando usar cada tipo de estado
+
+acceptance:
+  - prompt incluye los 3 tipos de estado con criterios claros
+  - prompt incluye cuando usar Zustand store con todos los criterios
+  - prompt incluye cuando usar estado local con todos los criterios
+  - prompt incluye cuando usar URL state con todos los criterios
+  - prompt presenta como guia de decision facilmente escaneable
+  - prompt indica que React Hook Form maneja el estado de formularios
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # state_management section

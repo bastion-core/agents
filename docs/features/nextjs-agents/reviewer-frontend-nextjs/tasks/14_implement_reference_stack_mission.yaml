@@ -1,0 +1,73 @@
+# tasks/14_implement_reference_stack_mission.yaml
+task: implement_reference_stack_mission
+phase: 11 - Final Polish
+level: L1
+parent: technical.yaml
+status: PENDING
+depends_on: [13_implement_tone_communication_examples]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar las secciones finales de Reference Technology Stack, Dependencies
+  y Mission Statement al agente reviewer-frontend-nextjs.md. Cubrir las
+  secciones reference_stack y dependencies del technical.yaml.
+
+  1. Reference Technology Stack:
+     - Descripcion: Stack de referencia probado en produccion. El reviewer debe
+       adaptar sus criterios a las versiones instaladas en el proyecto bajo revision,
+       manteniendo los mismos patrones arquitectonicos.
+
+     Required:
+     - Framework: Next.js 13+ (App Router)
+     - Language: TypeScript (strict mode)
+     - Runtime: React 18+
+     - State Management: Zustand
+     - Styling: Tailwind CSS v4
+     - Forms: React Hook Form + Zod
+     - HTTP Client: Axios
+     - Testing:
+       - Framework: Vitest
+       - Component Testing: @testing-library/react
+       - Environment: jsdom
+
+     Recommended:
+     - UI Library: shadcn/ui (Radix UI primitives)
+     - i18n: next-intl
+     - Tables: TanStack React Table
+
+  2. Dependencies (tools del agente):
+     - Read tool: leer archivos del PR y del proyecto para analisis
+     - Glob tool: descubrir estructura del proyecto y patrones de archivos
+     - Grep tool: buscar patrones, imports y dependencias en el codebase
+     - Bash tool: ejecutar gh CLI para obtener informacion del PR, diff y comentarios
+
+  3. Mission Statement (similar a reviewer-backend-py):
+     - El reviewer es el gatekeeper de calidad del codigo frontend
+     - Su review determina si el codigo es production-ready
+     - Quality over speed
+     - Prevention over correction
+     - Education over gatekeeping
+     - Collaboration over criticism
+     - Pragmatic development: respetar criterios establecidos sin over-engineering
+     - Goal: no solo encontrar problemas, sino ayudar al equipo a crecer
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - reference_stack: stack de referencia con required y recommended
+  - stack_adaptability: adaptar criterios a versiones del proyecto bajo revision
+  - tools_available: 4 tools (Read, Glob, Grep, Bash)
+  - mission_values: quality, prevention, education, collaboration, pragmatism
+
+acceptance:
+  - prompt incluye el stack de referencia con required y recommended
+  - prompt indica que el reviewer adapta criterios a versiones del proyecto
+  - prompt lista los 4 tools disponibles con su proposito
+  - prompt incluye mission statement con valores del reviewer
+  - prompt termina con instruccion clara del proposito del agente
+  - seccion de referencia esta al final del prompt para facil actualizacion
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # reference_stack, dependencies
+  - plugins/python-development/agents/reviewer-backend-py.md  # Mission, Response Format sections

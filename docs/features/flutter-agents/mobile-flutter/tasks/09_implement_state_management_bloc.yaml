@@ -1,0 +1,74 @@
+# tasks/09_implement_state_management_bloc.yaml
+task: implement_state_management_bloc
+phase: 5 - Application Layer
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [07_implement_networking_error_handling, 06_implement_domain_layer_repositories]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de State Management al agente mobile-flutter.md.
+  Cubrir la seccion state_management del technical.yaml. Esta es una seccion CRITICA
+  y extensa que define todo el patron BLoC + Freezed:
+
+  1. Libreria: flutter_bloc ^8.1.6
+  2. Patron: BLoC con Freezed sealed unions
+
+  3. Convenciones:
+     - Event naming: acciones en past tense o imperative (checkUserExistence, login, startChargingSession)
+     - State naming: condicion actual del BLoC, siempre incluir initial y loading
+     - BLoC constructor: dependencias via constructor injection
+
+  4. Event template (Freezed):
+     - @freezed class con const factory constructors
+     - part '{feature}_event.freezed.dart'
+     - Eventos como: started, loadData, submitForm (con parametros), reset
+
+  5. State template (Freezed):
+     - @freezed class con const factory constructors
+     - part '{feature}_state.freezed.dart'
+     - Estados: initial, loading, loaded (con data), success, error (con message)
+
+  6. BLoC template (event.map pattern):
+     - Extiende Bloc<{Feature}Event, {Feature}State>
+     - Constructor con repository y logger via injection
+     - on<{Feature}Event> con event.map() para delegation a handlers privados
+     - Cada handler es Future<void> con Emitter<{Feature}State>
+     - Emit loading antes de operaciones async
+     - result.when() para manejar success/failure
+
+  7. Helper pattern:
+     - Cuando BLoC tiene >6 event handlers o >200 lineas
+     - Helper recibe mismas dependencias que el BLoC
+     - BLoC delega a helper via on<EventA>(_helper.onEventA)
+     - Helper class con metodos Future<void>(event, emit)
+
+  8. Alternative event/state style (Equatable-based):
+     - Para BLoCs complejos con >5 state fields y copyWith
+     - Usa 'part of' directive en lugar de Freezed
+     - Abstract class extends Equatable con List<Object?> get props
+     - Cuando usar cada estilo (Freezed vs Equatable)
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - freezed_events: @freezed sealed class con const factory constructors
+  - freezed_states: @freezed sealed class con variantes (initial, loading, loaded, error)
+  - event_map_pattern: event.map() para delegation a handlers privados en el BLoC
+  - result_when: result.when(success:, failure:) para manejar respuestas de repos
+  - helper_extraction: extraer handlers a helper classes cuando BLoC es muy grande
+  - equatable_alternative: estilo alternativo para BLoCs complejos con muchos fields
+
+acceptance:
+  - prompt incluye template completo de Event con @freezed
+  - prompt incluye template completo de State con @freezed
+  - prompt incluye template completo de BLoC con event.map() pattern
+  - prompt incluye template de Helper class con criterios de cuando usarlo
+  - prompt incluye alternative Equatable-based style con criterios de seleccion
+  - prompt incluye convenciones de naming para events y states
+  - prompt indica constructor injection para dependencias (nunca get_it directo)
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # state_management section

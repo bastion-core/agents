@@ -1,0 +1,96 @@
+# tasks/16_test_review_catches_violations.yaml
+task: test_review_catches_violations
+phase: 12 - Validation
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [14_implement_reference_stack_mission]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Validar que el agente reviewer-frontend-nextjs.md detecta correctamente
+  violaciones de arquitectura, calidad de codigo, testing y seguridad cuando
+  se le presenta un PR con multiples problemas.
+
+  Escenario de prueba:
+  Simular un PR de tipo "new_feature" que incluye las siguientes violaciones:
+
+  Violaciones de Arquitectura:
+  - Domain importa de infrastructure (layer violation)
+  - Existe capa application/ con UseCase/Ploc
+  - Componente llama API directamente (sin store/DataAccess)
+  - Cross-module infrastructure import
+  - Fat store de 500+ lineas
+
+  Violaciones de Code Quality:
+  - Uso de 'any' type
+  - Texto hardcoded sin useTranslations()
+  - DataAccess usa try/catch en vez de Either
+  - Store no usa fold() para manejar respuesta
+  - dangerouslySetInnerHTML sin sanitizacion
+  - Secreto hardcoded en codigo
+  - useMemo sin justificacion de performance
+  - Componente de 300+ lineas
+  - Magic strings sin constantes
+  - Import order incorrecto
+
+  Violaciones de Testing:
+  - Tests en directorio tests/ separado (no colocados)
+  - Sin tests para store actions
+  - Test que verifica implementacion interna (useState llamado)
+  - Coverage por debajo del target para domain layer
+
+  Verificaciones:
+  1. El reviewer detecta TODAS las violaciones de arquitectura
+  2. El reviewer detecta TODAS las violaciones de code quality
+  3. El reviewer detecta las violaciones de testing
+  4. El reviewer detecta la vulnerabilidad de seguridad como blocking
+  5. Architecture score es bajo (< 5/10) por layer violations
+  6. Code Quality score es bajo (< 5/10) por multiples issues
+  7. Testing score refleja coverage inadecuado
+  8. Action items tiene "Must Fix" para issues criticos:
+     - Layer violations
+     - Security vulnerabilities
+     - Missing Either pattern
+  9. Action items tiene "Should Fix" para issues importantes:
+     - any type usage
+     - hardcoded text
+     - fat store
+  10. Decision es REQUEST_CHANGES con justificacion clara
+  11. Cada issue tiene referencia a archivo:linea
+  12. Cada issue tiene explicacion del "why" y sugerencia de fix
+
+  El test valida que el reviewer:
+  - Detecta layer violations correctamente
+  - Detecta violaciones del Either pattern
+  - Detecta vulnerabilidades de seguridad como blocking
+  - Clasifica correctamente la prioridad de cada issue
+  - Emite REQUEST_CHANGES cuando hay issues criticos
+  - Proporciona sugerencias concretas de fix
+
+files_to_verify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - violation_detection: detecta todas las violaciones definidas en el spec
+  - severity_classification: clasifica issues en must fix, should fix, consider
+  - blocking_security: vulnerabilidades de seguridad son siempre blocking
+  - request_changes: PR con violaciones criticas recibe REQUEST_CHANGES
+  - actionable_feedback: cada issue tiene archivo:linea, explicacion y sugerencia
+
+acceptance:
+  - el agente detecta layer violations (domain importando de infrastructure)
+  - el agente detecta capa application/ como anti-patron
+  - el agente detecta uso de 'any' type
+  - el agente detecta texto hardcoded sin i18n
+  - el agente detecta DataAccess sin Either pattern
+  - el agente detecta vulnerabilidad de seguridad (XSS, hardcoded secret)
+  - el agente detecta tests mal ubicados (no colocados)
+  - el agente clasifica security issues como "Must Fix (Blocking)"
+  - el agente emite REQUEST_CHANGES
+  - cada issue tiene referencia a archivo, explicacion y sugerencia de fix
+  - puntajes bajos reflejan la cantidad de violaciones
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # all sections
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md  # el agente completo a validar

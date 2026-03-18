@@ -1,0 +1,80 @@
+# tasks/18_implement_anti_patterns.yaml
+task: implement_anti_patterns
+phase: 10 - Quality & Guards
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on: [02_implement_architecture_rules, 10_implement_zustand_store_pattern, 08_implement_data_access_pattern, 12_implement_component_pattern]
+assigned_subagent: nextjs-development:frontend-nextjs
+
+scope: |
+  Agregar la seccion de Anti-Patterns al agente frontend-nextjs.md.
+  Cubrir la seccion anti_patterns del technical.yaml completa.
+
+  1. Over-engineering anti-patterns (10 patrones PROHIBIDOS):
+
+     a. Abstract Base Classes innecesarias
+        -> Composicion sobre herencia. Usar interfaces simples.
+
+     b. Generic CRUD Abstractions prematuras (BaseCrudService<T>)
+        -> Cada DataAccess implementa sus metodos especificos.
+
+     c. Deep inheritance hierarchies
+        -> Maximo 1 nivel. Preferir composicion y factory functions.
+
+     d. Fat stores (500+ lineas)
+        -> Dividir por concern: useListStore, useDetailStore, useFormStore.
+
+     e. Use cases layer en frontend
+        -> Stores llaman DataAccess directamente. No UseCase classes.
+
+     f. Application layer en frontend
+        -> Dos capas: domain + infrastructure. No Ploc, Command, DI factories.
+
+     g. Unnecessary middleware layers
+        -> Cadena: Component -> Store -> DataAccess. Sin capas intermedias.
+
+     h. DI framework overhead (InversifyJS, tsyringe)
+        -> DataAccess instanciado a nivel de modulo con new DataAccess(baseApiUrl).
+
+     i. Premature optimization (React.memo, useMemo, useCallback sin medir)
+        -> Optimizar solo cuando hay problema medible.
+
+     j. Over-testing implementation details
+        -> Testar comportamiento visible del componente.
+
+  2. Code smells (9 smells):
+     - any type -> usar unknown y type guards
+     - Magic strings -> usar constantes o enums
+     - Hardcoded text -> usar useTranslations()
+     - Direct API calls in components -> usar store -> DataAccess
+     - Business logic in components -> extraer a hooks o helpers
+     - Mutating state directly -> usar set() de Zustand
+     - Importing from other module's infrastructure -> usar domain types
+     - console.log in production -> usar logger service
+     - Nested ternaries -> extraer a funciones o early returns
+
+  Cada anti-patron debe tener un NEVER explicito y la alternativa correcta.
+
+files_to_modify:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+
+patterns:
+  - forbidden_patterns: 10 anti-patrones de over-engineering con alternativas
+  - code_smells: 9 code smells con correcciones
+  - explicit_nevers: cada patron tiene un NEVER claro
+  - correct_alternatives: cada prohibicion indica que usar en su lugar
+  - pragmatic_development: anti-overengineering como principio
+
+acceptance:
+  - prompt incluye los 10 anti-patrones de over-engineering con nombre, descripcion y alternativa
+  - prompt incluye los 9 code smells con alternativa correcta
+  - cada anti-patron tiene un NEVER o AVOID explicito
+  - cada anti-patron indica la alternativa correcta (do_instead)
+  - prompt es facilmente escaneable (formato lista con marcadores claros)
+  - prompt incluye principio de NO application layer, NO UseCase, NO Ploc
+  - prompt indica que la cadena correcta es Component -> Store -> DataAccess
+
+context_files:
+  - docs/features/nextjs-agents/frontend-nextjs/technical.yaml  # anti_patterns section
+  - plugins/python-development/agents/backend-py.md  # Common Pitfalls section

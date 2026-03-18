@@ -1,0 +1,65 @@
+# tasks/11_implement_dependency_injection.yaml
+task: implement_dependency_injection
+phase: 6 - Settings & Configuration
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on: [09_implement_state_management_bloc, 07_implement_networking_error_handling]
+assigned_subagent: flutter-development:mobile-flutter
+
+scope: |
+  Agregar la seccion de Dependency Injection al agente mobile-flutter.md.
+  Cubrir la seccion dependency_injection del technical.yaml que define:
+
+  1. Libreria: get_it ^7.7.0
+  2. Patron: Manual service locator con feature-grouped registration
+  3. Archivo: settings/di.dart
+
+  4. Convenciones:
+     - Global instance: final getIt = GetIt.instance;
+     - Entry point: Future<void> setupDependencies() async { ... }
+     - registerLazySingleton para services, repositories, API providers
+     - registerFactory para BLoCs (nueva instancia cada vez)
+
+  5. Orden de registracion:
+     - External services (SharedPreferences, PackageInfo, Firebase)
+     - Dio setup (BaseOptions, interceptor)
+     - Feature dependencies (agrupadas por feature)
+     - Cross-cutting services (AppVersionService, AnalyticsService)
+
+  6. Feature registration pattern template:
+     - Metodo privado _register{Feature}Dependencies()
+     - API Provider como lazySingleton
+     - Repository como lazySingleton (registrando abstract type)
+     - Service como lazySingleton (si aplica)
+     - BLoC como factory
+
+  7. Reglas criticas:
+     - ALWAYS registerFactory para BLoCs
+     - ALWAYS registerLazySingleton para services y repositories
+     - ALWAYS registrar abstract types (interfaces) apuntando a implementaciones concretas
+     - ALWAYS agrupar registraciones por feature en metodos privados
+     - NEVER usar injectable o auto-DI packages
+     - NEVER acceder getIt directamente desde BLoCs o repos (inject via constructor)
+     - Llamar setupDependencies() una vez en main.dart antes de runApp()
+
+files_to_modify:
+  - plugins/flutter-development/agents/mobile-flutter.md
+
+patterns:
+  - get_it_manual: manual registration sin injectable
+  - factory_for_blocs: registerFactory para BLoCs (nueva instancia cada vez)
+  - lazy_singleton: registerLazySingleton para services, repos, API providers
+  - abstract_type_registration: registrar interface, no concrete class
+  - feature_grouped: metodos privados _register{Feature}Dependencies()
+
+acceptance:
+  - prompt incluye template de feature registration con API provider, repo, BLoC
+  - prompt incluye orden de registracion (external -> Dio -> features -> cross-cutting)
+  - prompt diferencia registerFactory (BLoCs) vs registerLazySingleton (services/repos)
+  - prompt enfatiza registrar abstract types (interfaces)
+  - prompt incluye todas las reglas de dependency_injection.rules
+  - prompt indica que BLoCs reciben dependencias via constructor, nunca getIt directo
+
+context_files:
+  - docs/features/flutter-agents/mobile-flutter/technical.yaml  # dependency_injection section

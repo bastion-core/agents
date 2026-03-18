@@ -1,0 +1,86 @@
+# tasks/04_implement_architecture_review_rules.yaml
+task: implement_architecture_review_rules
+phase: 4 - Architecture Review
+level: L4
+parent: technical.yaml
+status: PENDING
+depends_on: [03_implement_review_pipeline_steps_0_1]
+assigned_subagent: nextjs-development:reviewer-frontend-nextjs
+
+scope: |
+  Agregar Step 2 (Architecture Review) al agente reviewer-frontend-nextjs.md.
+  Esta es una seccion critica que define como el reviewer evalua la arquitectura
+  de dos capas del proyecto. Cubrir la seccion step_2_architecture_review y
+  review_dimensions.architecture del technical.yaml.
+
+  1. Two-Layer Architecture Compliance:
+     - Capas: domain + infrastructure (SIN capa application/)
+     - Regla de dependencia: infrastructure -> domain (nunca al reves)
+     - Pureza del domain: libre de imports de infrastructure, React, Next.js, Zustand, Axios
+     - NO debe existir capa application/ con Ploc, UseCase, Command, Dependencies
+     - Estructura de modulo estandar:
+       src/core/{module-name}/
+       ├── domain/           # entities, dtos, states, enums, consts
+       └── infrastructure/   # data-access, services (solo logica real), helpers, store, ui/
+
+  2. Architecture Checks (del technical.yaml):
+     - domain_layer_purity: domain no importa de infrastructure, React, Next.js, Zustand, Axios
+     - dependency_direction: infrastructure -> domain (nunca al reves)
+     - module_boundaries: no importar infrastructure/ de otros modulos (usar domain types)
+     - module_structure: estructura estandar domain/infrastructure por feature (sin application/)
+     - data_access_pattern: clase concreta para HTTP, sin interface en domain
+     - store_pattern: stores llaman DataAccess directamente, multiples stores por concern
+     - no_application_layer: no debe existir capa application/ con Ploc, UseCase, Command, Dependencies
+
+  3. SOLID Principles adaptados a frontend:
+     - Single Responsibility: un componente/clase/modulo = una responsabilidad
+     - Dependency Inversion: infrastructure depende de domain types, no al reves
+     - Open/Closed: extensible via composicion, no modificacion
+     - Interface Segregation: interfaces especificas por necesidad
+
+  4. Design Patterns esperados:
+     - Either Monad: manejo funcional de errores en DataAccess
+     - Zustand Store: multiples stores pequenos por modulo (~60-100 lineas por concern)
+     - DataAccess: clase concreta para HTTP, sin interface en domain (no es un port)
+     - Discriminated Unions: estados UI con campo 'kind'
+     - Helpers: funciones puras para patrones repetidos 3+ veces
+
+  5. Red Flags (anti-patrones arquitectonicos):
+     - God Component: componente con demasiada logica
+     - Fat Store: store monolitico de 500+ lineas
+     - Direct API in Component: componente llamando APIs sin store/DataAccess
+     - Application Layer: existencia de capa application/ con Ploc, UseCase, Command
+     - Cross-module Infrastructure Import: importar de infrastructure/ de otro modulo
+     - Circular Dependencies
+     - Prop Drilling Excesivo: usar store o context
+     - DI Framework: uso de InversifyJS, tsyringe u otros
+
+  Incluir ejemplos concretos de violaciones y codigo correcto similar al
+  formato de reviewer-backend-py.md (marcadores de archivo:linea, explicaciones).
+
+files_to_modify:
+  - plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
+
+patterns:
+  - two_layer_architecture: domain + infrastructure sin application
+  - dependency_rule: infrastructure -> domain
+  - domain_purity: sin imports de frameworks o infraestructura
+  - module_structure: estructura estandar por feature
+  - expected_patterns: Either, Zustand Store, DataAccess, Discriminated Unions
+  - red_flags: 8 anti-patrones arquitectonicos
+
+acceptance:
+  - prompt define claramente la arquitectura de dos capas (domain + infrastructure)
+  - prompt lista los 7 checks arquitectonicos del technical.yaml
+  - prompt explica la regla de dependencia infrastructure -> domain
+  - prompt define pureza del domain (sin imports de React, Next.js, Zustand, Axios)
+  - prompt prohíbe explicitamente la capa application/ con Ploc/UseCase/Command
+  - prompt lista los 4 principios SOLID adaptados a frontend
+  - prompt lista los 5 patrones esperados con descripcion
+  - prompt lista los 8 red flags con descripcion
+  - prompt incluye ejemplos de violaciones y codigo correcto
+  - prompt muestra la estructura de carpetas estandar del modulo
+
+context_files:
+  - docs/features/nextjs-agents/reviewer-frontend-nextjs/technical.yaml  # step_2, review_dimensions.architecture
+  - plugins/python-development/agents/reviewer-backend-py.md  # Step 2: Architecture Review
