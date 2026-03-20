@@ -6,7 +6,7 @@ tools:
   - read_file
   - write_file
   - grep_search
-model: gemini-2.5-pro
+model: gemini-3-1-pro
 temperature: 0.3
 max_turns: 15
 ---
