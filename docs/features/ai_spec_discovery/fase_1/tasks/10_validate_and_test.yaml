@@ -17,12 +17,17 @@ scope: |
   Tests a ejecutar:
   1. Carga del workspace: ejecutar gemini en gemini/spec-generator/ y
      verificar que GEMINI.md se carga y los subagents estan disponibles
-  2. @product basico: generar feature.yaml para una funcionalidad simple
-  3. @product multi-stack: generar feature.yaml para funcionalidad multi-stack
-  4. @architect basico: generar technical.yaml a partir de un feature.yaml
+  2. @product single prompt: generar feature.yaml con toda la info en un
+     solo mensaje. Verificar que genera sin preguntas y escribe a disco
+  3. @product conversacional: generar feature.yaml con info incompleta.
+     Verificar que solo pregunta datos criticos (descripcion, stack)
+  4. Flujo secuencial: @product genera feature.yaml a disco -> main agent
+     sugiere @architect -> @architect lee feature.yaml del disco -> genera
+     technical.yaml -> main agent sugiere ir a Claude Code
   5. @architect con repo local: generar technical.yaml referenciando un repo
+     local. Verificar que usa read_file y list_directory
   6. Compatibilidad Claude Code: usar el agente architect de Claude Code
-     para consumir un feature.yaml generado por @product de Gemini
+     para consumir specs generadas por Gemini (feature.yaml y technical.yaml)
   7. Delegacion automatica: probar sin @, verificar que Gemini CLI
      delega al subagent correcto
   8. Gemini Flash: probar con --model gemini-3-flash para iteracion rapida

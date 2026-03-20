@@ -6,14 +6,15 @@ status: PENDING
 phase: "4 - GEMINI.md y Settings"
 
 scope: |
-  Crear el archivo GEMINI.md (contexto general del workspace) y el archivo
-  .gemini/settings.json (configuracion del proyecto) para el plugin de
-  generacion de specs.
-  El GEMINI.md tiene un rol liviano: define reglas compartidas entre
-  subagents, documenta los subagents disponibles (@product, @architect)
-  y establece convenciones generales de SDD.
-  NO debe importar convenciones ni schemas (eso lo hace cada subagent
-  en su system prompt).
+  Crear el archivo GEMINI.md (orquestador secuencial del workspace) y el
+  archivo .gemini/settings.json (configuracion del proyecto) para el plugin
+  de generacion de specs.
+  El GEMINI.md actua como orquestador: sugiere el flujo secuencial al
+  usuario (product → architect → Claude Code) y despues de que cada
+  subagent completa su tarea, sugiere el siguiente paso.
+  Define reglas compartidas entre subagents y documenta los subagents
+  disponibles (@product, @architect).
+  NO debe importar convenciones ni schemas (eso lo hace cada subagent).
   El settings.json configura overrides opcionales de subagents
   (maxTurns, timeout) y configuracion general del proyecto.
 
@@ -22,11 +23,13 @@ files_to_create:
   - gemini/spec-generator/.gemini/settings.json
 
 patterns:
-  - gemini_md_rol: contexto general del workspace, NO orquestador de roles
+  - gemini_md_rol: orquestador secuencial del workspace (sugiere siguiente paso)
   - gemini_md_contenido:
       - contexto general de SDD (Specification-Driven Development)
+      - flujo secuencial recomendado (paso 1 @product, paso 2 @architect, paso 3 Claude Code)
+      - instrucciones para sugerir el siguiente paso despues de cada subagent
       - subagents disponibles y como invocarlos (@product, @architect)
-      - reglas compartidas (idioma espanol, no generar codigo, validar completitud)
+      - reglas compartidas (idioma espanol, no generar codigo, single prompt first, escribir a disco)
       - referencia a que las specs generadas deben ser compatibles con Claude Code
   - gemini_md_no_incluir: convenciones de stack, schemas de output, prompts de rol
   - settings_json: configuracion de overrides de subagents (maxTurns, maxTimeMinutes)
@@ -34,8 +37,9 @@ patterns:
   - tamano_settings: 15-25 lineas
 
 acceptance:
-  - GEMINI.md documenta los 2 subagents disponibles (@product para feature.yaml, @architect para technical.yaml)
-  - GEMINI.md define reglas compartidas (idioma, no codigo, validar completitud)
+  - GEMINI.md documenta el flujo secuencial (product → architect → Claude Code)
+  - GEMINI.md contiene instrucciones para sugerir el siguiente paso al usuario
+  - GEMINI.md define reglas compartidas (idioma, no codigo, single prompt first, escribir a disco)
   - GEMINI.md NO importa convenciones ni schemas via @file.md
   - GEMINI.md se carga correctamente al ejecutar gemini en el directorio
   - settings.json es JSON valido con configuracion de overrides de subagents

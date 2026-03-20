@@ -24,7 +24,8 @@ patterns:
       - Instalacion y configuracion (paso a paso)
       - Autenticacion GCP (metodo ADC recomendado + Service Account alternativo)
       - Variables de entorno (GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION)
-      - Uso basico (invocacion de @product y @architect con ejemplos)
+      - Uso basico: flujo secuencial completo (@product → @architect → Claude Code)
+      - Single prompt: como proporcionar toda la info en un solo mensaje para minimizar tokens
       - Ejemplos avanzados (repo local, Gemini Flash, delegacion automatica)
       - Estructura de archivos del plugin (tabla descriptiva)
       - Troubleshooting (errores comunes de autenticacion, permisos)
@@ -37,7 +38,8 @@ acceptance:
   - README incluye pasos de instalacion de Gemini CLI
   - README incluye ambos metodos de autenticacion GCP (ADC + Service Account)
   - README incluye advertencia sobre API keys no soportadas por Vertex AI
-  - README incluye al menos 4 ejemplos de invocacion de subagents
+  - README incluye ejemplo de flujo secuencial completo (product → architect → Claude Code)
+  - README incluye ejemplo de single prompt rico para optimizacion de tokens
   - README incluye seccion de troubleshooting con errores comunes
   - un nuevo miembro del equipo puede seguir el README y generar su primera spec en < 10 minutos
   - tamano estimado: 80-120 lineas

@@ -3,45 +3,45 @@ feature: ai_spec_discovery_fase_1
 layer: agent
 
 architecture:
-  pattern: Subagent Architecture con .gemini/agents/ y GEMINI.md workspace context
+  pattern: Subagent Architecture con .gemini/agents/, GEMINI.md como orquestador secuencial y write_file para persistencia
   entry: Ejecucion de Gemini CLI en el directorio gemini/spec-generator/ e invocacion de subagents via @product o @architect
-  use_case: Generar especificaciones de producto (feature.yaml) y tecnicas (technical.yaml) en formato SDD estandarizado usando subagents de Gemini CLI con contexto pre-configurado
+  use_case: Generar especificaciones de producto (feature.yaml) y tecnicas (technical.yaml) en formato SDD estandarizado usando subagents de Gemini CLI con contexto pre-configurado. Los subagents escriben las specs a disco y el agente principal sugiere el siguiente paso del flujo
   interfaces:
-    - Subagent @product (.gemini/agents/product.md) con frontmatter YAML para generar feature.yaml
-    - Subagent @architect (.gemini/agents/architect.md) con frontmatter YAML para generar technical.yaml
-    - GEMINI.md como contexto general del workspace (convenciones compartidas)
+    - Subagent @product (.gemini/agents/product.md) con frontmatter YAML para generar feature.yaml y escribirlo a disco via write_file
+    - Subagent @architect (.gemini/agents/architect.md) con frontmatter YAML para generar technical.yaml y escribirlo a disco via write_file
+    - GEMINI.md como orquestador secuencial del workspace (sugiere el siguiente paso al usuario despues de cada subagent)
     - Archivos modulares .md importados via @file.md para convenciones por stack
     - Schemas de output .yaml como plantillas de formato esperado
 
 pipeline:
   - carga_contexto:
       input: Usuario ejecuta Gemini CLI en el directorio gemini/spec-generator/
-      process: Gemini CLI carga automaticamente el GEMINI.md del directorio (contexto general del workspace) y registra los subagents definidos en .gemini/agents/ (product.md y architect.md). Cada subagent tiene su propio system prompt con @imports de convenciones y schemas
+      process: Gemini CLI carga automaticamente el GEMINI.md del directorio (orquestador del workspace) y registra los subagents definidos en .gemini/agents/ (product.md y architect.md). Cada subagent tiene su propio system prompt con @imports de convenciones y schemas
       output: Sesion de Gemini CLI con contexto del workspace y subagents @product y @architect disponibles para invocacion
 
   - invocacion_subagent:
-      input: Usuario invoca un subagent con @product o @architect seguido de la descripcion de la tarea
-      process: Gemini CLI abre un contexto aislado con el system prompt del subagent seleccionado. El subagent tiene acceso a tools configurados en su frontmatter (read_file, write_file, grep_search). La delegacion puede ser explicita (@nombre) o automatica (el modelo principal decide basandose en el campo description del frontmatter)
+      input: Usuario invoca un subagent con @product o @architect seguido de la descripcion de la tarea. Idealmente proporciona toda la informacion en un solo prompt (descripcion, stack, criterios, reglas) para minimizar turnos y consumo de tokens
+      process: Gemini CLI abre un contexto aislado con el system prompt del subagent seleccionado. El subagent tiene acceso a tools configurados en su frontmatter (read_file, write_file, grep_search). Si el usuario proporciona toda la informacion necesaria, el subagent genera la spec directamente sin preguntas adicionales. Solo hace preguntas de clarificacion si faltan datos criticos
       output: Contexto aislado del subagent activo con su prompt especializado, convenciones del stack y schemas de output cargados
 
-  - recopilacion_inputs:
-      input: Usuario describe la funcionalidad en lenguaje natural, indica stack tecnologico y opcionalmente referencia un repositorio local
-      process: El subagent activo procesa la descripcion del usuario aplicando sus convenciones. Si el usuario indica un repositorio local, Gemini CLI lee la estructura y archivos relevantes para obtener contexto de arquitectura existente
-      output: Informacion estructurada lista para generar la especificacion
-
-  - generacion_spec:
+  - generacion_y_escritura_spec:
       input: Informacion recopilada del usuario + contexto de convenciones del subagent
-      process: El subagent genera la especificacion aplicando el schema de output correspondiente (feature.yaml para @product, technical.yaml para @architect) con las convenciones del stack seleccionado
-      output: Especificacion completa en formato YAML que el usuario copia a su repositorio bajo docs/features/{feature_name}/
+      process: El subagent genera la especificacion aplicando el schema de output correspondiente (feature.yaml para @product, technical.yaml para @architect) con las convenciones del stack seleccionado. Luego escribe el archivo a disco via write_file en la ruta indicada por el usuario (docs/features/{feature_name}/)
+      output: Archivo de especificacion escrito en el filesystem del proyecto destino
+
+  - orquestacion_siguiente_paso:
+      input: Subagent completa la generacion y escritura de la spec
+      process: El control regresa al agente principal (GEMINI.md). El agente principal detecta que se completo un paso del flujo y sugiere al usuario el siguiente paso. Ejemplo - despues de @product sugiere usar @architect, despues de @architect sugiere ir a Claude Code para Delivery
+      output: Usuario informado del siguiente paso y listo para invocar el siguiente subagent o cambiar a Claude Code
 
   - validacion_compatibilidad:
-      input: Especificacion generada por el subagent de Gemini
-      process: El usuario verifica que la especificacion generada es consumible por los agentes de Claude Code (product o architect) sin modificaciones. Opcionalmente, ejecuta el agente Claude Code correspondiente para validar
-      output: Especificacion validada y lista para la fase de Delivery con Claude Code
+      input: Especificaciones generadas y escritas a disco por los subagents
+      process: El usuario verifica que las especificaciones generadas son consumibles por los agentes de Claude Code (product o architect) sin modificaciones. Opcionalmente, ejecuta el agente Claude Code correspondiente para validar
+      output: Especificaciones validadas y listas para la fase de Delivery con Claude Code
 
 invocation_examples:
-  - ejemplo_product_explicito:
-      descripcion: Invocacion explicita de @product para generar feature.yaml de una funcionalidad multi-stack
+  - ejemplo_flujo_secuencial_completo:
+      descripcion: Flujo completo desde @product hasta @architect en una misma sesion de Gemini CLI. El agente principal sugiere el siguiente paso despues de cada subagent
       comando: |
         $ cd gemini/spec-generator/
         $ gemini
@@ -50,17 +50,39 @@ invocation_examples:
           que soporte Firebase Cloud Messaging para Flutter y un endpoint
           de registro de device tokens en el backend Python/FastAPI.
           Stack: multi_stack (python_fastapi + flutter)
+          Criterios: soportar topics, device tokens individuales, notificaciones silenciosas
+          Reglas: max 5 notificaciones/hora por usuario, retry con exponential backoff
+          Guardar en: docs/features/push_notifications/feature.yaml
 
-  - ejemplo_architect_explicito:
-      descripcion: Invocacion explicita de @architect para generar technical.yaml a partir de un feature.yaml existente, con referencia a repositorio local
+        # @product genera y escribe feature.yaml a disco via write_file
+        # Main agent dice: "feature.yaml guardado en docs/features/push_notifications/feature.yaml.
+        #   Para generar la spec tecnica, usa: @architect"
+
+        > @architect Genera el technical.yaml a partir de:
+          docs/features/push_notifications/feature.yaml
+          Stack: python_fastapi
+          Repositorio de referencia: /Users/dev/repos/mi-backend/
+          Guardar en: docs/features/push_notifications/technical.yaml
+
+        # @architect lee feature.yaml, explora el repo, genera y escribe technical.yaml
+        # Main agent dice: "technical.yaml guardado. Para iniciar el desarrollo,
+        #   abre Claude Code en tu proyecto: cd /Users/dev/repos/mi-backend/ && claude"
+
+  - ejemplo_product_single_prompt:
+      descripcion: Invocacion de @product con toda la informacion en un solo prompt para minimizar turnos y tokens
       comando: |
         $ cd gemini/spec-generator/
         $ gemini
 
-        > @architect Genera el technical.yaml a partir de este feature.yaml:
-          @docs/features/push_notifications/feature.yaml
+        > @product Necesito una spec para un modulo de pagos con Stripe.
           Stack: python_fastapi
-          Repositorio de referencia: /Users/dev/repos/mi-backend/
+          Descripcion: checkout con tarjeta de credito, webhooks de Stripe para
+          confirmar pagos, y endpoint de reembolsos parciales o totales.
+          Criterios: checkout completa en menos de 3 segundos, webhooks idempotentes,
+          reembolsos solo permitidos dentro de 30 dias.
+          Reglas: comision del 2.9% + $0.30 por transaccion, moneda USD unicamente,
+          monto minimo $1, monto maximo $10,000.
+          Guardar en: docs/features/payments/feature.yaml
 
   - ejemplo_delegacion_automatica:
       descripcion: Delegacion automatica donde Gemini CLI decide que subagent usar basandose en el campo description del frontmatter
@@ -70,6 +92,16 @@ invocation_examples:
 
         > Necesito crear la especificacion de producto para un nuevo modulo
           de pagos con Stripe que incluya checkout, webhooks y reembolsos.
+
+  - ejemplo_architect_gemini_flash:
+      descripcion: Uso de Gemini Flash para iteraciones rapidas sobre specs existentes
+      comando: |
+        $ cd gemini/spec-generator/
+        $ gemini --model gemini-3-flash
+
+        > @architect Refina este technical.yaml existente:
+          docs/features/payments/technical.yaml
+          Agrega un endpoint de webhooks para Stripe y actualiza las dependencies.
 
 auth:
   gcp_credits: El equipo cuenta con creditos activos en la consola de GCP para consumir Vertex AI
@@ -85,8 +117,8 @@ auth:
 dependencies:
   - gemini_cli: Herramienta CLI open-source de Google que ejecuta modelos Gemini desde la terminal con soporte de archivos GEMINI.md para contexto automatico y .gemini/agents/ para subagents especializados
   - vertex_ai: Servicio de Google Cloud Platform para ejecucion de modelos Gemini (Gemini 3.1 Pro por defecto, Gemini 3 Flash como alternativa). Autenticacion via ADC o Service Account (NO API keys). El equipo dispone de creditos GCP activos para cubrir el consumo
-  - subagent_product: Subagent definido en .gemini/agents/product.md con frontmatter YAML (name, description, tools, model, temperature). Prompt adaptado del agente product de Claude Code (plugins/general/agents/product.md). Se invoca con @product
-  - subagent_architect: Subagent definido en .gemini/agents/architect.md con frontmatter YAML (name, description, tools, model, temperature). Prompt adaptado del agente architect de Claude Code (plugins/general/agents/architect.md). Se invoca con @architect
+  - subagent_product: Subagent definido en .gemini/agents/product.md con frontmatter YAML (name, description, tools [read_file, write_file, grep_search], model, temperature). Prompt adaptado del agente product de Claude Code. Se invoca con @product. Escribe feature.yaml a disco via write_file
+  - subagent_architect: Subagent definido en .gemini/agents/architect.md con frontmatter YAML (name, description, tools [read_file, write_file, grep_search, list_directory], model, temperature). Prompt adaptado del agente architect de Claude Code. Se invoca con @architect. Lee feature.yaml y escribe technical.yaml a disco via write_file
   - convenciones_backend_py: Convenciones de desarrollo Python/FastAPI extraidas de plugins/python-development/agents/backend-py.md, importadas via @conventions-backend-py.md en los subagents
   - convenciones_frontend_nextjs: Convenciones de desarrollo Next.js extraidas de plugins/nextjs-development/agents/frontend-nextjs.md, importadas via @conventions-frontend-nextjs.md en los subagents
   - convenciones_mobile_flutter: Convenciones de desarrollo Flutter extraidas de plugins/flutter-development/agents/mobile-flutter.md, importadas via @conventions-mobile-flutter.md en los subagents

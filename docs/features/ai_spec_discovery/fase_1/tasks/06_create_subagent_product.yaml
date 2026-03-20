@@ -7,15 +7,21 @@ phase: "3 - Subagents"
 
 scope: |
   Crear el subagent @product de Gemini CLI que genera especificaciones
-  de producto (feature.yaml) en formato SDD estandarizado.
+  de producto (feature.yaml) en formato SDD estandarizado y las escribe
+  a disco via write_file.
   El archivo debe incluir frontmatter YAML con configuracion del subagent
   (name, description, kind, tools, model, temperature, max_turns) y un
   system prompt adaptado del agente product de Claude Code.
   El system prompt debe incluir @imports de convenciones por stack,
   schema de output y ejemplo de referencia.
   Adaptar el prompt para Gemini CLI: reemplazar referencias a herramientas
-  de Claude Code (Read, Write, Glob, AskUserQuestion) por interaccion
-  conversacional y tools de Gemini CLI (read_file, grep_search).
+  de Claude Code (Read, Write, Glob, AskUserQuestion) por tools de Gemini
+  CLI (read_file, write_file, grep_search).
+  IMPORTANTE: El system prompt debe implementar dos optimizaciones clave:
+  1) Single prompt first - si el usuario proporciona toda la info en un
+     solo mensaje, generar la spec directamente sin preguntas (minimiza tokens)
+  2) Escritura a disco - usar write_file para escribir el feature.yaml
+     en la ruta indicada por el usuario
   NO copiar el agente original tal cual. Adaptar la logica de validacion,
   pipeline y formato preservando la esencia del flujo.
 
@@ -25,23 +31,28 @@ files_to_create:
 patterns:
   - frontmatter:
       name: product
-      description: "Genera especificaciones de producto (feature.yaml) en formato SDD estandarizado"
+      description: "Genera especificaciones de producto (feature.yaml) en formato SDD estandarizado y las escribe a disco"
       kind: local
-      tools: [read_file, grep_search]
+      tools: [read_file, write_file, grep_search]
       model: gemini-2.5-pro
       temperature: 0.3
       max_turns: 15
   - system_prompt: adaptado de plugins/general/agents/product.md
   - imports: "@conventions-backend-py.md, @conventions-frontend-nextjs.md, @conventions-mobile-flutter.md, @schema-feature.yaml, @example-feature.yaml"
   - idioma_specs: espanol para contenido de specs generadas
-  - flujo: solicitar descripcion -> preguntar stack -> validar completitud -> generar feature.yaml
-  - output: mostrar feature.yaml en terminal (no escribir archivo directamente)
+  - single_prompt_first: si el usuario proporciona descripcion, stack, criterios, reglas y ruta destino, generar en 1 turno sin preguntas
+  - fallback_conversacional: solo preguntar si faltan datos criticos (descripcion o stack)
+  - escritura_disco: usar write_file para escribir feature.yaml en la ruta indicada por el usuario. Si no indica ruta, preguntar donde guardarlo
+  - flujo_optimizado: recibir info -> [preguntar solo si falta critico] -> generar feature.yaml -> write_file
 
 acceptance:
   - archivo tiene frontmatter YAML valido con todos los campos requeridos (name, description, kind, tools, model, temperature, max_turns)
+  - frontmatter incluye write_file en tools
   - system prompt incluye @imports de las 3 convenciones, schema y ejemplo
-  - system prompt define flujo claro: recopilar info -> validar completitud -> generar spec
-  - system prompt instruye al modelo a solicitar datos faltantes antes de generar
+  - system prompt implementa single prompt first (genera en 1 turno si tiene toda la info)
+  - system prompt instruye a escribir feature.yaml a disco via write_file
+  - system prompt define que datos son criticos (descripcion, stack) y cuales opcionales (criterios, reglas)
+  - system prompt instruye al modelo a solicitar solo datos criticos faltantes
   - NO contiene referencias a herramientas de Claude Code (Read, Write, Glob, AskUserQuestion)
   - el subagent se puede invocar con @product en Gemini CLI sin errores de carga
   - tamano estimado: 200-300 lineas

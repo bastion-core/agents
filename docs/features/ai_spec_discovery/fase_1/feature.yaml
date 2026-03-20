@@ -19,11 +19,13 @@ description: |
   centralizado.
 
 acceptance_criteria:
-  - PO o Arquitecto ejecuta Gemini CLI en gemini/spec-generator/ e invoca @product para generar un feature.yaml valido para una funcionalidad nueva
-  - PO o Arquitecto invoca @architect para generar un technical.yaml a partir de un feature.yaml existente usando Gemini CLI
+  - PO o Arquitecto ejecuta Gemini CLI en gemini/spec-generator/ e invoca @product para generar un feature.yaml valido que se escribe automaticamente a disco via write_file
+  - PO o Arquitecto invoca @architect para generar un technical.yaml a partir del feature.yaml escrito por @product, sin necesidad de copiar manualmente
+  - Al finalizar cada subagent, el agente principal (GEMINI.md) sugiere el siguiente paso del flujo (ej: "Usa @architect para generar la spec tecnica")
   - Las especificaciones generadas cumplen el formato SDD estandarizado y son consumibles por los agentes product y architect de Claude Code sin modificaciones
   - Las convenciones de arquitectura por stack (Clean Architecture para Python, Two-layer para Next.js, 4-layer para Flutter) se reflejan correctamente en las specs tecnicas generadas
   - El usuario puede referenciar un repositorio local para que Gemini CLI tenga contexto de la estructura y patrones del proyecto destino
+  - Los subagents aceptan un prompt rico con toda la informacion necesaria para generar la spec en un solo turno, minimizando consumo de tokens. Solo hacen preguntas si faltan datos criticos
   - Los subagents (@product y @architect) en .gemini/agents/ cargan correctamente con sus convenciones, schemas y contexto al ser invocados
   - La generacion de una especificacion completa toma menos de 30 segundos
   - Existe documentacion clara (README) para que cualquier miembro del equipo pueda instalar y usar el plugin en menos de 10 minutos
@@ -41,8 +43,10 @@ business_rules:
   - formato_output_technical: technical.yaml con secciones feature, layer, architecture, api_contract, pipeline, data_model, dependencies
   - invocacion_subagents: el usuario invoca @product o @architect en la sesion de Gemini CLI para activar el rol especializado correspondiente
   - ubicacion_plugin: gemini/spec-generator/ en la raiz del repositorio claude-agents, separado de plugins/ para evitar sincronizacion con el marketplace de Claude Code
+  - escritura_a_disco: los subagents escriben las specs generadas directamente al filesystem via write_file en la ruta indicada por el usuario (docs/features/{feature_name}/)
+  - orquestacion_secuencial: el GEMINI.md sugiere el siguiente paso al usuario despues de cada subagent (product -> architect). El usuario ejecuta manualmente el @siguiente
+  - optimizacion_tokens: los subagents priorizan generar la spec en un solo turno si el usuario proporciona toda la informacion necesaria. Solo hacen preguntas de clarificacion si faltan datos criticos
   - contexto_repo_local: el usuario puede indicar a Gemini CLI que lea archivos o directorios de cualquier repositorio local clonado
-  - almacenamiento_specs: las especificaciones generadas se guardan manualmente en el repositorio del proyecto bajo docs/features/{feature_name}/
   - compatibilidad_agentes: las specs generadas deben ser identicas en estructura a las que generan los agentes product y architect de Claude Code
 
 inputs:
