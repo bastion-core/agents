@@ -1,0 +1,132 @@
+# Schema: feature.yaml
+# Definicion formal de cada campo del archivo feature.yaml (especificacion de producto SDD).
+# Este archivo describe el formato esperado para que el subagent @product genere specs validas.
+# Todos los campos son OBLIGATORIOS salvo que se indique lo contrario.
+
+schema:
+  feature:
+    tipo: string
+    obligatorio: true
+    descripcion: Nombre unico de la funcionalidad en snake_case.
+    reglas:
+      - Usar snake_case (ej. create_trip, reset_password, generate_invoice)
+      - Debe ser corto, descriptivo y unico dentro del proyecto
+      - No incluir prefijos de modulo ni sufijos tecnicos
+    ejemplo: push_notifications
+
+  owner:
+    tipo: string
+    obligatorio: true
+    descripcion: Rol responsable de la definicion de esta funcionalidad.
+    valores_permitidos:
+      - product_owner
+      - product_manager
+      - tech_lead
+    reglas:
+      - Indica quien tiene la autoridad sobre los criterios de aceptacion y prioridad
+    ejemplo: product_owner
+
+  version:
+    tipo: string
+    obligatorio: true
+    descripcion: Version del documento de especificacion en formato numerico incremental.
+    reglas:
+      - Formato numerico con punto decimal (1.0, 1.1, 2.0)
+      - Primera version siempre es 1.0
+      - Incrementar minor (1.1) para ajustes, major (2.0) para cambios significativos
+    ejemplo: "1.0"
+
+  description:
+    tipo: string (multilinea)
+    obligatorio: true
+    descripcion: Descripcion funcional en lenguaje de negocio.
+    reglas:
+      - Iniciar con "Como [rol de usuario],"
+      - Segunda linea describe que puede hacer el usuario
+      - Tercera linea describe que debe hacer el sistema en respuesta
+      - Usar lenguaje de negocio, NUNCA jerga tecnica
+      - No mencionar frameworks, bases de datos ni tecnologias
+      - Debe ser comprensible para cualquier stakeholder no tecnico
+    ejemplo: |
+      Como administrador de flota,
+      puedo enviar notificaciones push a conductores individuales o grupos,
+      para comunicar actualizaciones operativas en tiempo real.
+
+  acceptance_criteria:
+    tipo: lista de strings
+    obligatorio: true
+    descripcion: Condiciones verificables que deben cumplirse para considerar la funcionalidad como terminada.
+    reglas:
+      - Minimo 3 criterios
+      - Cada criterio debe ser verificable y objetivo (se puede responder si/no)
+      - No mencionar tecnologias, frameworks ni detalles de implementacion
+      - Escritos desde la perspectiva del usuario o del comportamiento del sistema
+      - Usar verbos en presente ("El sistema muestra...", "El usuario puede...")
+    ejemplo:
+      - El administrador puede enviar una notificacion a un conductor especifico
+      - El sistema confirma el envio exitoso con un mensaje de confirmacion
+      - Las notificaciones no leidas se muestran con indicador visual
+
+  business_rules:
+    tipo: lista de objetos (clave-valor)
+    obligatorio: true
+    descripcion: Reglas de negocio con valores concretos que restringen o definen el comportamiento.
+    reglas:
+      - Cada regla tiene un nombre_clave en snake_case y un valor concreto
+      - Incluir limites numericos, enumeraciones, codigos de error, restricciones
+      - Los valores deben ser precisos y medibles (no "debe ser rapido")
+      - Incluir comportamientos ante errores cuando aplique
+      - Incluir requisitos de autenticacion/autorizacion cuando aplique
+    ejemplo:
+      - max_notificaciones_hora: 5 por usuario
+      - tipos_notificacion: [push, silent, topic]
+      - retry_policy: exponential backoff con max 3 reintentos
+
+  inputs:
+    tipo: lista de objetos (clave-valor)
+    obligatorio: true
+    descripcion: Datos que el usuario o sistema externo debe proporcionar.
+    reglas:
+      - Cada input tiene nombre descriptivo y especifica tipo de dato + valores permitidos
+      - Incluir formatos esperados (ej. UUID, email, ISO 8601)
+      - Indicar si el campo es requerido u opcional
+      - Incluir rangos o enums cuando aplique
+    ejemplo:
+      - destinatario_id: UUID del conductor (requerido)
+      - titulo: string, max 100 caracteres (requerido)
+      - cuerpo: string, max 500 caracteres (requerido)
+      - tipo: enum [push, silent, topic] (requerido)
+
+  outputs:
+    tipo: lista de objetos (clave-valor)
+    obligatorio: true
+    descripcion: Datos que el sistema devuelve como resultado.
+    reglas:
+      - Cada output tiene nombre, tipo de dato y descripcion
+      - Incluir TANTO respuestas exitosas COMO respuestas de error
+      - Especificar codigos HTTP o codigos de error cuando aplique
+      - Describir el formato de la respuesta
+    ejemplo:
+      - notificacion_enviada: objeto con id, timestamp y estado de entrega
+      - error_destinatario_no_encontrado: codigo 404, mensaje descriptivo
+      - error_limite_excedido: codigo 429, mensaje con tiempo de espera
+
+  tests_scope:
+    tipo: lista de objetos (clave-valor)
+    obligatorio: true
+    descripcion: Escenarios de prueba que cubren el alcance funcional.
+    reglas:
+      - Minimo 3 escenarios (1 exitoso + 1 error de validacion + 1 caso limite)
+      - Cada escenario tiene nombre_clave en snake_case y descripcion con resultado esperado
+      - Usar formato "descripcion -> resultado esperado"
+      - Sirve como guia para que ingenieria defina los tests tecnicos detallados
+    ejemplo:
+      - envio_exitoso: enviar notificacion a conductor activo -> notificacion recibida
+      - destinatario_inexistente: enviar a ID invalido -> error 404
+      - limite_excedido: enviar 6ta notificacion en una hora -> error 429
+
+# Reglas generales de redaccion:
+#   - Todo el contenido debe estar en ESPANOL
+#   - Usar lenguaje de negocio, nunca jerga tecnica
+#   - Los valores deben ser concretos y medibles
+#   - No inventar datos que no hayan sido proporcionados por el usuario

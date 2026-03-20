@@ -1,0 +1,56 @@
+# feature.yaml — Ejemplo de referencia
+# Tema: Sistema de gestion de inventario para almacenes
+# Este ejemplo es distinto de la funcionalidad real del proyecto (AI Spec Discovery)
+
+feature: warehouse_inventory_management
+owner: product_owner
+version: 1.0
+
+description: |
+  Como administrador de almacen,
+  puedo registrar entradas y salidas de productos del inventario,
+  para mantener un control actualizado del stock disponible en cada bodega
+  y recibir alertas cuando un producto alcance su nivel minimo de reposicion.
+
+acceptance_criteria:
+  - El administrador puede registrar una entrada de productos indicando cantidad, producto y bodega destino
+  - El administrador puede registrar una salida de productos indicando cantidad, producto y bodega origen
+  - El sistema actualiza automaticamente el stock disponible despues de cada movimiento
+  - El sistema envia una alerta cuando el stock de un producto cae por debajo del nivel minimo configurado
+  - El administrador puede consultar el historial de movimientos filtrado por producto, bodega y rango de fechas
+  - El sistema rechaza salidas que excedan el stock disponible en la bodega
+
+business_rules:
+  - stock_minimo_default: 10 unidades por producto (configurable por administrador)
+  - tipos_movimiento: [entrada, salida, ajuste_manual]
+  - max_productos_por_movimiento: 50 items por operacion
+  - formato_codigo_producto: alfanumerico de 8 caracteres (ej. PROD0001)
+  - retencion_historial: 24 meses de movimientos
+  - permisos_ajuste_manual: solo rol supervisor o superior
+  - moneda_valoracion: USD
+  - metodo_valoracion: FIFO (First In, First Out)
+
+inputs:
+  - producto_id: UUID del producto registrado en el catalogo (requerido)
+  - bodega_id: UUID de la bodega destino u origen (requerido)
+  - tipo_movimiento: enum [entrada, salida, ajuste_manual] (requerido)
+  - cantidad: entero positivo, min 1, max 10000 (requerido)
+  - motivo: string, max 200 caracteres (requerido para ajuste_manual, opcional para otros)
+  - documento_referencia: string, max 50 caracteres (opcional, ej. numero de factura o guia)
+
+outputs:
+  - movimiento_registrado: objeto con id, producto_id, bodega_id, tipo, cantidad, stock_resultante, timestamp
+  - alerta_stock_bajo: notificacion con producto_id, bodega_id, stock_actual, stock_minimo
+  - error_stock_insuficiente: codigo 422, mensaje "Stock insuficiente. Disponible: {cantidad}"
+  - error_producto_no_encontrado: codigo 404, mensaje "Producto no encontrado en el catalogo"
+  - error_bodega_no_encontrada: codigo 404, mensaje "Bodega no encontrada"
+  - error_limite_excedido: codigo 422, mensaje "Maximo 50 productos por movimiento"
+
+tests_scope:
+  - entrada_exitosa: registrar entrada de 100 unidades -> stock incrementado, movimiento registrado
+  - salida_exitosa: registrar salida de 20 unidades con stock suficiente -> stock decrementado
+  - salida_sin_stock: registrar salida de 200 unidades con solo 50 disponibles -> error 422
+  - alerta_stock_bajo: registrar salida que deja stock en 5 (minimo configurado en 10) -> alerta generada
+  - ajuste_sin_permisos: usuario con rol operador intenta ajuste manual -> error 403
+  - producto_inexistente: registrar movimiento con producto_id invalido -> error 404
+  - limite_productos: registrar movimiento con 51 items -> error 422

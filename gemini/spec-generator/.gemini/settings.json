@@ -1,0 +1,16 @@
+{
+  "agents": {
+    "product": {
+      "maxTurns": 15,
+      "maxTimeMinutes": 5
+    },
+    "architect": {
+      "maxTurns": 20,
+      "maxTimeMinutes": 10
+    }
+  },
+  "defaults": {
+    "model": "gemini-2.5-pro",
+    "temperature": 0.3
+  }
+}

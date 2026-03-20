@@ -1,0 +1,161 @@
+# technical.yaml — Ejemplo de referencia
+# Tema: Sistema de gestion de inventario para almacenes
+# Este ejemplo es distinto de la funcionalidad real del proyecto (AI Spec Discovery)
+
+feature: warehouse_inventory_management
+layer: api
+
+architecture:
+  pattern: Hexagonal Architecture con Interactor pattern, Repository ABC y DIP para servicios de notificacion
+  entry: POST /api/v1/inventory/movements/ con autenticacion JWT y autorizacion por rol
+  use_case: Recibir request de movimiento de inventario, validar stock disponible, registrar movimiento, actualizar stock y disparar alerta si el stock cae debajo del minimo configurado
+  interfaces:
+    - "POST /api/v1/inventory/movements/ (registrar movimiento)"
+    - "GET /api/v1/inventory/movements/ (historial con filtros)"
+    - "GET /api/v1/inventory/stock/ (consultar stock por bodega)"
+    - "InventoryMovementRepository ABC (port de persistencia de movimientos)"
+    - "StockRepository ABC (port de persistencia de stock)"
+    - "AlertNotificationService ABC (port de servicio de alertas)"
+
+api_contract:
+  endpoints:
+    - method: POST
+      path: /api/v1/inventory/movements/
+      auth: Bearer JWT via validate_user_token_depends + user_has_permission(INVENTORY, CREATE)
+      request:
+        body:
+          producto_id: UUID (requerido)
+          bodega_id: UUID (requerido)
+          tipo_movimiento: enum [entrada, salida, ajuste_manual] (requerido)
+          cantidad: integer, min 1, max 10000 (requerido)
+          motivo: string, max 200 chars (requerido si tipo=ajuste_manual)
+          documento_referencia: string, max 50 chars (opcional)
+      response:
+        success:
+          status: 201
+          body:
+            id: UUID
+            producto_id: UUID
+            bodega_id: UUID
+            tipo_movimiento: string
+            cantidad: integer
+            stock_resultante: integer
+            created_at: datetime ISO 8601
+        errors:
+          - status: 404
+            code: PRODUCT_NOT_FOUND
+            message: Producto no encontrado en el catalogo
+          - status: 404
+            code: WAREHOUSE_NOT_FOUND
+            message: Bodega no encontrada
+          - status: 422
+            code: INSUFFICIENT_STOCK
+            message: "Stock insuficiente. Disponible: {cantidad}"
+          - status: 422
+            code: ITEMS_LIMIT_EXCEEDED
+            message: Maximo 50 productos por movimiento
+          - status: 403
+            code: INSUFFICIENT_PERMISSIONS
+            message: Permisos insuficientes para ajuste manual
+
+    - method: GET
+      path: /api/v1/inventory/movements/
+      auth: Bearer JWT via validate_user_token_depends
+      request:
+        query_params:
+          producto_id: UUID (opcional, filtro)
+          bodega_id: UUID (opcional, filtro)
+          fecha_inicio: date ISO 8601 (opcional)
+          fecha_fin: date ISO 8601 (opcional)
+          page: integer, default 1
+          per_page: integer, default 20, max 100
+      response:
+        success:
+          status: 200
+          body:
+            data: lista de movimientos
+            total_rows: integer
+            page: integer
+            per_page: integer
+
+    - method: GET
+      path: /api/v1/inventory/stock/
+      auth: Bearer JWT via validate_user_token_depends
+      request:
+        query_params:
+          bodega_id: UUID (opcional, filtro)
+          producto_id: UUID (opcional, filtro)
+          alerta_activa: boolean (opcional, filtrar solo productos con stock bajo)
+      response:
+        success:
+          status: 200
+          body:
+            data: lista de registros de stock con producto_id, bodega_id, cantidad, stock_minimo, alerta_activa
+
+pipeline:
+  - validacion_request:
+      input: Request HTTP con datos del movimiento
+      process: Validar que producto y bodega existen, verificar permisos para ajuste_manual, validar cantidad dentro de limites
+      output: Datos validados o error de validacion
+
+  - verificacion_stock:
+      input: Datos validados del movimiento
+      process: Si tipo=salida, verificar que stock actual >= cantidad solicitada en la bodega indicada
+      output: Confirmacion de stock suficiente o error INSUFFICIENT_STOCK
+
+  - registro_movimiento:
+      input: Movimiento validado con stock verificado
+      process: Crear registro de movimiento en base de datos, actualizar stock de la bodega (incrementar para entrada, decrementar para salida)
+      output: Movimiento registrado con stock_resultante
+
+  - evaluacion_alertas:
+      input: Stock resultante del movimiento
+      process: Comparar stock_resultante con stock_minimo configurado. Si stock < minimo, disparar alerta via AlertNotificationService
+      output: Alerta generada (si aplica) y movimiento finalizado
+
+data_model:
+  entities:
+    - inventory_movement:
+        campos:
+          - id: UUID, PK, default uuid4
+          - producto_id: UUID, FK a products, NOT NULL
+          - bodega_id: UUID, FK a warehouses, NOT NULL
+          - tipo_movimiento: VARCHAR(20), NOT NULL, CHECK IN (entrada, salida, ajuste_manual)
+          - cantidad: INTEGER, NOT NULL, CHECK > 0
+          - stock_resultante: INTEGER, NOT NULL
+          - motivo: VARCHAR(200), NULLABLE
+          - documento_referencia: VARCHAR(50), NULLABLE
+          - created_by: UUID, FK a users, NOT NULL
+          - created_at: TIMESTAMP WITH TZ, default now()
+        indexes:
+          - idx_movements_producto_bodega: (producto_id, bodega_id) — consultas de historial por producto y bodega
+          - uq_movements_idempotency: UNIQUE(documento_referencia) WHERE documento_referencia IS NOT NULL
+
+    - warehouse_stock:
+        campos:
+          - id: UUID, PK, default uuid4
+          - producto_id: UUID, FK a products, NOT NULL
+          - bodega_id: UUID, FK a warehouses, NOT NULL
+          - cantidad: INTEGER, NOT NULL, default 0
+          - stock_minimo: INTEGER, NOT NULL, default 10
+          - updated_at: TIMESTAMP WITH TZ, default now()
+        indexes:
+          - uq_stock_producto_bodega: UNIQUE(producto_id, bodega_id) — un registro de stock por producto por bodega
+
+  relationships:
+    - "inventory_movement N:1 product (via producto_id)"
+    - "inventory_movement N:1 warehouse (via bodega_id)"
+    - "inventory_movement N:1 user (via created_by)"
+    - "warehouse_stock N:1 product (via producto_id)"
+    - "warehouse_stock N:1 warehouse (via bodega_id)"
+
+  migrations:
+    - create_inventory_movements_table
+    - create_warehouse_stock_table
+
+dependencies:
+  - sqlalchemy: ORM para persistencia de movimientos e inventario en PostgreSQL
+  - alembic: Migraciones de base de datos para las nuevas tablas
+  - pydantic: Validacion de DTOs de request y response
+  - fastapi: Framework para endpoints REST con autenticacion y autorizacion
+  - pytest: Testing de interactors con repositorios mockeados

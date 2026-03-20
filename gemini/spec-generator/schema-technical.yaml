@@ -1,0 +1,211 @@
+# Schema: technical.yaml
+# Definicion formal de cada campo del archivo technical.yaml (especificacion tecnica SDD).
+# Este archivo describe el formato esperado para que el subagent @architect genere specs validas.
+# Los campos se clasifican como OBLIGATORIOS o CONDICIONALES segun el tipo de funcionalidad.
+
+schema:
+  # --- CAMPOS OBLIGATORIOS ---
+
+  feature:
+    tipo: string
+    obligatorio: true
+    descripcion: Nombre de la funcionalidad en snake_case. Debe coincidir con el feature del feature.yaml.
+    reglas:
+      - Formato snake_case
+      - Debe ser identico al campo feature del feature.yaml de origen
+    ejemplo: push_notifications
+
+  layer:
+    tipo: string (enum)
+    obligatorio: true
+    descripcion: Capa principal de la funcionalidad en la arquitectura.
+    valores_permitidos:
+      - api: funcionalidad que expone endpoints HTTP REST
+      - domain: logica de negocio pura sin exposicion directa
+      - infrastructure: servicios de infraestructura (storage, messaging, etc.)
+      - agent: agentes de IA o automatizacion
+      - worker: procesamiento en background o colas
+      - scheduler: tareas programadas o cron jobs
+    reglas:
+      - Seleccionar la capa PRINCIPAL, no todas las que toca
+      - Si la funcionalidad expone un endpoint, usar "api" aunque tenga logica de dominio
+    ejemplo: api
+
+  architecture:
+    tipo: objeto
+    obligatorio: true
+    descripcion: Descripcion de la arquitectura propuesta para la funcionalidad.
+    campos:
+      pattern:
+        tipo: string
+        obligatorio: true
+        descripcion: Patron arquitectonico principal con descripcion breve.
+        reglas:
+          - Nombrar el patron y describir como se aplica a esta funcionalidad
+          - Ser especifico al stack (ej. "Hexagonal Architecture con Interactor pattern" para Python)
+        ejemplo: "Hexagonal Architecture con Interactor pattern, Repository ABC y DIP para servicios externos"
+
+      entry:
+        tipo: string
+        obligatorio: true
+        descripcion: Punto de entrada de la funcionalidad en el sistema.
+        reglas:
+          - Describir como se invoca la funcionalidad (endpoint, evento, comando, etc.)
+        ejemplo: "POST /api/v1/notifications/ con autenticacion JWT"
+
+      use_case:
+        tipo: string
+        obligatorio: true
+        descripcion: Descripcion tecnica del caso de uso principal.
+        reglas:
+          - Describir el flujo tecnico principal de la funcionalidad
+          - Incluir componentes involucrados y su interaccion
+        ejemplo: "Recibir request de notificacion, validar destinatario, enviar via FCM y persistir resultado"
+
+      interfaces:
+        tipo: lista de strings
+        obligatorio: false
+        descripcion: Interfaces o contratos principales que la funcionalidad expone o consume.
+        reglas:
+          - Listar las interfaces clave del sistema
+          - Incluir APIs, eventos, contratos de datos
+        ejemplo:
+          - "POST /api/v1/notifications/ (endpoint REST)"
+          - "NotificationRepository ABC (port de persistencia)"
+          - "FCMService ABC (port de servicio externo)"
+
+  dependencies:
+    tipo: lista de objetos
+    obligatorio: true
+    descripcion: Dependencias tecnicas necesarias para implementar la funcionalidad.
+    reglas:
+      - Listar cada dependencia con nombre descriptivo y explicacion de su rol
+      - Incluir librerias, servicios externos, modulos internos, herramientas
+      - Usar formato "nombre_dependencia: descripcion de su rol"
+    ejemplo:
+      - firebase_admin: SDK de Firebase para envio de notificaciones push via FCM
+      - sqlalchemy: ORM para persistencia de notificaciones y tokens de dispositivo
+      - pydantic: Validacion de DTOs de request y response
+
+  # --- CAMPOS CONDICIONALES ---
+
+  api_contract:
+    tipo: objeto
+    condicional: true
+    condicion: Incluir SOLO si layer=api o si la funcionalidad expone endpoints HTTP.
+    descripcion: Contrato de API con definicion de endpoints.
+    campos:
+      endpoints:
+        tipo: lista de objetos
+        descripcion: Cada endpoint con method, path, auth, request y response.
+        campos_por_endpoint:
+          method:
+            tipo: string (enum)
+            valores: [GET, POST, PUT, PATCH, DELETE]
+            descripcion: Metodo HTTP del endpoint.
+          path:
+            tipo: string
+            descripcion: Ruta del endpoint con prefijo de version.
+            reglas:
+              - Formato /api/v1/{recurso}/
+              - Trailing slash obligatorio
+          auth:
+            tipo: string
+            descripcion: Mecanismo de autenticacion requerido.
+            ejemplo: "Bearer JWT via validate_user_token_depends"
+          request:
+            tipo: objeto
+            descripcion: Esquema de request con campos, tipos y validaciones.
+          response:
+            tipo: objeto
+            descripcion: Esquema de response para exito (2xx) y errores (4xx, 5xx).
+    ejemplo:
+      endpoints:
+        - method: POST
+          path: /api/v1/notifications/
+          auth: Bearer JWT
+          request:
+            body:
+              destinatario_id: UUID (requerido)
+              titulo: string, max 100 chars (requerido)
+              cuerpo: string, max 500 chars (requerido)
+          response:
+            success: "201 Created con objeto notificacion"
+            errors:
+              - "404 Not Found: destinatario no encontrado"
+              - "429 Too Many Requests: limite de notificaciones excedido"
+
+  pipeline:
+    tipo: lista de objetos
+    condicional: true
+    condicion: Incluir si la funcionalidad tiene un flujo de procesamiento con multiples fases secuenciales.
+    descripcion: Fases del pipeline de procesamiento.
+    campos_por_fase:
+      nombre_fase:
+        tipo: objeto con input, process, output
+        descripcion: Cada fase describe que recibe, que procesa y que produce.
+    reglas:
+      - Cada fase tiene nombre descriptivo en snake_case
+      - Cada fase tiene input (que recibe), process (que hace) y output (que produce)
+      - Las fases son secuenciales (el output de una es el input de la siguiente)
+    ejemplo:
+      - validacion:
+          input: Request HTTP con datos de notificacion
+          process: Validar destinatario existe y no se excede el limite horario
+          output: Datos validados listos para envio
+      - envio:
+          input: Datos validados
+          process: Enviar notificacion via FCM
+          output: Resultado de entrega (success/failure)
+
+  data_model:
+    tipo: objeto
+    condicional: true
+    condicion: Incluir SOLO si la funcionalidad requiere crear o modificar tablas/entidades en la base de datos.
+    descripcion: Modelo de datos con entidades, relaciones y migraciones necesarias.
+    campos:
+      entities:
+        tipo: lista de objetos
+        descripcion: Entidades con sus campos, tipos y restricciones.
+      relationships:
+        tipo: lista de strings
+        descripcion: Relaciones entre entidades.
+      migrations:
+        tipo: lista de strings
+        descripcion: Migraciones necesarias para implementar los cambios.
+    ejemplo:
+      entities:
+        - notification:
+            campos:
+              - id: UUID, PK
+              - destinatario_id: UUID, FK a users
+              - titulo: VARCHAR(100), NOT NULL
+              - enviado_at: TIMESTAMP WITH TZ
+      relationships:
+        - "notification N:1 user (via destinatario_id)"
+      migrations:
+        - "create_notifications_table"
+
+  invocation_examples:
+    tipo: lista de objetos
+    condicional: false
+    obligatorio: false
+    descripcion: Ejemplos de invocacion o uso de la funcionalidad.
+    reglas:
+      - Incluir al menos un ejemplo del flujo principal
+      - Cada ejemplo tiene nombre descriptivo y comando/request de ejemplo
+
+  auth:
+    tipo: objeto
+    condicional: false
+    obligatorio: false
+    descripcion: Informacion de autenticacion y autorizacion especifica de la funcionalidad.
+    reglas:
+      - Incluir solo si hay requisitos de auth especiales mas alla del JWT estandar
+
+# Reglas generales de redaccion:
+#   - Todo el contenido debe estar en ESPANOL
+#   - No incluir codigo de implementacion
+#   - Los campos condicionales solo se incluyen cuando aplican segun su condicion
+#   - El technical.yaml debe ser consumible por agentes de desarrollo sin ambiguedad
+#   - Ser especifico al stack seleccionado en patrones y convenciones
