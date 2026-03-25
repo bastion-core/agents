@@ -5,8 +5,8 @@
       "maxTimeMinutes": 5
     },
     "architect": {
-      "maxTurns": 20,
-      "maxTimeMinutes": 10
+      "maxTurns": 30,
+      "maxTimeMinutes": 15
     }
   },
   "defaults": {

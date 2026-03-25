@@ -16,6 +16,49 @@ architecture:
     - "InventoryMovementRepository ABC (port de persistencia de movimientos)"
     - "StockRepository ABC (port de persistencia de stock)"
     - "AlertNotificationService ABC (port de servicio de alertas)"
+  component_diagram: |
+    graph TB
+      subgraph "Capa API"
+        ROUTER_MOV[MovementRouter]
+        ROUTER_STOCK[StockRouter]
+        SCHEMA_MOV[MovementSchemas]
+        SCHEMA_STOCK[StockSchemas]
+      end
+
+      subgraph "Capa Aplicacion"
+        INT_CREATE[CreateMovementInteractor]
+        INT_LIST[ListMovementsInteractor]
+        INT_STOCK[GetStockInteractor]
+      end
+
+      subgraph "Capa Dominio"
+        REPO_MOV_IF[InventoryMovementRepository ABC]
+        REPO_STOCK_IF[StockRepository ABC]
+        SVC_ALERT_IF[AlertNotificationService ABC]
+      end
+
+      subgraph "Capa Infraestructura"
+        REPO_MOV_IMPL[SQLInventoryMovementRepository]
+        REPO_STOCK_IMPL[SQLStockRepository]
+        SVC_ALERT_IMPL[EmailAlertService]
+        DB[(PostgreSQL)]
+        EMAIL[Servicio de Email]
+      end
+
+      ROUTER_MOV --> INT_CREATE
+      ROUTER_MOV --> INT_LIST
+      ROUTER_STOCK --> INT_STOCK
+      INT_CREATE --> REPO_MOV_IF
+      INT_CREATE --> REPO_STOCK_IF
+      INT_CREATE --> SVC_ALERT_IF
+      INT_LIST --> REPO_MOV_IF
+      INT_STOCK --> REPO_STOCK_IF
+      REPO_MOV_IF -.implementa.-> REPO_MOV_IMPL
+      REPO_STOCK_IF -.implementa.-> REPO_STOCK_IMPL
+      SVC_ALERT_IF -.implementa.-> SVC_ALERT_IMPL
+      REPO_MOV_IMPL --> DB
+      REPO_STOCK_IMPL --> DB
+      SVC_ALERT_IMPL --> EMAIL
 
 api_contract:
   endpoints:
@@ -114,6 +157,36 @@ pipeline:
       output: Alerta generada (si aplica) y movimiento finalizado
 
 data_model:
+  er_diagram: |
+    erDiagram
+      PRODUCT ||--o{ INVENTORY_MOVEMENT : tiene
+      WAREHOUSE ||--o{ INVENTORY_MOVEMENT : registra
+      USER ||--o{ INVENTORY_MOVEMENT : crea
+      PRODUCT ||--o{ WAREHOUSE_STOCK : almacena
+      WAREHOUSE ||--o{ WAREHOUSE_STOCK : contiene
+
+      INVENTORY_MOVEMENT {
+        uuid id PK
+        uuid producto_id FK
+        uuid bodega_id FK
+        varchar tipo_movimiento
+        integer cantidad
+        integer stock_resultante
+        varchar motivo
+        varchar documento_referencia
+        uuid created_by FK
+        timestamp created_at
+      }
+
+      WAREHOUSE_STOCK {
+        uuid id PK
+        uuid producto_id FK
+        uuid bodega_id FK
+        integer cantidad
+        integer stock_minimo
+        timestamp updated_at
+      }
+
   entities:
     - inventory_movement:
         campos:
@@ -152,6 +225,46 @@ data_model:
   migrations:
     - create_inventory_movements_table
     - create_warehouse_stock_table
+
+files_to_create:
+  - path: app/api/v1/inventory/router.py
+    description: Router FastAPI con endpoints de movimientos y stock
+  - path: app/api/v1/inventory/schemas.py
+    description: Schemas Pydantic de request y response para inventario
+  - path: app/interactors/create_movement.py
+    description: Interactor para crear movimientos de inventario con validacion de stock
+  - path: app/interactors/list_movements.py
+    description: Interactor para listar movimientos con filtros y paginacion
+  - path: app/interactors/get_stock.py
+    description: Interactor para consultar stock por bodega con alertas
+  - path: app/domain/ports/inventory_movement_repository.py
+    description: Interface ABC del repositorio de movimientos de inventario
+  - path: app/domain/ports/stock_repository.py
+    description: Interface ABC del repositorio de stock
+  - path: app/domain/ports/alert_notification_service.py
+    description: Interface ABC del servicio de alertas de stock bajo
+  - path: app/infrastructure/repositories/sql_inventory_movement_repository.py
+    description: Implementacion SQL del repositorio de movimientos
+  - path: app/infrastructure/repositories/sql_stock_repository.py
+    description: Implementacion SQL del repositorio de stock
+  - path: app/infrastructure/services/email_alert_service.py
+    description: Implementacion del servicio de alertas via email
+  - path: alembic/versions/xxxx_create_inventory_movements_table.py
+    description: Migracion para crear tabla inventory_movements
+  - path: alembic/versions/xxxx_create_warehouse_stock_table.py
+    description: Migracion para crear tabla warehouse_stock
+  - path: tests/unit/interactors/test_create_movement.py
+    description: Tests unitarios del interactor de creacion de movimientos
+  - path: tests/unit/interactors/test_list_movements.py
+    description: Tests unitarios del interactor de listado
+  - path: tests/unit/interactors/test_get_stock.py
+    description: Tests unitarios del interactor de consulta de stock
+
+files_to_modify:
+  - path: app/api/v1/router.py
+    change: Agregar include_router para el nuevo router de inventario
+  - path: app/core/dependencies.py
+    change: Registrar dependencias de repositorios y servicio de alertas en el contenedor DI
 
 dependencies:
   - sqlalchemy: ORM para persistencia de movimientos e inventario en PostgreSQL

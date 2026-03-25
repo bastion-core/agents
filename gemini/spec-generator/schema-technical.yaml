@@ -74,6 +74,43 @@ schema:
           - "NotificationRepository ABC (port de persistencia)"
           - "FCMService ABC (port de servicio externo)"
 
+      component_diagram:
+        tipo: string (multilinea)
+        obligatorio: true
+        descripcion: Diagrama de componentes en sintaxis Mermaid (graph TB o graph LR) mostrando modulos, capas y sus relaciones.
+        reglas:
+          - Usar sintaxis Mermaid valida (graph TB o graph LR)
+          - Mostrar las capas de la arquitectura como subgraphs
+          - Incluir los componentes principales (routers, interactors, repositories, services)
+          - Mostrar las relaciones y dependencias entre componentes
+          - Usar etiquetas descriptivas en espanol
+        ejemplo: |
+          graph TB
+            subgraph "Capa API"
+              ROUTER[NotificationRouter]
+              SCHEMA[NotificationSchema]
+            end
+            subgraph "Capa Aplicacion"
+              INTERACTOR[SendNotificationInteractor]
+            end
+            subgraph "Capa Dominio"
+              REPO_IF[NotificationRepository ABC]
+              SVC_IF[FCMService ABC]
+            end
+            subgraph "Capa Infraestructura"
+              REPO_IMPL[SQLNotificationRepository]
+              SVC_IMPL[FirebaseFCMService]
+              DB[(PostgreSQL)]
+              FCM[Firebase Cloud Messaging]
+            end
+            ROUTER --> INTERACTOR
+            INTERACTOR --> REPO_IF
+            INTERACTOR --> SVC_IF
+            REPO_IF -.implementa.-> REPO_IMPL
+            SVC_IF -.implementa.-> SVC_IMPL
+            REPO_IMPL --> DB
+            SVC_IMPL --> FCM
+
   dependencies:
     tipo: lista de objetos
     obligatorio: true
@@ -86,6 +123,37 @@ schema:
       - firebase_admin: SDK de Firebase para envio de notificaciones push via FCM
       - sqlalchemy: ORM para persistencia de notificaciones y tokens de dispositivo
       - pydantic: Validacion de DTOs de request y response
+
+  files_to_create:
+    tipo: lista de objetos
+    obligatorio: true
+    descripcion: Lista de archivos nuevos que la funcionalidad requiere crear.
+    reglas:
+      - Cada entrada tiene ruta relativa a la raiz del proyecto y descripcion breve
+      - Incluir archivos de todas las capas (domain, application, infrastructure, api, tests)
+      - Agrupar logicamente por capa o modulo
+    ejemplo:
+      - path: app/interactors/send_notification.py
+        description: Interactor principal para envio de notificaciones
+      - path: app/domain/ports/notification_repository.py
+        description: Interface ABC del repositorio de notificaciones
+      - path: app/infrastructure/repositories/sql_notification_repository.py
+        description: Implementacion SQL del repositorio de notificaciones
+      - path: tests/unit/test_send_notification.py
+        description: Tests unitarios del interactor
+
+  files_to_modify:
+    tipo: lista de objetos
+    obligatorio: false
+    descripcion: Lista de archivos existentes que la funcionalidad requiere modificar.
+    reglas:
+      - Cada entrada tiene ruta relativa y descripcion del cambio requerido
+      - Solo incluir si hay archivos existentes que necesitan cambios
+    ejemplo:
+      - path: app/api/v1/router.py
+        change: Agregar include_router para el nuevo router de notificaciones
+      - path: app/core/dependencies.py
+        change: Registrar nuevas dependencias (repositorio, servicio FCM)
 
   # --- CAMPOS CONDICIONALES ---
 
@@ -162,18 +230,51 @@ schema:
     tipo: objeto
     condicional: true
     condicion: Incluir SOLO si la funcionalidad requiere crear o modificar tablas/entidades en la base de datos.
-    descripcion: Modelo de datos con entidades, relaciones y migraciones necesarias.
+    descripcion: Modelo de datos con diagrama ER, entidades, relaciones y migraciones necesarias.
     campos:
+      er_diagram:
+        tipo: string (multilinea)
+        obligatorio: true (cuando data_model se incluye)
+        descripcion: Diagrama entidad-relacion en sintaxis Mermaid erDiagram.
+        reglas:
+          - Usar sintaxis Mermaid erDiagram valida
+          - Incluir entidades con sus atributos y tipos
+          - Mostrar relaciones con cardinalidad (||--o{, }|--|{, etc.)
+          - Incluir solo entidades relevantes a la funcionalidad (nuevas y existentes relacionadas)
+        ejemplo: |
+          erDiagram
+            USER ||--o{ NOTIFICATION : recibe
+            NOTIFICATION {
+              uuid id PK
+              uuid destinatario_id FK
+              string titulo
+              string cuerpo
+              timestamp enviado_at
+            }
+            USER {
+              uuid id PK
+              string email
+            }
       entities:
         tipo: lista de objetos
         descripcion: Entidades con sus campos, tipos y restricciones.
       relationships:
         tipo: lista de strings
-        descripcion: Relaciones entre entidades.
+        descripcion: Relaciones entre entidades con cardinalidad.
       migrations:
         tipo: lista de strings
         descripcion: Migraciones necesarias para implementar los cambios.
     ejemplo:
+      er_diagram: |
+        erDiagram
+          USER ||--o{ NOTIFICATION : recibe
+          NOTIFICATION {
+            uuid id PK
+            uuid destinatario_id FK
+            string titulo
+            string cuerpo
+            timestamp enviado_at
+          }
       entities:
         - notification:
             campos:
@@ -209,3 +310,5 @@ schema:
 #   - Los campos condicionales solo se incluyen cuando aplican segun su condicion
 #   - El technical.yaml debe ser consumible por agentes de desarrollo sin ambiguedad
 #   - Ser especifico al stack seleccionado en patrones y convenciones
+#   - Los diagramas Mermaid deben ser sintacticamente validos
+#   - files_to_create y files_to_modify deben usar rutas relativas a la raiz del proyecto
