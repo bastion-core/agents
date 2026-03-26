@@ -11,7 +11,9 @@
 #     --model <claude-model-id> \
 #     --arch-threshold <0-10> \
 #     --quality-threshold <0-10> \
-#     --test-threshold <0-10>
+#     --test-threshold <0-10> \
+#     --file-pattern <regex>          # e.g., '\.py$' or '\.(ts|tsx)$'
+#     --scope-label <label>           # e.g., 'Python' or 'Next.js/TypeScript'
 #
 # Required environment variables:
 #   ANTHROPIC_API_KEY  - Claude API key
@@ -39,6 +41,8 @@ TEST_THRESHOLD=8
 MAX_DIFF_SIZE=300000  # ~75K tokens per section (diffs + file contents each)
 MAX_OUTPUT_TOKENS=16384  # Allow thorough reasoning over large PRs
 MAX_FILES=50  # Maximum number of changed files allowed for review
+FILE_PATTERN='\.py$'  # Regex pattern for reviewable files (e.g., '\.py$', '\.(ts|tsx)$')
+SCOPE_LABEL="Python"  # Label for scope messages (e.g., "Python", "Next.js/TypeScript")
 
 # =============================================================================
 # Parse arguments
@@ -67,6 +71,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --max-files)
       MAX_FILES="$2"
+      shift 2
+      ;;
+    --file-pattern)
+      FILE_PATTERN="$2"
+      shift 2
+      ;;
+    --scope-label)
+      SCOPE_LABEL="$2"
       shift 2
       ;;
     *)
@@ -109,6 +121,8 @@ validate_inputs() {
   echo "  Thresholds: Arch>=${ARCH_THRESHOLD}, Quality>=${QUALITY_THRESHOLD}, Test>=${TEST_THRESHOLD}"
   echo "  Max files: ${MAX_FILES}"
   echo "  Max output tokens: ${MAX_OUTPUT_TOKENS}"
+  echo "  File pattern: ${FILE_PATTERN}"
+  echo "  Scope label: ${SCOPE_LABEL}"
   echo "  Repository: ${REPOSITORY}"
   echo "  PR #${PR_NUMBER}: ${PR_TITLE}"
 }
@@ -163,7 +177,7 @@ get_previous_reviews() {
 }
 
 # =============================================================================
-# Step 1.5: Check if PR has reviewable Python files (Out of Scope detection)
+# Step 1.5: Check if PR has reviewable files (Out of Scope detection)
 # =============================================================================
 check_scope() {
   echo ""
@@ -172,16 +186,16 @@ check_scope() {
   # Get ALL changed files (unfiltered) for the out-of-scope comment
   git diff --name-only "origin/${BASE_REF}...HEAD" > all_changed_files.txt || true
 
-  # Get only Python files in reviewable paths
+  # Get only files matching the configured pattern in reviewable paths
   git diff --name-only "origin/${BASE_REF}...HEAD" \
-    | grep '\.py$' \
+    | grep -E "${FILE_PATTERN}" \
     | tee changed_files.txt || true
 
-  local PY_COUNT
-  PY_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
+  local FILE_COUNT
+  FILE_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
 
-  if [[ "${PY_COUNT}" -eq 0 ]]; then
-    echo "No reviewable Python files found in this PR."
+  if [[ "${FILE_COUNT}" -eq 0 ]]; then
+    echo "No reviewable ${SCOPE_LABEL} files found in this PR."
     echo "Activating out-of-scope flow (skipping Claude API call)."
 
     # Build the list of changed files for the comment
@@ -204,8 +218,8 @@ check_scope() {
 **Decision: APPROVE**
 
 The modified files in this PR are outside the scope of the technical code review.
-This review focuses on Python source code (\`src/\`, \`tests/\`, \`scripts/\`), and none
-of the changed files fall within these directories.
+This review focuses on ${SCOPE_LABEL} source code, and none of the changed files
+match the reviewable file patterns.
 
 **Changed files:**
 ${FILE_LIST}
@@ -213,7 +227,7 @@ No architectural, code quality, or testing analysis is required for these change
 Approving to unblock the merge process.
 
 ---
-*Automated review by Backend Python Code Reviewer Agent*"
+*Automated review by ${SCOPE_LABEL} Code Reviewer Agent*"
 
     gh issue comment "${PR_NUMBER}" --body "${OOS_COMMENT}"
     echo "Out-of-scope comment posted successfully."
@@ -230,8 +244,8 @@ Approving to unblock the merge process.
         \"conclusion\": \"success\",
         \"output\": {
           \"title\": \"Code Review - Out of Scope\",
-          \"summary\": \"No reviewable Python files found. PR approved to unblock merge.\",
-          \"text\": \"Changed files are outside the review scope (src/, tests/, scripts/).\"
+          \"summary\": \"No reviewable ${SCOPE_LABEL} files found. PR approved to unblock merge.\",
+          \"text\": \"Changed files are outside the review scope for ${SCOPE_LABEL}.\"
         }
       }" > /dev/null
 
@@ -248,10 +262,10 @@ Approving to unblock the merge process.
 - **Author**: @${PR_AUTHOR}
 
 ## Scope Check
-**Result**: Out of Scope — No reviewable Python files found.
+**Result**: Out of Scope — No reviewable ${SCOPE_LABEL} files found.
 
 ## Decision
-**APPROVE** (automated — no Python files to review)
+**APPROVE** (automated — no ${SCOPE_LABEL} files to review)
 
 ---
 
@@ -264,7 +278,7 @@ EOF
     exit 0
   fi
 
-  echo "Found ${PY_COUNT} reviewable Python file(s). Continuing with full review pipeline."
+  echo "Found ${FILE_COUNT} reviewable ${SCOPE_LABEL} file(s). Continuing with full review pipeline."
 }
 
 # =============================================================================
@@ -279,7 +293,7 @@ get_changes() {
 
   # Validate max files limit
   if [[ ${CHANGED_COUNT} -gt ${MAX_FILES} ]]; then
-    echo "::error::PR has ${CHANGED_COUNT} changed Python files, exceeding the maximum of ${MAX_FILES}."
+    echo "::error::PR has ${CHANGED_COUNT} changed ${SCOPE_LABEL} files, exceeding the maximum of ${MAX_FILES}."
     echo ""
     echo "The code review cannot process more than ${MAX_FILES} files reliably."
     echo "Please split this PR into smaller, focused pull requests."

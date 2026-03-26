@@ -58,7 +58,10 @@ jobs:
             --model claude-opus-4-20250514 \
             --arch-threshold 7 \
             --quality-threshold 7 \
-            --test-threshold 8
+            --test-threshold 8 \
+            --file-pattern '\.py$' \
+            --scope-label 'Python' \
+            --max-files 50
 
       - name: Upload Review Artifacts
         if: always()

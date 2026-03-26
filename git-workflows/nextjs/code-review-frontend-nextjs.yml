@@ -1,11 +1,11 @@
-name: Claude Code Review
+name: Claude Code Review - Frontend Next.js
 
+# Trigger on ALL PRs so the review script can post out-of-scope feedback
+# for non-TypeScript changes. The script handles file filtering internally
+# and exits early without calling the Claude API when no .ts/.tsx files are found.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'voltop_common_structure/**/*.py'
-      - 'tests/**/*.py'
 
 # Prevent multiple runs for the same PR
 concurrency:
@@ -36,7 +36,7 @@ jobs:
           ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
           path: .agents-marketplace
           sparse-checkout: |
-            plugins/python-development/agents/reviewer-library-py.md
+            plugins/nextjs-development/agents/reviewer-frontend-nextjs.md
             scripts/code-review.sh
 
       - name: Run code review
@@ -54,13 +54,13 @@ jobs:
         run: |
           chmod +x .agents-marketplace/scripts/code-review.sh
           .agents-marketplace/scripts/code-review.sh \
-            --agent .agents-marketplace/plugins/python-development/agents/reviewer-library-py.md \
-            --model claude-sonnet-4-20250514 \
-            --arch-threshold 7 \
-            --quality-threshold 7 \
+            --agent .agents-marketplace/plugins/nextjs-development/agents/reviewer-frontend-nextjs.md \
+            --model claude-opus-4-20250514 \
+            --arch-threshold 8 \
+            --quality-threshold 8 \
             --test-threshold 8 \
-            --file-pattern '\.py$' \
-            --scope-label 'Python' \
+            --file-pattern '\.(ts|tsx)$' \
+            --scope-label 'Next.js/TypeScript' \
             --max-files 50
 
       - name: Upload Review Artifacts
