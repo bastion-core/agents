@@ -1,0 +1,58 @@
+# Phase 1 - Foundation (python-api stack)
+task: extract_python_api_api_patterns
+id: TASK-010
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-004
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-api/api_patterns.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Quality Criteria > Security" (routes with authentication and authorization)
+    - "DTOs (Data Transfer Objects)" (request, response, entity DTOs)
+    - "Dependency Injection" (*_depends.py, factory pattern)
+    - "Alembic Migrations" (database indexing guidelines)
+    - "Naming conventions for interactors, DTOs, repositories"
+
+  Transformation rules to apply:
+    - Document validate_user_token_depends and user_has_permission patterns
+    - Describe DTO flow between layers (Request, Response, Entity DTOs)
+    - Document DI via *_depends.py with Factory pattern
+    - Include Alembic migration and indexing guidelines
+    - Document naming conventions ({Action}{Entity}Interactor, {Entity}{Purpose}Dto, etc.)
+    - Add structural headings per api_patterns.md template (TASK-004)
+
+  Content scope: Secure routes with validate_user_token_depends and user_has_permission.
+  DTOs for data flow between layers. DI via *_depends.py with Factory pattern.
+  Alembic migrations with database indexing guidelines. Naming conventions.
+
+stack: python-api
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-api/api_patterns.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-api/api_patterns.md
+  - Contains all 7 sections from the api_patterns.md template
+  - Authentication and authorization patterns are documented
+  - DTO types (Request, Response, Entity) are described with their roles
+  - DI via *_depends.py is documented
+  - Alembic migration patterns and indexing guidelines are included
+  - Naming conventions for interactors, DTOs, and repositories are clear
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

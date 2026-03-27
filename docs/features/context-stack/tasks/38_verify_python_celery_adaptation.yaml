@@ -1,0 +1,52 @@
+# Cross-cutting task
+task: verify_python_celery_adaptation_completeness
+id: TASK-038
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "cross-cutting"
+depends_on:
+  - TASK-022
+  - TASK-023
+  - TASK-024
+
+scope: |
+  Special verification task for the python-celery stack, which carries a
+  "Medium probability / Medium impact" risk in technical.yaml because
+  backend-py.md does not contain Celery-specific content.
+
+  Verify that:
+    1. The 3 python-celery context files are meaningfully different from
+       the python-api context files (not just find-replace of "endpoint" with "task")
+    2. Celery-specific patterns are architecturally consistent with the
+       Hexagonal Architecture from backend-py.md
+    3. The adaptations cover the key differences:
+       - Entry point: Celery task vs HTTP endpoint
+       - Session management: scoped sessions vs request-scoped
+       - Error handling: retry policies vs HTTP error responses
+       - DI: worker context vs FastAPI Depends
+    4. If significant content gaps exist, document them as known limitations
+
+  This task addresses the risk documented in technical.yaml:
+    "El stack python-celery requiere adaptaciones significativas respecto a backend-py.md"
+
+stack: python-celery
+source_file: plugins/python-development/agents/backend-py.md
+files_to_create: []
+estimated_effort: medium
+
+acceptance:
+  - python-celery files are meaningfully different from python-api files
+  - Celery-specific patterns are architecturally consistent with Hexagonal Architecture
+  - Key adaptation areas are covered (entry point, sessions, errors, DI)
+  - Any content gaps are documented as known limitations
+  - Overall quality is comparable to other stacks
+
+context_files:
+  - context/python-celery/architecture.md
+  - context/python-celery/api_patterns.md
+  - context/python-celery/state_management.md
+  - context/python-api/architecture.md
+  - context/python-api/api_patterns.md
+  - context/python-api/state_management.md
+  - plugins/python-development/agents/backend-py.md

@@ -1,0 +1,55 @@
+# Phase 2 - Frontend Stacks (nextjs-app stack)
+task: extract_nextjs_app_architecture
+id: TASK-016
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/nextjs-development/agents/frontend-nextjs.md
+  and extract content for context/nextjs-app/architecture.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Architecture Understanding" (Two-layer, dependency direction)
+    - "Folder Structure" (module structure, route structure, path aliases)
+    - "Anti-Patterns" (10 forbidden patterns)
+    - "Coding Standards" (TypeScript rules, naming conventions)
+
+  Transformation rules: Convert imperative to declarative, preserve architecture
+  details, add template headings from TASK-002.
+
+  Content scope: Two-layer Architecture (Domain + Infrastructure). Data flow
+  Component -> Store -> DataAccess -> API. Module structure (domain/ with entities,
+  dtos, enums, states, consts; infrastructure/ with data-access, services, helpers,
+  store, ui). Route structure (App Router). Path aliases. 10 forbidden anti-patterns.
+  TypeScript rules (strict mode, no any, discriminated unions).
+
+stack: nextjs-app
+source_file: plugins/nextjs-development/agents/frontend-nextjs.md
+
+files_to_create:
+  - context/nextjs-app/architecture.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/nextjs-app/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Two-layer Architecture is documented (Domain + Infrastructure)
+  - Data flow (Component -> Store -> DataAccess -> API) is described
+  - Module structure with domain/ and infrastructure/ is included
+  - App Router route structure is documented
+  - 10 anti-patterns are listed with alternatives
+  - TypeScript coding standards are included
+  - Content traces back to frontend-nextjs.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

@@ -1,0 +1,36 @@
+# Phase 4 - Validation and Review
+task: validate_python_stacks_use_api_patterns
+id: TASK-029
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-028
+
+scope: |
+  Specific validation per business rule (ADR-004 in technical.yaml):
+  Python stacks must NOT have widget_patterns.md. They must have api_patterns.md.
+
+  Verify:
+    - context/python-api/ contains api_patterns.md, NOT widget_patterns.md
+    - context/python-library/ contains api_patterns.md, NOT widget_patterns.md
+    - context/python-celery/ contains api_patterns.md, NOT widget_patterns.md
+    - Content of api_patterns.md covers endpoint/task patterns, serialization,
+      middleware, and validation (not UI components)
+    - Flutter and Next.js stacks conversely have widget_patterns.md, NOT api_patterns.md
+
+stack: python-api, python-library, python-celery
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - No widget_patterns.md exists in any Python stack directory
+  - api_patterns.md exists in all 3 Python stack directories
+  - api_patterns.md content covers API/task patterns (not UI components)
+  - No api_patterns.md exists in any Flutter or Next.js stack directory
+  - widget_patterns.md exists in all 3 frontend stack directories
+
+context_files:
+  - docs/features/context-stack/technical.yaml

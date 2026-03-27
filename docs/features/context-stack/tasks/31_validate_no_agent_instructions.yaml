@@ -1,0 +1,44 @@
+# Phase 4 - Validation and Review
+task: validate_no_agent_directed_instructions
+id: TASK-031
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-025
+
+scope: |
+  Search all 18 context files for patterns that indicate agent-directed
+  instructions that should have been transformed to declarative documentation.
+
+  Patterns to search for:
+    - "you MUST" / "you must"
+    - "NEVER do" / "never do"
+    - "ALWAYS use" / "always use"
+    - "you should"
+    - "your mission"
+    - "your response"
+    - "when generating"
+    - "## Response Format"
+    - "## Your Mission"
+    - Any second-person imperative ("you", "your") in instructional context
+
+  Each match must be reviewed:
+    - Is it part of a code example? (acceptable)
+    - Is it a general documentation statement? (acceptable)
+    - Is it an agent instruction that was not transformed? (must be fixed)
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - All 18 files have been searched for agent-directed instruction patterns
+  - No untransformed agent instructions remain in any file
+  - Any matches in code examples are documented as acceptable
+  - All instructional content has been converted to declarative form
+
+context_files:
+  - docs/features/context-stack/technical.yaml

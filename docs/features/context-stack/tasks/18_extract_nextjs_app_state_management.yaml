@@ -1,0 +1,57 @@
+# Phase 2 - Frontend Stacks (nextjs-app stack)
+task: extract_nextjs_app_state_management
+id: TASK-018
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/nextjs-development/agents/frontend-nextjs.md
+  and extract content for context/nextjs-app/state_management.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Zustand Store Pattern" (template, critical rules, reset, cross-store)
+    - "State Management Rules" (when to use Zustand, useState, URL state)
+    - "Discriminated Union States" (template, kind field, type narrowing)
+    - "Either Pattern" (ServiceError, ServiceSuccess, fold)
+    - "DataAccess Pattern" (template, rules)
+
+  Transformation rules: Convert imperative to declarative, preserve Zustand
+  pattern details, add template headings from TASK-005.
+
+  Content scope: Zustand stores split by concern (~60-100 lines). DataAccess
+  instantiated at module level (outside store). State and Actions in separate
+  interfaces (domain/states/). response.fold() direct in store actions. Boolean
+  loading flags. Cross-store with useOtherStore.getState(). Discriminated Union
+  States with kind field. Either Pattern (ServiceError, ServiceSuccess). DataAccess
+  as concrete class (no interface in domain). handleRequest<T> for HTTP.
+
+stack: nextjs-app
+source_file: plugins/nextjs-development/agents/frontend-nextjs.md
+
+files_to_create:
+  - context/nextjs-app/state_management.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/nextjs-app/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - Zustand store pattern is documented with critical rules
+  - State Management Rules (Zustand vs useState vs URL state) are included
+  - Discriminated Union States with kind field are documented
+  - Either Pattern (ServiceError, ServiceSuccess, fold) is described
+  - DataAccess pattern is documented
+  - Cross-store communication pattern is included
+  - Content traces back to frontend-nextjs.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

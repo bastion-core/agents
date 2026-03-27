@@ -1,0 +1,44 @@
+# Cross-cutting task
+task: document_context_file_paths_for_subagents
+id: TASK-037
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "cross-cutting"
+depends_on:
+  - TASK-035
+
+scope: |
+  Create a reference guide that documents the available context file paths for
+  each stack, so that sub-agents (Claude Code and Gemini CLI) can correctly
+  reference them during task execution.
+
+  Per risk mitigation in technical.yaml:
+    "Documentar en cada plugin README.md la ruta de los archivos de contexto
+     disponibles para cada stack."
+
+  For each stack, document:
+    - Stack name and description
+    - Target repository
+    - Available context files with full relative paths from repo root
+    - When to use each file:
+      - architecture.md: for structural tasks, module creation, refactoring
+      - widget_patterns.md / api_patterns.md: for UI/API implementation tasks
+      - state_management.md: for data flow, state, testing tasks
+
+  This can be a simple section in a README or a standalone reference document.
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Reference guide exists documenting all 18 file paths
+  - Each stack's files are listed with their full relative paths
+  - Usage guidance is provided (which file for which type of task)
+  - Sub-agents can use this reference to select the right context file
+
+context_files:
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

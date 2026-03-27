@@ -1,0 +1,36 @@
+# Phase 0 - Preparation
+task: define_state_management_md_template
+id: TASK-005
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "0 - Preparation"
+depends_on: []
+
+scope: |
+  Define the canonical section structure for state_management.md files based on the
+  output_file_templates.state_management_md section in technical.yaml. This template
+  applies to all 6 stacks (universal template).
+
+  Required sections (in order):
+    1. "# State Management"
+    2. "## State Pattern"
+    3. "## Data Flow"
+    4. "## Error Handling"
+    5. "## Dependency Injection"
+    6. "## Testing Strategy"
+
+  This is an internal reference document for consistency across all 6 stacks.
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Template defines all 6 sections from technical.yaml output_file_templates.state_management_md
+  - Template is universal (works for both frontend and backend stacks)
+  - Template is documented and available for reference during content extraction tasks
+
+context_files:
+  - docs/features/context-stack/technical.yaml

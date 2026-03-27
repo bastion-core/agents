@@ -1,0 +1,67 @@
+# Phase 3 - Backend Stacks (python-celery stack)
+task: extract_python_celery_api_patterns
+id: TASK-023
+level: L3
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-010
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-celery/api_patterns.md.
+
+  IMPORTANT: This file adapts API patterns to the Celery task context. Instead of
+  REST endpoint patterns, it documents Celery task definition patterns.
+
+  Source sections to extract (per product.yaml mapping):
+    - Celery task definition patterns (task registration, retry policies, timeouts)
+    - DTOs for task input/output
+    - Error handling in async tasks
+
+  Adaptation rules (in addition to standard transformation):
+    - Replace endpoint patterns with task registration patterns
+    - Document retry policies (exponential backoff, max_retries)
+    - Document task timeout configuration
+    - Adapt DTO patterns from request/response to task input/output
+    - Document error handling specific to async context (retry, dead letter queue)
+    - Adapt naming conventions to task context
+
+  Content scope: Celery task definition patterns (registration, retry policies,
+  timeouts). DTOs for task input/output. Error handling in async tasks (retry
+  with backoff, dead letter queue). Naming convention adaptation from API context.
+
+  RISK: backend-py.md does not contain Celery-specific content. This task requires
+  more adaptation than extraction. Use general Celery best practices aligned with the
+  Hexagonal Architecture patterns from the source spec. Refer to context/python-api/api_patterns.md
+  (TASK-010) as a baseline and adapt for the Celery context.
+
+stack: python-celery
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-celery/api_patterns.md
+
+estimated_effort: large
+
+acceptance:
+  - File exists at context/python-celery/api_patterns.md
+  - Contains all 7 sections from the api_patterns.md template (adapted for tasks)
+  - Celery task registration patterns are documented
+  - Retry policies (exponential backoff, max_retries) are described
+  - Task timeout configuration is included
+  - DTOs for task input/output are described
+  - Error handling for async context is documented
+  - Naming conventions are adapted to task context
+  - Content is architecturally consistent with python-api stack patterns
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - context/python-api/api_patterns.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

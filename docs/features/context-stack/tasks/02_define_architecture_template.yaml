@@ -1,0 +1,42 @@
+# Phase 0 - Preparation
+task: define_architecture_md_template
+id: TASK-002
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "0 - Preparation"
+depends_on: []
+
+scope: |
+  Define the canonical section structure for architecture.md files based on the
+  output_file_templates.architecture_md section in technical.yaml. This template
+  will be used as a structural guide when generating architecture.md for all 6 stacks
+  to ensure consistency.
+
+  Required sections (in order):
+    1. "# Architecture Overview"
+    2. "## Architectural Pattern"
+    3. "## Layer Structure"
+    4. "## Folder Structure"
+    5. "## Dependency Flow"
+    6. "## Key Architectural Decisions"
+    7. "## Anti-Patterns (Forbidden)"
+    8. "## Naming Conventions"
+    9. "## Development Principles"
+
+  This is an internal reference document for the content extraction tasks.
+  It does NOT produce a committed file; it establishes the heading structure
+  that all architecture.md files must follow.
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Template defines all 9 sections from technical.yaml output_file_templates.architecture_md
+  - Sections are ordered logically (overview first, conventions/principles last)
+  - Template is documented and available for reference during content extraction tasks
+
+context_files:
+  - docs/features/context-stack/technical.yaml

@@ -1,0 +1,65 @@
+# Phase 4 - Validation and Review
+task: validate_directory_structure
+id: TASK-028
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-025
+
+scope: |
+  Verify the final directory structure matches the expected output from
+  product.yaml and technical.yaml.
+
+  Expected structure:
+    context/
+    +-- flutter-app/
+    |   +-- architecture.md
+    |   +-- widget_patterns.md
+    |   +-- state_management.md
+    +-- flutter-library/
+    |   +-- architecture.md
+    |   +-- widget_patterns.md
+    |   +-- state_management.md
+    +-- nextjs-app/
+    |   +-- architecture.md
+    |   +-- widget_patterns.md
+    |   +-- state_management.md
+    +-- python-api/
+    |   +-- architecture.md
+    |   +-- api_patterns.md
+    |   +-- state_management.md
+    +-- python-library/
+    |   +-- architecture.md
+    |   +-- api_patterns.md
+    |   +-- state_management.md
+    +-- python-celery/
+        +-- architecture.md
+        +-- api_patterns.md
+        +-- state_management.md
+
+  Checks:
+    - Exactly 6 directories under context/
+    - Exactly 3 files per directory
+    - Exactly 18 total .md files
+    - Flutter and Next.js stacks have widget_patterns.md (NOT api_patterns.md)
+    - Python stacks have api_patterns.md (NOT widget_patterns.md)
+    - No extra files or directories
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - 6 directories exist under context/
+  - Each directory has exactly 3 .md files
+  - Total of 18 .md files
+  - flutter-app, flutter-library, nextjs-app have widget_patterns.md
+  - python-api, python-library, python-celery have api_patterns.md
+  - No unexpected files or directories exist
+  - Directory names match exactly (lowercase, hyphenated)
+
+context_files:
+  - docs/features/context-stack/product.yaml

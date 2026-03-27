@@ -1,0 +1,36 @@
+# Phase 0 - Preparation
+task: define_widget_patterns_md_template
+id: TASK-003
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "0 - Preparation"
+depends_on: []
+
+scope: |
+  Define the canonical section structure for widget_patterns.md files based on the
+  output_file_templates.widget_patterns_md section in technical.yaml. This template
+  applies to Flutter and Next.js stacks only (flutter-app, flutter-library, nextjs-app).
+
+  Required sections (in order):
+    1. "# UI Component Patterns"
+    2. "## Component Architecture"
+    3. "## Component Categories"
+    4. "## Component Resolution Flow"
+    5. "## Component Templates"
+    6. "## Rules and Constraints"
+
+  This is an internal reference document for consistency across the 3 frontend stacks.
+
+stack: flutter-app, flutter-library, nextjs-app
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Template defines all 6 sections from technical.yaml output_file_templates.widget_patterns_md
+  - Template is clearly scoped to Flutter and Next.js stacks only
+  - Template is documented and available for reference during content extraction tasks
+
+context_files:
+  - docs/features/context-stack/technical.yaml

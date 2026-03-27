@@ -1,0 +1,42 @@
+# Phase 4 - Validation and Review
+task: validate_format_consistency
+id: TASK-027
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-025
+
+scope: |
+  Verify that all 18 context files follow a consistent format, tone, and structure.
+
+  Consistency checks:
+    - All 6 architecture.md files follow the same template structure (TASK-002)
+    - All 3 widget_patterns.md files follow the same template structure (TASK-003)
+    - All 3 api_patterns.md files follow the same template structure (TASK-004)
+    - All 6 state_management.md files follow the same template structure (TASK-005)
+    - Heading levels are used consistently (# for title, ## for sections, ### for subsections)
+    - Code examples use consistent fencing (```language blocks)
+    - Tables use consistent formatting
+    - Lists use consistent formatting (- for unordered, 1. for ordered)
+    - Tone is consistently declarative (not imperative)
+    - Language is consistently English (technical)
+    - Files are valid Markdown (no broken links, no unclosed fences)
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - All 6 architecture.md files follow the same heading structure
+  - All 3 widget_patterns.md files follow the same heading structure
+  - All 3 api_patterns.md files follow the same heading structure
+  - All 6 state_management.md files follow the same heading structure
+  - No inconsistencies in Markdown formatting across files
+  - All files use declarative tone (no imperative agent instructions)
+  - All files are in English (technical)
+
+context_files:
+  - docs/features/context-stack/technical.yaml

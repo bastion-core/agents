@@ -1,0 +1,51 @@
+# Phase 2 - Frontend Stacks (flutter-library stack)
+task: extract_flutter_library_state_management
+id: TASK-015
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/reviewer-flutter-app.md
+  and extract content for context/flutter-library/state_management.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "PATTERN CONSISTENCY" (BLoC, Repository, Result, Freezed, DI, Navigation)
+    - "TESTING COVERAGE" (BLoC test requirements, coverage targets)
+
+  Transformation rules: Convert imperative to declarative, preserve pattern details,
+  add template headings from TASK-005.
+
+  Content scope: Pattern consistency: BLoC with constructor injection, private
+  _on prefixed handlers, event.map() for exhaustive handling, result.when() for
+  errors. Repository Pattern with abstract interfaces and Result<T>. DI with
+  Factory for BLoCs. Testing: 95%+ BLoC coverage, blocTest helper, provideDummy,
+  Fake vs Mock.
+
+stack: flutter-library
+source_file: plugins/flutter-development/agents/reviewer-flutter-app.md
+
+files_to_create:
+  - context/flutter-library/state_management.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-library/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - BLoC pattern consistency requirements are documented
+  - Repository Pattern with Result<T> is described
+  - DI pattern (Factory for BLoCs) is documented
+  - Testing requirements are documented (95%+ coverage, blocTest, Fake vs Mock)
+  - Content traces back to reviewer-flutter-app.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/reviewer-flutter-app.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

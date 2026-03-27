@@ -1,0 +1,58 @@
+# Phase 1 - Foundation (flutter-app stack)
+task: extract_flutter_app_architecture
+id: TASK-006
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-002
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/mobile-flutter.md
+  and extract content for context/flutter-app/architecture.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Architecture Understanding" (Clean Architecture, 4 layers, 5 critical decisions)
+    - "Folder Structure" (root layout, test layout, naming conventions, folder rules)
+    - "Anti-Patterns" (14 forbidden patterns)
+    - "Pragmatic Development Principles"
+
+  Transformation rules to apply:
+    - Convert imperative instructions ("ALWAYS use X") to declarative ("The project uses X")
+    - Preserve exact library names, versions, patterns
+    - Remove "Response Format", "Your Mission" sections
+    - Add structural headings per architecture.md template (TASK-002)
+    - Include code examples as documentary reference (not executable deliverables)
+
+  Content scope: Clean Architecture with Feature-Based Modularization. 4 layers
+  (Presentation, Application/BLoC, Domain, Infrastructure). 5 critical architectural
+  decisions (no Entity layer, no UseCase, no Mapper, DTOs in domain/, Helpers for
+  complex BLoCs). Full folder structure with naming conventions. 14 forbidden anti-patterns.
+
+stack: flutter-app
+source_file: plugins/flutter-development/agents/mobile-flutter.md
+
+files_to_create:
+  - context/flutter-app/architecture.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-app/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Content traces back to mobile-flutter.md sections listed above
+  - No imperative agent instructions remain ("you MUST", "NEVER do")
+  - All 4 layers are documented with responsibilities
+  - All 5 critical architectural decisions are listed
+  - Folder structure is complete with naming conventions
+  - 14 anti-patterns are documented with alternatives
+  - File is between 100 and 500 lines
+  - File is self-contained (readable without the full agent spec)
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/mobile-flutter.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

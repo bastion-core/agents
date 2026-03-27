@@ -1,0 +1,60 @@
+# Phase 1 - Foundation (python-api stack)
+task: extract_python_api_state_management
+id: TASK-011
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-005
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-api/state_management.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Interactor Pattern (Use Cases)" (validate-process flow, BaseInteractor)
+    - "Repository Pattern (Ports)" (domain interface, infrastructure adapter)
+    - "Infrastructure Service Interfaces (Ports)"
+    - "Entity Management" (voltop-common-structure, domain vs infrastructure entities)
+    - "Quality Criteria > Testability" (unit tests, integration tests, fixtures)
+
+  Transformation rules to apply:
+    - Document Interactor validate -> process flow
+    - Describe BaseInteractor with run()/run_async()
+    - Document Repository Pattern with abstract interfaces in domain/ and implementations in infrastructure/
+    - Include Infrastructure Service Interfaces (ABC for file storage, email, Excel, external APIs)
+    - Document entity management with voltop-common-structure
+    - Include testing strategy (mocked repos, test DB, pytest fixtures, >80% coverage)
+    - Add structural headings per state_management.md template (TASK-005)
+
+  Content scope: Interactor pattern with validate -> process flow. BaseInteractor.
+  Repository Pattern with abstract interfaces. Infrastructure Service Interfaces.
+  Entity management (domain vs infrastructure entities). Testing strategy.
+
+stack: python-api
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-api/state_management.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-api/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - Interactor pattern with validate -> process flow is documented
+  - BaseInteractor with run()/run_async() is described
+  - Repository Pattern with domain interfaces and infrastructure adapters is documented
+  - Infrastructure Service Interfaces (ABC) are described
+  - Entity management (domain vs infrastructure, voltop-common-structure) is documented
+  - Testing strategy covers unit tests, integration tests, fixtures, >80% coverage
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

@@ -1,0 +1,59 @@
+# Phase 5 - Finalization
+task: stage_and_commit_context_files
+id: TASK-035
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "5 - Finalization"
+depends_on:
+  - TASK-034
+
+scope: |
+  Stage all files in the context/ directory and create a single git commit
+  with a descriptive commit message.
+
+  Commit should include:
+    - All 6 directories under context/
+    - All 18 .md files
+    - Nothing else (no unrelated changes)
+
+  Suggested commit message:
+    "feat: Add centralized project context stacks (18 context files across 6 stacks)"
+
+  This satisfies the acceptance criterion in product.yaml:
+    "Los archivos de contexto estan versionados en el repositorio de agentes
+     y son auditables mediante el historial de git"
+
+stack: all
+source_file: null
+
+files_to_create:
+  - context/flutter-app/architecture.md
+  - context/flutter-app/widget_patterns.md
+  - context/flutter-app/state_management.md
+  - context/flutter-library/architecture.md
+  - context/flutter-library/widget_patterns.md
+  - context/flutter-library/state_management.md
+  - context/nextjs-app/architecture.md
+  - context/nextjs-app/widget_patterns.md
+  - context/nextjs-app/state_management.md
+  - context/python-api/architecture.md
+  - context/python-api/api_patterns.md
+  - context/python-api/state_management.md
+  - context/python-library/architecture.md
+  - context/python-library/api_patterns.md
+  - context/python-library/state_management.md
+  - context/python-celery/architecture.md
+  - context/python-celery/api_patterns.md
+  - context/python-celery/state_management.md
+
+estimated_effort: small
+
+acceptance:
+  - All 18 files are committed in a single commit
+  - Commit message is descriptive
+  - No unrelated files are included in the commit
+  - Git history shows the new context/ files as added
+
+context_files:
+  - docs/features/context-stack/product.yaml

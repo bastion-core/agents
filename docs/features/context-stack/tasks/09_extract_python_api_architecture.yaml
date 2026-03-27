@@ -1,0 +1,60 @@
+# Phase 1 - Foundation (python-api stack)
+task: extract_python_api_architecture
+id: TASK-009
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-002
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-api/architecture.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Architecture Understanding" (Hexagonal Architecture, folder structure)
+    - "SOLID Principles Application"
+    - "Design Patterns Catalog" (creational, structural, behavioral)
+    - "Common Pitfalls to Avoid" (anti-patterns, common errors)
+    - "Pragmatic Development Principles"
+
+  Transformation rules to apply:
+    - Convert imperative instructions to declarative documentation
+    - Preserve Hexagonal Architecture details (Ports and Adapters)
+    - Document 3 layers (Domain, Application, Infrastructure)
+    - Include folder structure per bounded context
+    - Add structural headings per architecture.md template (TASK-002)
+
+  Content scope: Hexagonal Architecture (Ports and Adapters). 3 layers (Domain,
+  Application, Infrastructure). Folder structure by domain (bounded context). SOLID
+  principles applied. Design pattern catalog (Factory, Adapter, Strategy, Template
+  Method, Observer). Anti-patterns (Fat Interactors, Anemic Domain, Leaky Abstractions,
+  God Objects, Tight Coupling, Over-Engineering). Pragmatic development principles.
+
+stack: python-api
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-api/architecture.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-api/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Hexagonal Architecture (Ports and Adapters) is clearly documented
+  - 3 layers are documented with responsibilities
+  - Folder structure per bounded context is included
+  - SOLID principles application is described
+  - Design pattern catalog covers creational, structural, behavioral
+  - Anti-patterns are listed with alternatives
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

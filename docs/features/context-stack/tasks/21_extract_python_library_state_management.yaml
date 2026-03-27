@@ -1,0 +1,53 @@
+# Phase 3 - Backend Stacks (python-library stack)
+task: extract_python_library_state_management
+id: TASK-021
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/reviewer-library-py.md
+  and extract content for context/python-library/state_management.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Testing & Coverage" (unit tests, test quality, mocking, edge cases)
+    - "Layer separation and dependencies"
+    - "Backwards compatibility and interface stability"
+
+  Transformation rules: Convert imperative to declarative, preserve testing and
+  architecture details, add template headings from TASK-005.
+
+  Content scope: Library testing: unit tests for all public API, >90% coverage
+  on modified public components. Mock of external dependencies. Test isolation.
+  Naming pattern test_should_{expected}_when_{condition}. Layer separation and
+  dependencies (domain without infrastructure imports). Interface stability and
+  backwards compatibility.
+
+stack: python-library
+source_file: plugins/python-development/agents/reviewer-library-py.md
+
+files_to_create:
+  - context/python-library/state_management.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-library/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - Unit testing requirements are documented (>90% coverage)
+  - Mock and test isolation patterns are described
+  - Test naming convention is included
+  - Layer separation rules are documented
+  - Interface stability and backwards compatibility are described
+  - Content traces back to reviewer-library-py.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/reviewer-library-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

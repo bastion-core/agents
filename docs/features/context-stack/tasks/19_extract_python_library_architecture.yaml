@@ -1,0 +1,52 @@
+# Phase 3 - Backend Stacks (python-library stack)
+# NOTE: Phase 3 can run in PARALLEL with Phase 2 (no dependency between them)
+task: extract_python_library_architecture
+id: TASK-019
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/reviewer-library-py.md
+  and extract content for context/python-library/architecture.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Context: Internal Library Standards" (Hexagonal Architecture mandatory)
+    - "Architecture & Design" (Clean Architecture compliance, SOLID, DDD)
+
+  Transformation rules: Convert imperative to declarative, preserve architecture
+  details, add template headings from TASK-002.
+
+  Content scope: Internal library standards. Mandatory Hexagonal Architecture.
+  Structure domain/, application/, infrastructure/. Company repository template
+  as base. Clean Architecture compliance (layers, SOLID, DDD). Required files
+  (setup.py, README.md, CHANGELOG.md, tests/). Naming conventions
+  (*_interactor.py, *_repository.py, *_dto.py, OutputContext).
+
+stack: python-library
+source_file: plugins/python-development/agents/reviewer-library-py.md
+
+files_to_create:
+  - context/python-library/architecture.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-library/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Mandatory Hexagonal Architecture is documented
+  - Layer structure (domain, application, infrastructure) is described
+  - Required files are listed (setup.py, README.md, CHANGELOG.md, tests/)
+  - Naming conventions are documented
+  - Content traces back to reviewer-library-py.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/reviewer-library-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

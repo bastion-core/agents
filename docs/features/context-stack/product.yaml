@@ -1,0 +1,295 @@
+# product.yaml
+feature: centralized_project_context_stacks
+owner: product_owner
+version: 1.0
+
+description: |
+  Como Product Owner del repositorio de agentes,
+  puedo centralizar el contexto arquitectonico de cada proyecto gestionado
+  en los repositorios git de la organizacion, de modo que los sub-agentes
+  especializados (Claude y Gemini) tengan conocimiento profundo de la
+  arquitectura, patrones de componentes y manejo de estado de cada proyecto
+  al momento de ejecutar tareas de desarrollo, revision de codigo o
+  generacion de especificaciones tecnicas.
+  El sistema debe generar 3 archivos de contexto por cada stack de proyecto,
+  extrayendo la informacion de las especificaciones de agentes existentes
+  en el directorio plugins/ del repositorio de agentes.
+
+acceptance_criteria:
+  - Cada stack de proyecto tiene exactamente 3 archivos de contexto generados en su directorio correspondiente dentro de context/
+  - Los archivos de contexto de los stacks de Flutter y Next.js contienen architecture.md, widget_patterns.md y state_management.md
+  - Los archivos de contexto de los stacks de Python contienen architecture.md, api_patterns.md y state_management.md en lugar de widget_patterns.md
+  - El contenido de cada archivo de contexto es extraido y destilado de las especificaciones de agentes existentes en plugins/, no inventado desde cero
+  - Cada archivo de contexto es autonomo y legible sin necesidad de consultar la especificacion completa del agente
+  - Los sub-agentes de Claude y Gemini pueden referenciar los archivos de contexto para obtener conocimiento especifico del proyecto sin cargar la especificacion completa del agente
+  - Se generan un total de 18 archivos de contexto (6 stacks x 3 archivos por stack)
+  - La estructura de directorios sigue el formato context/{nombre_del_stack}/ para cada proyecto
+  - Los archivos de contexto estan versionados en el repositorio de agentes y son auditables mediante el historial de git
+
+business_rules:
+  - total_stacks: 6 stacks de proyecto (flutter-app, flutter-library, nextjs-app, python-api, python-library, python-celery)
+  - archivos_por_stack_frontend: 3 archivos (architecture.md, widget_patterns.md, state_management.md) para stacks de Flutter y Next.js
+  - archivos_por_stack_backend: 3 archivos (architecture.md, api_patterns.md, state_management.md) para stacks de Python
+  - total_archivos: 18 archivos de contexto en total
+  - adaptacion_python: los stacks de Python no tienen widget_patterns.md; en su lugar tienen api_patterns.md que cubre patrones de endpoints, serializacion, middleware y validacion de entrada
+  - fuente_de_verdad: el contenido se extrae de las especificaciones de agentes existentes en plugins/, nunca se inventa desde cero
+  - autonomia_del_archivo: cada archivo de contexto debe ser comprensible y util de forma independiente, sin necesidad de leer la especificacion completa del agente
+  - directorio_raiz: los archivos de contexto se almacenan bajo context/ en la raiz del repositorio de agentes
+  - formato_markdown: todos los archivos de contexto se generan en formato Markdown (.md)
+  - sin_codigo_fuente: los archivos de contexto documentan patrones y decisiones arquitectonicas, nunca contienen codigo de implementacion ejecutable como entregable final
+  - idioma_contenido: los archivos de contexto se redactan en el idioma predominante de la especificacion del agente fuente (ingles tecnico)
+
+  - stack_flutter_app:
+      nombre: flutter-app
+      descripcion: Aplicaciones moviles Flutter
+      repositorio_fuente: voltop-control-tower-front
+      especificacion_agente: plugins/flutter-development/agents/mobile-flutter.md
+      archivos:
+        - architecture.md
+        - widget_patterns.md
+        - state_management.md
+
+  - stack_flutter_library:
+      nombre: flutter-library
+      descripcion: Libreria de componentes Flutter
+      repositorio_fuente: flutter-components-library
+      especificacion_agente: plugins/flutter-development/agents/reviewer-flutter-app.md
+      archivos:
+        - architecture.md
+        - widget_patterns.md
+        - state_management.md
+
+  - stack_nextjs_app:
+      nombre: nextjs-app
+      descripcion: Aplicaciones web Next.js
+      repositorio_fuente: voltop-control-tower-front
+      especificacion_agente: plugins/nextjs-development/agents/frontend-nextjs.md
+      archivos:
+        - architecture.md
+        - widget_patterns.md
+        - state_management.md
+
+  - stack_python_api:
+      nombre: python-api
+      descripcion: Backend FastAPI en Python
+      repositorio_fuente: voltop-api
+      especificacion_agente: plugins/python-development/agents/backend-py.md
+      archivos:
+        - architecture.md
+        - api_patterns.md
+        - state_management.md
+
+  - stack_python_library:
+      nombre: python-library
+      descripcion: Libreria compartida de Python
+      repositorio_fuente: voltop-common-structure-library
+      especificacion_agente: plugins/python-development/agents/reviewer-library-py.md
+      archivos:
+        - architecture.md
+        - api_patterns.md
+        - state_management.md
+
+  - stack_python_celery:
+      nombre: python-celery
+      descripcion: Servidor de tareas programadas Python Celery
+      repositorio_fuente: voltop-tasks-server
+      especificacion_agente: plugins/python-development/agents/backend-py.md
+      archivos:
+        - architecture.md
+        - api_patterns.md
+        - state_management.md
+
+inputs:
+  - especificacion_agente_flutter_app: archivo Markdown con la especificacion del agente mobile-flutter (plugins/flutter-development/agents/mobile-flutter.md), contiene arquitectura Clean Architecture con Feature-Based Modularization, patrones BLoC + Freezed, UI abstraction layer y patrones de widgets
+  - especificacion_agente_flutter_library: archivo Markdown con la especificacion del agente reviewer-flutter-app (plugins/flutter-development/agents/reviewer-flutter-app.md), contiene criterios de revision de arquitectura, patrones de componentes UI con flutter_components_library y convenciones de la libreria de componentes
+  - especificacion_agente_nextjs: archivo Markdown con la especificacion del agente frontend-nextjs (plugins/nextjs-development/agents/frontend-nextjs.md), contiene arquitectura Two-layer (Domain + Infrastructure), patrones Zustand + DataAccess, componentes shadcn/ui y estrategia de testing
+  - especificacion_agente_python_api: archivo Markdown con la especificacion del agente backend-py (plugins/python-development/agents/backend-py.md), contiene arquitectura Hexagonal con Ports and Adapters, patrones Interactor, repositorios SQLAlchemy y validacion Pydantic
+  - especificacion_agente_python_library: archivo Markdown con la especificacion del agente reviewer-library-py (plugins/python-development/agents/reviewer-library-py.md), contiene criterios de revision para librerias Python internas, arquitectura Hexagonal obligatoria y estandares de API publica
+  - repositorios_fuente: acceso de lectura a los repositorios fuente de cada proyecto para validar que los patrones documentados corresponden con la implementacion real (opcional, para enriquecer contexto)
+
+outputs:
+  archivos_de_contexto:
+    descripcion: |
+      18 archivos Markdown distribuidos en 6 directorios de stack,
+      cada uno conteniendo documentacion de contexto especifica del proyecto
+      que los sub-agentes pueden referenciar durante la ejecucion de tareas.
+
+    por_stack_frontend:
+      - architecture.md: |
+          Documento que describe la arquitectura del proyecto.
+          Incluye: capas de la arquitectura, estructura de carpetas,
+          flujo de dependencias, patrones de diseno utilizados,
+          principios SOLID aplicados, decisiones arquitectonicas clave
+          y anti-patrones prohibidos.
+      - widget_patterns.md: |
+          Documento que describe los patrones de componentes de UI del proyecto.
+          Incluye: libreria de componentes base, convenciones de nombrado,
+          patrones de composicion, widgets reutilizables, sistema de diseno,
+          paleta de colores centralizada y reglas de uso de componentes.
+      - state_management.md: |
+          Documento que describe el enfoque de manejo de estado del proyecto.
+          Incluye: libreria de estado, patrones de eventos y estados,
+          flujo de datos, manejo de errores asincrono, inyeccion de dependencias
+          y patrones de consumo de estado en la capa de presentacion.
+
+    por_stack_backend:
+      - architecture.md: |
+          Documento que describe la arquitectura del proyecto backend.
+          Incluye: capas de la arquitectura hexagonal, estructura de carpetas,
+          flujo de dependencias con Ports and Adapters, patrones de diseno,
+          principios SOLID aplicados, gestion de entidades y migraciones,
+          y anti-patrones prohibidos.
+      - api_patterns.md: |
+          Documento que describe los patrones de API del proyecto backend.
+          Incluye: patrones de endpoints REST, serializacion con Pydantic DTOs,
+          middleware de autenticacion y autorizacion, validacion de entrada,
+          formato de respuesta estandarizado, manejo de errores HTTP
+          y convenciones de nombrado de rutas.
+      - state_management.md: |
+          Documento que describe el manejo de estado y flujo de datos del backend.
+          Incluye: patron Interactor (casos de uso), flujo validate-process,
+          patron Repository con interfaces abstractas, inyeccion de dependencias
+          via FastAPI Depends, manejo de errores con OutputContext
+          y patrones de operaciones asincronas.
+
+  estructura_de_directorios:
+    descripcion: |
+      Estructura final de directorios generada en la raiz del repositorio de agentes.
+    formato: |
+      context/
+      ├── flutter-app/
+      │   ├── architecture.md
+      │   ├── widget_patterns.md
+      │   └── state_management.md
+      ├── flutter-library/
+      │   ├── architecture.md
+      │   ├── widget_patterns.md
+      │   └── state_management.md
+      ├── nextjs-app/
+      │   ├── architecture.md
+      │   ├── widget_patterns.md
+      │   └── state_management.md
+      ├── python-api/
+      │   ├── architecture.md
+      │   ├── api_patterns.md
+      │   └── state_management.md
+      ├── python-library/
+      │   ├── architecture.md
+      │   ├── api_patterns.md
+      │   └── state_management.md
+      └── python-celery/
+          ├── architecture.md
+          ├── api_patterns.md
+          └── state_management.md
+
+tests_scope:
+  - generacion_completa_stack_flutter: se proporcionan las especificaciones de agentes Flutter -> se generan 3 archivos de contexto (architecture.md, widget_patterns.md, state_management.md) con contenido extraido de mobile-flutter.md
+  - generacion_completa_stack_python: se proporcionan las especificaciones de agentes Python -> se generan 3 archivos de contexto (architecture.md, api_patterns.md, state_management.md) con contenido extraido de backend-py.md
+  - generacion_completa_stack_nextjs: se proporcionan las especificaciones de agentes Next.js -> se generan 3 archivos de contexto (architecture.md, widget_patterns.md, state_management.md) con contenido extraido de frontend-nextjs.md
+  - adaptacion_python_sin_widget_patterns: los stacks de Python generan api_patterns.md en lugar de widget_patterns.md -> el archivo cubre patrones de endpoints, serializacion y middleware
+  - autonomia_del_contenido: cada archivo de contexto generado es comprensible sin necesidad de leer la especificacion completa del agente -> un lector puede entender la arquitectura, patrones o manejo de estado del proyecto leyendo solo el archivo de contexto
+  - contenido_no_inventado: el contenido de cada archivo de contexto corresponde a informacion documentada en la especificacion del agente fuente -> no se incluyen patrones, tecnologias o decisiones que no esten en la especificacion original
+  - especificacion_agente_inexistente: se solicita generar contexto para un stack cuya especificacion de agente no existe -> el sistema reporta que no puede generar el contexto por falta de fuente de verdad
+  - estructura_de_directorios_correcta: se generan los 18 archivos -> la estructura de directorios sigue el formato context/{nombre_del_stack}/ con los archivos correspondientes
+  - total_archivos_generados: se ejecuta la generacion completa -> se producen exactamente 18 archivos de contexto (6 stacks x 3 archivos)
+  - referencia_por_subagentes: un sub-agente de Claude o Gemini recibe una tarea de desarrollo para un proyecto especifico -> puede referenciar los archivos de contexto del stack correspondiente para obtener conocimiento arquitectonico sin cargar la especificacion completa del agente
+
+# --- Mapeo de Contenido: Secciones de Agente -> Archivos de Contexto ---
+#
+# Este mapeo indica que secciones de cada especificacion de agente
+# alimentan cada archivo de contexto.
+#
+# flutter-app (fuente: mobile-flutter.md):
+#   architecture.md:
+#     - "Architecture Understanding" (Clean Architecture, 4 capas, 5 decisiones criticas)
+#     - "Folder Structure" (root layout, test layout, naming conventions, folder rules)
+#     - "Anti-Patterns" (14 patrones prohibidos)
+#     - "Pragmatic Development Principles"
+#   widget_patterns.md:
+#     - "UI Components" (discovery rule, component resolution flow, expected structure)
+#     - "Reference Example (Voltop Charging App)" (componentes VoltopButton, VoltopText, etc.)
+#     - "UI Component Rules"
+#   state_management.md:
+#     - "State Management" (BLoC + Freezed, convenciones, templates de Event/State/BLoC)
+#     - "Helper Pattern for Complex BLoCs"
+#     - "BLoC UI Consumption" (BlocBuilder, BlocConsumer, BlocListener)
+#     - "Dependency Injection" (get_it, registration types, feature registration)
+#     - "Networking and Error Handling" (Result<T>, RequestError)
+#     - "Global vs Local BLoC Providers"
+#
+# flutter-library (fuente: reviewer-flutter-app.md):
+#   architecture.md:
+#     - "Project Architecture Overview" (Clean Architecture, 3 capas, Feature-First)
+#     - "Expected Directory Structure"
+#     - "ARCHITECTURE COMPLIANCE" (checklist completo)
+#   widget_patterns.md:
+#     - "PROJECT UI LIBRARY" (3-layer component architecture)
+#     - "Component Library Architecture" (flutter_components_library, project wrappers)
+#     - "Centralized UI Components" (checklist)
+#   state_management.md:
+#     - "PATTERN CONSISTENCY" (BLoC, Repository, Result, Freezed, DI, Navigation)
+#     - "TESTING COVERAGE" (BLoC test requirements, coverage targets)
+#
+# nextjs-app (fuente: frontend-nextjs.md):
+#   architecture.md:
+#     - "Architecture Understanding" (Two-layer, dependency direction)
+#     - "Folder Structure" (module structure, route structure, path aliases)
+#     - "Anti-Patterns" (10 patrones prohibidos)
+#     - "Coding Standards" (TypeScript rules, naming conventions)
+#   widget_patterns.md:
+#     - "Component Pattern" (template, store consumption)
+#     - "Component Guidelines" (shadcn/ui, Tailwind cn(), Data Tables, Forms)
+#     - "Page Pattern" (App Router, screen components)
+#     - "Custom Hook Pattern" (6 secciones internas)
+#   state_management.md:
+#     - "Zustand Store Pattern" (template, reglas criticas, reset, cross-store)
+#     - "State Management Rules" (cuando usar Zustand, useState, URL state)
+#     - "Discriminated Union States" (template, kind field, type narrowing)
+#     - "Either Pattern" (ServiceError, ServiceSuccess, fold)
+#     - "DataAccess Pattern" (template, reglas)
+#
+# python-api (fuente: backend-py.md):
+#   architecture.md:
+#     - "Architecture Understanding" (Hexagonal Architecture, folder structure)
+#     - "SOLID Principles Application"
+#     - "Design Patterns Catalog" (creacional, estructural, behavioral)
+#     - "Common Pitfalls to Avoid" (anti-patrones, errores comunes)
+#     - "Pragmatic Development Principles"
+#   api_patterns.md:
+#     - "Quality Criteria > Security" (rutas con autenticacion y autorizacion)
+#     - "DTOs (Data Transfer Objects)" (request, response, entity DTOs)
+#     - "Dependency Injection" (*_depends.py, factory pattern)
+#     - "Alembic Migrations" (database indexing guidelines)
+#     - Naming conventions para interactors, DTOs, repositories
+#   state_management.md:
+#     - "Interactor Pattern (Use Cases)" (validate-process flow, BaseInteractor)
+#     - "Repository Pattern (Ports)" (domain interface, infrastructure adapter)
+#     - "Infrastructure Service Interfaces (Ports)"
+#     - "Entity Management" (voltop-common-structure, domain vs infrastructure entities)
+#     - "Quality Criteria > Testability" (unit tests, integration tests, fixtures)
+#
+# python-library (fuente: reviewer-library-py.md):
+#   architecture.md:
+#     - "Context: Internal Library Standards" (Hexagonal Architecture obligatoria)
+#     - "Architecture & Design" (Clean Architecture compliance, SOLID, DDD)
+#   api_patterns.md:
+#     - "Library API Design" (public API surface, type hints, docstrings)
+#     - "Code Quality" (Python best practices, error handling, security)
+#     - Naming conventions (interactors, repositories, DTOs, OutputContext)
+#   state_management.md:
+#     - "Testing & Coverage" (unit tests, test quality, mocking, edge cases)
+#     - Layer separation and dependencies
+#     - Backwards compatibility and interface stability
+#
+# python-celery (fuente: backend-py.md, adaptado para tareas programadas):
+#   architecture.md:
+#     - Misma base que python-api, adaptada al contexto de tareas Celery
+#     - "Architecture Understanding" con enfoque en workers y schedulers
+#   api_patterns.md:
+#     - Patrones de definicion de tareas Celery (task registration, retry policies)
+#     - DTOs para entrada/salida de tareas
+#     - Manejo de errores en tareas asincronas
+#   state_management.md:
+#     - Patron Interactor aplicado a tareas programadas
+#     - Repository Pattern para acceso a datos desde workers
+#     - Manejo de transacciones y sesiones de base de datos en contexto de tareas

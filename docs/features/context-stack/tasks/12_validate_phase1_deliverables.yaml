@@ -1,0 +1,61 @@
+# Phase 1 - Foundation (validation gate)
+task: validate_phase1_deliverables
+id: TASK-012
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-006
+  - TASK-007
+  - TASK-008
+  - TASK-009
+  - TASK-010
+  - TASK-011
+
+scope: |
+  Review the 6 context files generated in Phase 1 (flutter-app + python-api)
+  to verify they meet the validation_criteria defined in technical.yaml before
+  proceeding to Phase 2 and Phase 3.
+
+  Per-file checks:
+    - File is comprehensible without reading the full agent spec
+    - Content is traceable to source spec sections (not invented)
+    - Valid Markdown with hierarchical headings
+    - English technical language
+    - No agent-directed instructions ("you MUST", "NEVER do")
+    - No executable code as final deliverable (only documentary examples)
+    - File is between 100 and 500 lines
+
+  Per-stack checks:
+    - flutter-app has exactly: architecture.md, widget_patterns.md, state_management.md
+    - python-api has exactly: architecture.md, api_patterns.md, state_management.md
+
+  Cross-stack consistency checks:
+    - Both architecture.md files follow the same template structure
+    - Both state_management.md files follow the same template structure
+    - Tone and formatting are consistent between stacks
+
+  This is a quality gate. Phase 2 and Phase 3 should not start until this
+  validation passes. Any issues found must be documented for correction.
+
+stack: flutter-app, python-api
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - All 6 files pass per-file validation criteria
+  - Both stacks have the correct 3 files each
+  - Template structure is consistent across stacks
+  - No files contain invented content (all traceable to source specs)
+  - Feedback items (if any) are documented for correction before Phase 2/3
+
+context_files:
+  - context/flutter-app/architecture.md
+  - context/flutter-app/widget_patterns.md
+  - context/flutter-app/state_management.md
+  - context/python-api/architecture.md
+  - context/python-api/api_patterns.md
+  - context/python-api/state_management.md
+  - docs/features/context-stack/technical.yaml

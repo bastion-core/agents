@@ -1,0 +1,44 @@
+# Phase 0 - Preparation
+task: create_directory_structure
+id: TASK-001
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "0 - Preparation"
+depends_on: []
+
+scope: |
+  Create the root context/ directory at the repository root and all 6 stack
+  subdirectories. Each directory will hold exactly 3 Markdown context files.
+
+  Directories to create:
+    - context/flutter-app/
+    - context/flutter-library/
+    - context/nextjs-app/
+    - context/python-api/
+    - context/python-library/
+    - context/python-celery/
+
+  No files should be created in this task, only the empty directory structure.
+
+stack: all
+source_file: null
+
+files_to_create:
+  - context/flutter-app/
+  - context/flutter-library/
+  - context/nextjs-app/
+  - context/python-api/
+  - context/python-library/
+  - context/python-celery/
+
+estimated_effort: small
+
+acceptance:
+  - All 6 directories exist under context/ at the repository root
+  - No files exist inside the directories yet
+  - Directory names match exactly the stack names defined in product.yaml (lowercase, hyphenated)
+
+context_files:
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

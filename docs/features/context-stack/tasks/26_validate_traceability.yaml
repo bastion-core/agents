@@ -1,0 +1,47 @@
+# Phase 4 - Validation and Review
+task: validate_content_traceability
+id: TASK-026
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-025
+
+scope: |
+  For each of the 18 context files, verify that the content is traceable to
+  the source agent specification. No content should be invented or assumed.
+
+  Validation process:
+    1. For each context file, identify the source_sections listed in technical.yaml
+    2. Open the source agent spec and locate those sections
+    3. Verify that the content in the context file corresponds to information
+       found in the source spec
+    4. Flag any content that appears to be invented (not in the source spec)
+
+  Special attention for python-celery stack:
+    - This stack adapts backend-py.md content for Celery context
+    - Adaptations are acceptable (replacing "endpoint" with "task")
+    - But new patterns not in backend-py.md should be flagged for review
+    - Celery-specific patterns that are industry-standard are acceptable
+      if they align with the Hexagonal Architecture from the source spec
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: medium
+
+acceptance:
+  - All 18 files have been checked against their source specs
+  - No invented content found (or all exceptions are justified and documented)
+  - python-celery adaptations are reasonable and architecturally consistent
+  - Traceability mapping is documented (which source section maps to which context section)
+
+context_files:
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml
+  - plugins/flutter-development/agents/mobile-flutter.md
+  - plugins/flutter-development/agents/reviewer-flutter-app.md
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+  - plugins/python-development/agents/backend-py.md
+  - plugins/python-development/agents/reviewer-library-py.md

@@ -1,0 +1,56 @@
+# Phase 2 - Frontend Stacks (nextjs-app stack)
+task: extract_nextjs_app_widget_patterns
+id: TASK-017
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/nextjs-development/agents/frontend-nextjs.md
+  and extract content for context/nextjs-app/widget_patterns.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Component Pattern" (template, store consumption)
+    - "Component Guidelines" (shadcn/ui, Tailwind cn(), Data Tables, Forms)
+    - "Page Pattern" (App Router, screen components)
+    - "Custom Hook Pattern" (6 internal sections)
+
+  Transformation rules: Convert imperative to declarative, preserve component
+  library references, add template headings from TASK-003.
+
+  Content scope: Component pattern with 'use client', useTranslations, specific
+  store selectors, type narrowing with kind. Shadcn/ui as base library. Tailwind
+  with cn() for conditional classes. Data Tables with TanStack React Table. Forms
+  with React Hook Form + Zod. Page pattern (minimal wrappers importing Screens).
+  Custom hook pattern (6 sections: local state, store integration, computed values,
+  side effects, handlers, return object).
+
+stack: nextjs-app
+source_file: plugins/nextjs-development/agents/frontend-nextjs.md
+
+files_to_create:
+  - context/nextjs-app/widget_patterns.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/nextjs-app/widget_patterns.md
+  - Contains all 6 sections from the widget_patterns.md template
+  - Component pattern with 'use client' is documented
+  - shadcn/ui as base library is referenced
+  - Tailwind with cn() is documented
+  - Data Tables (TanStack React Table) and Forms (React Hook Form + Zod) are covered
+  - Page pattern (wrappers importing Screens) is described
+  - Custom hook pattern with 6 sections is documented
+  - Content traces back to frontend-nextjs.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/nextjs-development/agents/frontend-nextjs.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

@@ -1,0 +1,620 @@
+# technical.yaml
+feature: centralized_project_context_stacks
+layer: infrastructure
+
+architecture:
+  pattern: Static Content Generation Pipeline (Extract-Transform-Write)
+  entry: Manual agent invocation per stack (no HTTP endpoint, no scheduler)
+  use_case: >
+    Extraer secciones especificas de las especificaciones de agentes existentes
+    en plugins/, transformar el contenido en documentacion autonoma de contexto,
+    y escribir los archivos Markdown resultantes en el directorio context/{stack}/
+    del repositorio de agentes.
+  interfaces: []
+
+  decisions:
+    - id: ADR-001
+      title: Archivos estaticos Markdown en lugar de generacion dinamica
+      rationale: >
+        Los archivos de contexto son documentos Markdown estaticos versionados
+        en git. No requieren un servicio, base de datos ni pipeline CI/CD.
+        Son editados y revisados como cualquier otro archivo del repositorio.
+        Esto maximiza la auditabilidad (historial git), minimiza la complejidad
+        operacional (cero infraestructura) y permite que los sub-agentes los
+        referencien directamente por ruta de archivo.
+      alternatives_rejected:
+        - Generacion dinamica via script en CI/CD (complejidad innecesaria para contenido que cambia infrecuentemente)
+        - Base de datos de contexto consultable por API (over-engineering, agrega latencia y punto de fallo)
+
+    - id: ADR-002
+      title: Un directorio por stack en context/ en la raiz del repositorio
+      rationale: >
+        La estructura context/{stack-name}/ es plana, predecible y alineada
+        con la convencion del product.yaml. Cada stack tiene exactamente 3 archivos.
+        No se anidan stacks dentro de otros ni se agrupan por tecnologia
+        (ej. no context/flutter/flutter-app/) para mantener la simplicidad
+        y evitar ambiguedades de ruta.
+      alternatives_rejected:
+        - Agrupacion por tecnologia (context/flutter/, context/python/) agrega un nivel innecesario
+        - Archivos dentro de plugins/ (contamina la especificacion del agente con documentacion derivada)
+
+    - id: ADR-003
+      title: Contenido extraido y destilado, nunca inventado
+      rationale: >
+        Cada archivo de contexto se construye extrayendo secciones especificas
+        de la especificacion del agente fuente segun el mapeo definido en el
+        product.yaml. El contenido se destila (se simplifica, se reorganiza
+        para autonomia) pero nunca se inventa desde cero. Esto garantiza
+        trazabilidad entre la fuente de verdad (agent spec) y el artefacto
+        derivado (context file).
+      alternatives_rejected:
+        - Redaccion libre sin referencia a la spec (pierde trazabilidad y puede contradecir la spec)
+        - Copia literal de secciones (no seria autonomo ni legible independientemente)
+
+    - id: ADR-004
+      title: Adaptacion de widget_patterns.md a api_patterns.md para stacks Python
+      rationale: >
+        Los stacks de Python no tienen componentes de UI (widgets). En su lugar,
+        tienen patrones de API (endpoints, serializacion, middleware, validacion).
+        El archivo api_patterns.md cumple el mismo rol que widget_patterns.md
+        (documentar patrones de la capa de presentacion/interfaz) pero adaptado
+        al contexto backend.
+      alternatives_rejected:
+        - Usar el mismo nombre widget_patterns.md para ambos (confuso y semanticamente incorrecto)
+        - Eliminar el tercer archivo en stacks Python (romperia la regla de 3 archivos por stack)
+
+    - id: ADR-005
+      title: Idioma ingles tecnico para todos los archivos de contexto
+      rationale: >
+        Las especificaciones de agentes fuente estan redactadas en ingles tecnico.
+        Los archivos de contexto mantienen el mismo idioma para consistencia
+        y porque los sub-agentes (Claude, Gemini) procesan mejor instrucciones
+        tecnicas en ingles.
+      alternatives_rejected:
+        - Espanol (inconsistente con las specs fuente y reduce precision tecnica)
+        - Bilingue (duplica esfuerzo sin beneficio claro)
+
+    - id: ADR-006
+      title: Cada archivo de contexto es autonomo y no requiere la spec completa
+      rationale: >
+        Los sub-agentes deben poder cargar un archivo de contexto individual
+        (ej. context/flutter-app/state_management.md) sin necesidad de leer
+        la especificacion completa del agente (1700+ lineas). Esto reduce
+        el consumo de tokens, mejora la precision del contexto y permite
+        carga selectiva segun la tarea.
+      alternatives_rejected:
+        - Referencia cruzada obligatoria a la spec (anula el beneficio de contexto ligero)
+        - Archivo unico de contexto por stack (demasiado grande, pierde granularidad)
+
+  content_extraction_strategy:
+    description: >
+      Estrategia de extraccion y transformacion del contenido de las
+      especificaciones de agentes hacia archivos de contexto autonomos.
+    principles:
+      - Cada archivo de contexto se construye a partir de secciones especificas de la spec fuente
+      - El contenido se destila para ser autonomo (comprensible sin leer la spec completa)
+      - Se preserva la precision tecnica (nombres de librerias, versiones, patrones exactos)
+      - Se eliminan instrucciones dirigidas al agente (ej. "you MUST", "NEVER do") y se reformulan como documentacion descriptiva
+      - Se incluyen ejemplos de codigo cuando la spec fuente los contiene, reformateados para contexto documental
+      - No se inventa informacion que no este en la spec fuente
+    transformation_rules:
+      - Convertir instrucciones imperativas ("ALWAYS use X") en descripciones declarativas ("The project uses X")
+      - Preservar templates de codigo como ejemplos de referencia
+      - Incluir tablas de convenciones y reglas cuando la spec las define
+      - Agregar encabezados descriptivos y estructura de navegacion (TOC)
+      - Eliminar secciones de "Response Format" y "Your Mission" (son para el agente, no para el contexto)
+
+  stacks:
+    - name: flutter-app
+      source_spec: plugins/flutter-development/agents/mobile-flutter.md
+      target_repo: voltop-control-tower-front
+      output_dir: context/flutter-app/
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Architecture Understanding (Clean Architecture, 4 capas, 5 decisiones criticas)"
+            - "Folder Structure (root layout, test layout, naming conventions, folder rules)"
+            - "Anti-Patterns (14 patrones prohibidos)"
+            - "Pragmatic Development Principles"
+          content_scope: >
+            Arquitectura Clean Architecture con Feature-Based Modularization.
+            4 capas (Presentation, Application/BLoC, Domain, Infrastructure).
+            5 decisiones arquitectonicas criticas (no Entity layer, no UseCase,
+            no Mapper, DTOs en domain/, Helpers para BLoCs complejos).
+            Estructura de carpetas completa con convenciones de nombrado.
+            14 anti-patrones prohibidos con alternativas.
+
+        - file: widget_patterns.md
+          source_sections:
+            - "UI Components (discovery rule, component resolution flow, expected structure)"
+            - "Reference Example (Voltop Charging App) (VoltopButton, VoltopText, etc.)"
+            - "UI Component Rules"
+          content_scope: >
+            Capa de abstraccion UI del proyecto. Regla de descubrimiento obligatoria.
+            Flujo de resolucion de componentes (proyecto -> libreria -> Flutter raw).
+            Estructura esperada de componentes por categoria (Buttons, Typography,
+            Inputs, Feedback, Overlays, Colors, Icons). Ejemplo de referencia con
+            componentes Voltop. Reglas de uso (nunca raw widgets, nunca colores inline).
+
+        - file: state_management.md
+          source_sections:
+            - "State Management (BLoC + Freezed, convenciones, templates de Event/State/BLoC)"
+            - "Helper Pattern for Complex BLoCs"
+            - "BLoC UI Consumption (BlocBuilder, BlocConsumer, BlocListener)"
+            - "Dependency Injection (get_it, registration types, feature registration)"
+            - "Networking and Error Handling (Result<T>, RequestError)"
+            - "Global vs Local BLoC Providers"
+          content_scope: >
+            Patron BLoC con Freezed sealed unions. Convenciones de eventos y estados.
+            Templates de Event, State y BLoC. Patron Helper para BLoCs complejos.
+            Consumo de BLoC en UI (BlocBuilder, BlocConsumer, BlocListener).
+            DI con get_it (registerFactory para BLoCs, registerLazySingleton para servicios).
+            Manejo de errores con Result<T> y RequestError. Proveedores globales vs locales.
+
+    - name: flutter-library
+      source_spec: plugins/flutter-development/agents/reviewer-flutter-app.md
+      target_repo: flutter-components-library
+      output_dir: context/flutter-library/
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Project Architecture Overview (Clean Architecture, 3 capas, Feature-First)"
+            - "Expected Directory Structure"
+            - "ARCHITECTURE COMPLIANCE (checklist completo)"
+          content_scope: >
+            Clean Architecture con organizacion Feature-First. 3 capas
+            (Domain, Infrastructure, Presentation). Validacion de ubicacion
+            del proyecto (raiz del repositorio). Estructura de directorios esperada.
+            Checklist de cumplimiento arquitectonico (capas, organizacion de features,
+            flujo de dependencias, organizacion de BLoCs).
+
+        - file: widget_patterns.md
+          source_sections:
+            - "PROJECT UI LIBRARY (3-layer component architecture)"
+            - "Component Library Architecture (flutter_components_library, project wrappers)"
+            - "Centralized UI Components (checklist)"
+          content_scope: >
+            Arquitectura de componentes de 3 capas (Base Library, Project Wrappers,
+            Feature UI). flutter_components_library como libreria base obligatoria.
+            Patron de wrappers de proyecto ({Project}Button, {Project}Text, etc.).
+            Checklist de componentes centralizados. Reglas de importacion (nunca
+            importar libreria base directamente en features).
+
+        - file: state_management.md
+          source_sections:
+            - "PATTERN CONSISTENCY (BLoC, Repository, Result, Freezed, DI, Navigation)"
+            - "TESTING COVERAGE (BLoC test requirements, coverage targets)"
+          content_scope: >
+            Consistencia de patrones: BLoC con inyeccion via constructor,
+            handlers privados con prefijo _on, event.map() para manejo exhaustivo,
+            result.when() para errores. Repository Pattern con interfaces abstractas
+            y Result<T>. DI con Factory para BLoCs. Requisitos de testing: 95%+
+            cobertura de BLoC, blocTest helper, provideDummy, Fake vs Mock.
+
+    - name: nextjs-app
+      source_spec: plugins/nextjs-development/agents/frontend-nextjs.md
+      target_repo: voltop-control-tower-front
+      output_dir: context/nextjs-app/
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Architecture Understanding (Two-layer, dependency direction)"
+            - "Folder Structure (module structure, route structure, path aliases)"
+            - "Anti-Patterns (10 patrones prohibidos)"
+            - "Coding Standards (TypeScript rules, naming conventions)"
+          content_scope: >
+            Two-layer Architecture (Domain + Infrastructure). Flujo de datos
+            Component -> Store -> DataAccess -> API. Estructura de modulos
+            (domain/ con entities, dtos, enums, states, consts; infrastructure/
+            con data-access, services, helpers, store, ui). Estructura de rutas
+            App Router. Path aliases. 10 anti-patrones prohibidos.
+            Reglas TypeScript (strict mode, no any, discriminated unions).
+
+        - file: widget_patterns.md
+          source_sections:
+            - "Component Pattern (template, store consumption)"
+            - "Component Guidelines (shadcn/ui, Tailwind cn(), Data Tables, Forms)"
+            - "Page Pattern (App Router, screen components)"
+            - "Custom Hook Pattern (6 secciones internas)"
+          content_scope: >
+            Patron de componentes con 'use client', useTranslations, selectors
+            especificos de store, type narrowing con kind. Shadcn/ui como
+            libreria base. Tailwind con cn() para clases condicionales.
+            Data Tables con TanStack React Table. Forms con React Hook Form + Zod.
+            Patron de paginas (wrappers minimos que importan Screens).
+            Patron de hooks custom (6 secciones: local state, store integration,
+            computed values, side effects, handlers, return object).
+
+        - file: state_management.md
+          source_sections:
+            - "Zustand Store Pattern (template, reglas criticas, reset, cross-store)"
+            - "State Management Rules (cuando usar Zustand, useState, URL state)"
+            - "Discriminated Union States (template, kind field, type narrowing)"
+            - "Either Pattern (ServiceError, ServiceSuccess, fold)"
+            - "DataAccess Pattern (template, reglas)"
+          content_scope: >
+            Zustand stores divididos por concern (~60-100 lineas). DataAccess
+            instanciado a nivel de modulo (fuera del store). State y Actions
+            en interfaces separadas (domain/states/). response.fold() directo
+            en store actions. Boolean loading flags. Cross-store con
+            useOtherStore.getState(). Discriminated Union States con kind field.
+            Either Pattern (ServiceError, ServiceSuccess). DataAccess como clase
+            concreta (no interface en domain). handleRequest<T> para HTTP.
+
+    - name: python-api
+      source_spec: plugins/python-development/agents/backend-py.md
+      target_repo: voltop-api
+      output_dir: context/python-api/
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Architecture Understanding (Hexagonal Architecture, folder structure)"
+            - "SOLID Principles Application"
+            - "Design Patterns Catalog (creacional, estructural, behavioral)"
+            - "Common Pitfalls to Avoid (anti-patrones, errores comunes)"
+            - "Pragmatic Development Principles"
+          content_scope: >
+            Hexagonal Architecture (Ports and Adapters). 3 capas (Domain,
+            Application, Infrastructure). Estructura de carpetas por dominio
+            (bounded context). Principios SOLID aplicados. Catalogo de
+            patrones de diseno (Factory, Adapter, Strategy, Template Method,
+            Observer). Anti-patrones (Fat Interactors, Anemic Domain,
+            Leaky Abstractions, God Objects, Tight Coupling, Over-Engineering).
+            Principios pragmaticos de desarrollo.
+
+        - file: api_patterns.md
+          source_sections:
+            - "Quality Criteria > Security (rutas con autenticacion y autorizacion)"
+            - "DTOs (Data Transfer Objects) (request, response, entity DTOs)"
+            - "Dependency Injection (*_depends.py, factory pattern)"
+            - "Alembic Migrations (database indexing guidelines)"
+            - "Naming conventions para interactors, DTOs, repositories"
+          content_scope: >
+            Rutas seguras con validate_user_token_depends y user_has_permission.
+            DTOs para flujo de datos entre capas (Request, Response, Entity DTOs).
+            Inyeccion de dependencias via *_depends.py con patron Factory.
+            Migraciones Alembic con guias de indexacion de base de datos
+            (cuando crear indices, cuando no, reglas de indices compuestos,
+            limite por tabla). Convenciones de nombrado para interactors
+            ({Action}{Entity}Interactor), DTOs ({Entity}{Purpose}Dto),
+            repositories ({Entity}Repository, Postgres{Entity}Repository).
+
+        - file: state_management.md
+          source_sections:
+            - "Interactor Pattern (Use Cases) (validate-process flow, BaseInteractor)"
+            - "Repository Pattern (Ports) (domain interface, infrastructure adapter)"
+            - "Infrastructure Service Interfaces (Ports)"
+            - "Entity Management (voltop-common-structure, domain vs infrastructure entities)"
+            - "Quality Criteria > Testability (unit tests, integration tests, fixtures)"
+          content_scope: >
+            Patron Interactor con flujo validate -> process. BaseInteractor
+            con run()/run_async(). Repository Pattern con interfaces abstractas
+            en domain/ e implementaciones en infrastructure/. Infrastructure
+            Service Interfaces (ABC para file storage, email, Excel, APIs externas).
+            Gestion de entidades con voltop-common-structure (domain entities
+            vs infrastructure entities SQLAlchemy). Testabilidad: unit tests
+            con mocked repositories, integration tests contra test DB,
+            fixtures pytest, >80% coverage.
+
+    - name: python-library
+      source_spec: plugins/python-development/agents/reviewer-library-py.md
+      target_repo: voltop-common-structure-library
+      output_dir: context/python-library/
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Context: Internal Library Standards (Hexagonal Architecture obligatoria)"
+            - "Architecture & Design (Clean Architecture compliance, SOLID, DDD)"
+          content_scope: >
+            Estandares de librerias internas. Hexagonal Architecture obligatoria.
+            Estructura domain/, application/, infrastructure/. Template de
+            repositorio de la empresa como base. Cumplimiento Clean Architecture
+            (capas, SOLID, DDD). Archivos requeridos (setup.py, README.md,
+            CHANGELOG.md, tests/). Convenciones de nombrado (*_interactor.py,
+            *_repository.py, *_dto.py, OutputContext).
+
+        - file: api_patterns.md
+          source_sections:
+            - "Library API Design (public API surface, type hints, docstrings)"
+            - "Code Quality (Python best practices, error handling, security)"
+            - "Naming conventions (interactors, repositories, DTOs, OutputContext)"
+          content_scope: >
+            Diseno de API publica de libreria. Superficie de API publica
+            con __init__.py y __all__. Type hints completos en metodos publicos.
+            Docstrings con Args/Returns/Raises. Compatibilidad hacia atras
+            con deprecation strategy. Versionado semantico (MAJOR.MINOR.PATCH).
+            Calidad de codigo (Python best practices, error handling con
+            exception chaining, seguridad, performance).
+
+        - file: state_management.md
+          source_sections:
+            - "Testing & Coverage (unit tests, test quality, mocking, edge cases)"
+            - "Layer separation and dependencies"
+            - "Backwards compatibility and interface stability"
+          content_scope: >
+            Testing de librerias: unit tests para toda API publica, >90%
+            coverage en componentes publicos modificados. Mock de dependencias
+            externas. Test isolation. Naming pattern test_should_{expected}_when_{condition}.
+            Separacion de capas y dependencias (domain sin imports de infrastructure).
+            Estabilidad de interfaces y compatibilidad hacia atras.
+
+    - name: python-celery
+      source_spec: plugins/python-development/agents/backend-py.md
+      target_repo: voltop-tasks-server
+      output_dir: context/python-celery/
+      adaptation_notes: >
+        Misma base que python-api (backend-py.md) pero adaptada al contexto
+        de tareas programadas Celery. Se enfatizan patrones de workers,
+        schedulers, retry policies, y manejo de sesiones de DB en contexto
+        de tareas asincronas.
+      files:
+        - file: architecture.md
+          source_sections:
+            - "Architecture Understanding con enfoque en workers y schedulers"
+            - "SOLID Principles Application"
+            - "Design Patterns Catalog"
+            - "Pragmatic Development Principles"
+          content_scope: >
+            Hexagonal Architecture adaptada a Celery workers. Mismas 3 capas
+            pero sin routes/ (las tareas Celery reemplazan endpoints HTTP
+            como punto de entrada). Estructura de carpetas adaptada para
+            definicion de tareas. SOLID aplicado a tareas programadas.
+
+        - file: api_patterns.md
+          source_sections:
+            - "Patrones de definicion de tareas Celery (task registration, retry policies)"
+            - "DTOs para entrada/salida de tareas"
+            - "Manejo de errores en tareas asincronas"
+          content_scope: >
+            Patrones de definicion de tareas Celery (registro, retry policies,
+            timeouts). DTOs para entrada/salida de tareas. Manejo de errores
+            en tareas asincronas (retry con backoff, dead letter queue).
+            Adaptacion de naming conventions del API context al contexto
+            de tareas.
+
+        - file: state_management.md
+          source_sections:
+            - "Patron Interactor aplicado a tareas programadas"
+            - "Repository Pattern para acceso a datos desde workers"
+            - "Manejo de transacciones y sesiones de base de datos en contexto de tareas"
+          content_scope: >
+            Patron Interactor aplicado a tareas Celery. Repository Pattern
+            para acceso a datos desde workers (gestion de sesiones scoped).
+            Manejo de transacciones en contexto de tareas (commit/rollback
+            por tarea). Inyeccion de dependencias en contexto de worker.
+
+dependencies:
+  - agent_specifications: >
+      5 archivos Markdown de especificaciones de agentes en plugins/
+      que sirven como fuente de verdad para el contenido de los archivos de contexto.
+      Son: mobile-flutter.md, reviewer-flutter-app.md, frontend-nextjs.md,
+      backend-py.md, reviewer-library-py.md.
+  - git_repository: >
+      El repositorio claude-agents donde se alojan tanto las specs fuente
+      como los archivos de contexto generados. Los archivos son versionados
+      y auditables via historial de git.
+  - sub_agents_consumers: >
+      Los sub-agentes de Claude Code y Gemini CLI que consumiran los archivos
+      de contexto mediante referencia directa por ruta de archivo. No hay
+      integracion programatica, solo lectura de archivos Markdown.
+
+constraints:
+  - total_files: 18 archivos de contexto (6 stacks x 3 archivos por stack)
+  - file_format: Markdown (.md) exclusivamente
+  - content_language: Ingles tecnico (consistente con las specs fuente)
+  - content_source: Extraido y destilado de specs existentes, nunca inventado
+  - file_autonomy: Cada archivo debe ser comprensible sin leer la spec completa del agente
+  - no_executable_code: Los archivos documentan patrones, nunca contienen codigo ejecutable como entregable final
+  - directory_structure: context/{stack-name}/ en la raiz del repositorio
+
+implementation_phases:
+  - phase: "1 - Foundation"
+    description: >
+      Crear la estructura de directorios base y generar los archivos
+      de contexto para los stacks principales (flutter-app y python-api)
+      que representan los dos arquetipos mas completos (frontend y backend).
+    tasks:
+      - Crear los 6 directorios bajo context/
+      - Generar context/flutter-app/architecture.md
+      - Generar context/flutter-app/widget_patterns.md
+      - Generar context/flutter-app/state_management.md
+      - Generar context/python-api/architecture.md
+      - Generar context/python-api/api_patterns.md
+      - Generar context/python-api/state_management.md
+    deliverables: 6 archivos de contexto + 6 directorios creados
+    estimated_duration:
+      optimistic: 2 dias
+      probable: 3 dias
+      pessimistic: 5 dias
+
+  - phase: "2 - Frontend Stacks"
+    description: >
+      Generar los archivos de contexto para los stacks frontend restantes
+      (flutter-library y nextjs-app). Estos reutilizan patrones similares
+      a flutter-app pero con fuentes y enfoques distintos.
+    depends_on:
+      - "1 - Foundation"
+    tasks:
+      - Generar context/flutter-library/architecture.md
+      - Generar context/flutter-library/widget_patterns.md
+      - Generar context/flutter-library/state_management.md
+      - Generar context/nextjs-app/architecture.md
+      - Generar context/nextjs-app/widget_patterns.md
+      - Generar context/nextjs-app/state_management.md
+    deliverables: 6 archivos de contexto adicionales
+    estimated_duration:
+      optimistic: 2 dias
+      probable: 3 dias
+      pessimistic: 4 dias
+
+  - phase: "3 - Backend Stacks"
+    description: >
+      Generar los archivos de contexto para los stacks backend restantes
+      (python-library y python-celery). python-library usa reviewer-library-py.md
+      como fuente. python-celery adapta backend-py.md al contexto de tareas Celery.
+    depends_on:
+      - "1 - Foundation"
+    tasks:
+      - Generar context/python-library/architecture.md
+      - Generar context/python-library/api_patterns.md
+      - Generar context/python-library/state_management.md
+      - Generar context/python-celery/architecture.md
+      - Generar context/python-celery/api_patterns.md
+      - Generar context/python-celery/state_management.md
+    deliverables: 6 archivos de contexto adicionales
+    estimated_duration:
+      optimistic: 2 dias
+      probable: 3 dias
+      pessimistic: 5 dias
+
+  - phase: "4 - Validation and Review"
+    description: >
+      Revision cruzada de los 18 archivos para verificar autonomia,
+      completitud, consistencia de formato y ausencia de contenido inventado.
+      Validar que cada archivo es comprensible sin la spec fuente.
+    depends_on:
+      - "2 - Frontend Stacks"
+      - "3 - Backend Stacks"
+    tasks:
+      - Revisar autonomia de cada archivo (legible sin la spec completa)
+      - Verificar que no hay contenido inventado (todo trazable a la spec fuente)
+      - Validar consistencia de formato entre los 18 archivos
+      - Verificar estructura de directorios (6 stacks x 3 archivos)
+      - Validar que los stacks Python usan api_patterns.md y no widget_patterns.md
+      - Review por pares (al menos 1 revisor adicional)
+    deliverables: 18 archivos validados y listos para merge
+    estimated_duration:
+      optimistic: 1 dia
+      probable: 2 dias
+      pessimistic: 3 dias
+
+  total_estimated_duration:
+    optimistic: 5 dias
+    probable: 8 dias
+    pessimistic: 13 dias
+    notes: >
+      Las fases 2 y 3 pueden ejecutarse en paralelo ya que no tienen
+      dependencias entre si. Esto reduce el probable a 6 dias si se
+      paralelizan. La fase 4 es secuencial y requiere que las 3 fases
+      previas esten completas.
+
+risks:
+  - risk: Contenido de la spec fuente insuficiente para generar un archivo de contexto autonomo
+    probability: Low
+    impact: Medium
+    mitigation: >
+      El mapeo de secciones del product.yaml es detallado y cubre las secciones
+      principales de cada spec. Si alguna seccion resulta insuficiente, se puede
+      complementar con informacion del repositorio fuente del proyecto (acceso
+      opcional segun el product.yaml).
+
+  - risk: El stack python-celery requiere adaptaciones significativas respecto a backend-py.md
+    probability: Medium
+    impact: Medium
+    mitigation: >
+      backend-py.md es la fuente para python-celery pero no contiene secciones
+      especificas de Celery. Se debe adaptar el contenido al contexto de tareas
+      programadas, enfatizando diferencias en punto de entrada (task vs endpoint),
+      manejo de sesiones y retry policies. Si la adaptacion es excesiva,
+      consultar con el equipo de backend para validar patrones Celery reales.
+
+  - risk: Los archivos de contexto se desactualizan respecto a las specs fuente
+    probability: Medium
+    impact: High
+    mitigation: >
+      Agregar un proceso de revision periodica (trimestral) donde se compara
+      el contenido de los archivos de contexto contra las specs fuente.
+      Opcionalmente, agregar un workflow de CI que detecte cambios en las specs
+      fuente y genere un reminder para actualizar los archivos de contexto.
+
+  - risk: Los sub-agentes no referencian correctamente los archivos de contexto
+    probability: Low
+    impact: Low
+    mitigation: >
+      Documentar en cada plugin README.md la ruta de los archivos de contexto
+      disponibles para cada stack. Incluir instrucciones de referencia en las
+      specs de los agentes que consumen contexto.
+
+  - risk: Inconsistencia de formato entre archivos de diferentes stacks
+    probability: Low
+    impact: Low
+    mitigation: >
+      Definir un template base para cada tipo de archivo (architecture.md,
+      widget_patterns.md/api_patterns.md, state_management.md) y aplicarlo
+      consistentemente en la fase de generacion.
+
+output_file_templates:
+  architecture_md:
+    description: >
+      Template base para architecture.md en todos los stacks.
+      Secciones comunes: Overview, Layers, Folder Structure, Dependency Flow,
+      Key Decisions, Anti-Patterns, Naming Conventions.
+    sections:
+      - "# Architecture Overview"
+      - "## Architectural Pattern"
+      - "## Layer Structure"
+      - "## Folder Structure"
+      - "## Dependency Flow"
+      - "## Key Architectural Decisions"
+      - "## Anti-Patterns (Forbidden)"
+      - "## Naming Conventions"
+      - "## Development Principles"
+
+  widget_patterns_md:
+    description: >
+      Template base para widget_patterns.md en stacks Flutter y Next.js.
+      Secciones comunes: Component System, Component Categories, Resolution Flow,
+      Rules and Constraints.
+    sections:
+      - "# UI Component Patterns"
+      - "## Component Architecture"
+      - "## Component Categories"
+      - "## Component Resolution Flow"
+      - "## Component Templates"
+      - "## Rules and Constraints"
+
+  api_patterns_md:
+    description: >
+      Template base para api_patterns.md en stacks Python.
+      Secciones comunes: API Design, DTOs, Dependency Injection,
+      Security, Database, Naming Conventions.
+    sections:
+      - "# API Patterns"
+      - "## Endpoint Design"
+      - "## DTOs (Data Transfer Objects)"
+      - "## Dependency Injection"
+      - "## Security (Authentication & Authorization)"
+      - "## Database Patterns"
+      - "## Naming Conventions"
+
+  state_management_md:
+    description: >
+      Template base para state_management.md en todos los stacks.
+      Secciones comunes: State Pattern, Data Flow, Error Handling,
+      Dependency Injection, Testing Strategy.
+    sections:
+      - "# State Management"
+      - "## State Pattern"
+      - "## Data Flow"
+      - "## Error Handling"
+      - "## Dependency Injection"
+      - "## Testing Strategy"
+
+validation_criteria:
+  per_file:
+    - El archivo es comprensible sin leer la especificacion completa del agente fuente
+    - El contenido es trazable a secciones de la spec fuente (no inventado)
+    - El formato es Markdown valido con estructura de navegacion (headings jerarquicos)
+    - El idioma es ingles tecnico consistente
+    - No contiene instrucciones dirigidas al agente ("you MUST", "NEVER do")
+    - No contiene codigo ejecutable como entregable final (solo ejemplos documentales)
+    - El archivo tiene entre 100 y 500 lineas (suficiente para ser util, no excesivo)
+  per_stack:
+    - El stack tiene exactamente 3 archivos en su directorio
+    - Los stacks Flutter y Next.js tienen architecture.md, widget_patterns.md, state_management.md
+    - Los stacks Python tienen architecture.md, api_patterns.md, state_management.md
+  global:
+    - Se generan exactamente 18 archivos de contexto en total
+    - La estructura de directorios es context/{nombre_del_stack}/ con 6 stacks
+    - Todos los archivos estan versionados en git
+    - El formato y tono es consistente entre los 18 archivos

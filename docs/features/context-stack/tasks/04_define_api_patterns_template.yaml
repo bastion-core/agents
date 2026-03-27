@@ -1,0 +1,37 @@
+# Phase 0 - Preparation
+task: define_api_patterns_md_template
+id: TASK-004
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "0 - Preparation"
+depends_on: []
+
+scope: |
+  Define the canonical section structure for api_patterns.md files based on the
+  output_file_templates.api_patterns_md section in technical.yaml. This template
+  applies to Python stacks only (python-api, python-library, python-celery).
+
+  Required sections (in order):
+    1. "# API Patterns"
+    2. "## Endpoint Design"
+    3. "## DTOs (Data Transfer Objects)"
+    4. "## Dependency Injection"
+    5. "## Security (Authentication & Authorization)"
+    6. "## Database Patterns"
+    7. "## Naming Conventions"
+
+  This is an internal reference document for consistency across the 3 Python stacks.
+
+stack: python-api, python-library, python-celery
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Template defines all 7 sections from technical.yaml output_file_templates.api_patterns_md
+  - Template is clearly scoped to Python stacks only
+  - Template is documented and available for reference during content extraction tasks
+
+context_files:
+  - docs/features/context-stack/technical.yaml

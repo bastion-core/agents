@@ -1,0 +1,68 @@
+# Phase 3 - Backend Stacks (python-celery stack)
+# NOTE: python-celery depends on python-api context files as a reference baseline
+task: extract_python_celery_architecture
+id: TASK-022
+level: L3
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-009
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-celery/architecture.md.
+
+  IMPORTANT: This stack uses the SAME source spec as python-api (backend-py.md)
+  but must be ADAPTED for the Celery task server context. Per the technical.yaml
+  adaptation_notes, the content emphasizes workers, schedulers, and replaces HTTP
+  endpoint entry points with Celery task definitions.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Architecture Understanding" adapted for workers and schedulers
+    - "SOLID Principles Application"
+    - "Design Patterns Catalog"
+    - "Pragmatic Development Principles"
+
+  Adaptation rules (in addition to standard transformation):
+    - Replace references to "routes" and "endpoints" with "task definitions"
+    - Celery tasks replace HTTP endpoints as the entry point to the application
+    - Emphasize worker and scheduler context
+    - Folder structure adapted: no routes/ directory; tasks/ directory instead
+    - Preserve Hexagonal Architecture, SOLID, and design patterns (they apply equally)
+
+  Content scope: Hexagonal Architecture adapted to Celery workers. Same 3 layers
+  but without routes/ (Celery tasks replace HTTP endpoints as entry point). Folder
+  structure adapted for task definitions. SOLID applied to scheduled tasks.
+
+  RISK: backend-py.md does not contain Celery-specific sections. This task requires
+  more adaptation than other extraction tasks. Refer to context/python-api/architecture.md
+  (TASK-009) as a baseline and adapt for the Celery context.
+
+stack: python-celery
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-celery/architecture.md
+
+estimated_effort: large
+
+acceptance:
+  - File exists at context/python-celery/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Hexagonal Architecture is documented with Celery worker adaptations
+  - Entry point is clearly documented as Celery tasks (not HTTP endpoints)
+  - Folder structure reflects tasks/ instead of routes/
+  - SOLID principles are applied to the Celery context
+  - Content is adapted from backend-py.md (not copied verbatim from python-api)
+  - The distinction from python-api/architecture.md is clear
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - context/python-api/architecture.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

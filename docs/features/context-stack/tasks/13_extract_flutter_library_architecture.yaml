@@ -1,0 +1,51 @@
+# Phase 2 - Frontend Stacks (flutter-library stack)
+task: extract_flutter_library_architecture
+id: TASK-013
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/reviewer-flutter-app.md
+  and extract content for context/flutter-library/architecture.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Project Architecture Overview" (Clean Architecture, 3 layers, Feature-First)
+    - "Expected Directory Structure"
+    - "ARCHITECTURE COMPLIANCE" (complete checklist)
+
+  Transformation rules: Convert imperative to declarative, preserve technical details,
+  add template headings from TASK-002.
+
+  Content scope: Clean Architecture with Feature-First organization. 3 layers
+  (Domain, Infrastructure, Presentation). Project location validation (repository root).
+  Expected directory structure. Architecture compliance checklist (layers, feature
+  organization, dependency flow, BLoC organization).
+
+stack: flutter-library
+source_file: plugins/flutter-development/agents/reviewer-flutter-app.md
+
+files_to_create:
+  - context/flutter-library/architecture.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-library/architecture.md
+  - Contains all 9 sections from the architecture.md template
+  - Clean Architecture with Feature-First organization is documented
+  - 3 layers are documented (Domain, Infrastructure, Presentation)
+  - Directory structure is included
+  - Architecture compliance checklist is documented
+  - Content traces back to reviewer-flutter-app.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/reviewer-flutter-app.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

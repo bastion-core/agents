@@ -1,0 +1,51 @@
+# Phase 2 - Frontend Stacks (flutter-library stack)
+task: extract_flutter_library_widget_patterns
+id: TASK-014
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Frontend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/reviewer-flutter-app.md
+  and extract content for context/flutter-library/widget_patterns.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "PROJECT UI LIBRARY" (3-layer component architecture)
+    - "Component Library Architecture" (flutter_components_library, project wrappers)
+    - "Centralized UI Components" (checklist)
+
+  Transformation rules: Convert imperative to declarative, preserve component names,
+  add template headings from TASK-003.
+
+  Content scope: 3-layer component architecture (Base Library, Project Wrappers,
+  Feature UI). flutter_components_library as mandatory base library. Project wrapper
+  pattern ({Project}Button, {Project}Text, etc.). Centralized UI components checklist.
+  Import rules (never import base library directly in features).
+
+stack: flutter-library
+source_file: plugins/flutter-development/agents/reviewer-flutter-app.md
+
+files_to_create:
+  - context/flutter-library/widget_patterns.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-library/widget_patterns.md
+  - Contains all 6 sections from the widget_patterns.md template
+  - 3-layer component architecture is documented
+  - flutter_components_library is referenced as base library
+  - Project wrapper pattern is described
+  - Import rules are documented
+  - Content traces back to reviewer-flutter-app.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/reviewer-flutter-app.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

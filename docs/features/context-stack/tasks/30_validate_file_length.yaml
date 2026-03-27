@@ -1,0 +1,35 @@
+# Phase 4 - Validation and Review
+task: validate_file_length_constraints
+id: TASK-030
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-025
+
+scope: |
+  Per the validation_criteria.per_file in technical.yaml, each context file
+  must be between 100 and 500 lines. This ensures files are substantial enough
+  to be useful but not so long that they recreate the "load everything" problem
+  the feature aims to solve.
+
+  For each of the 18 files:
+    - Count total lines
+    - Flag files under 100 lines (too short to be useful)
+    - Flag files over 500 lines (too long, defeats purpose of lightweight context)
+    - Document line count for each file
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - All 18 files have been measured for line count
+  - All files are between 100 and 500 lines
+  - Files outside the range are flagged with specific corrective action
+  - Line count summary is documented
+
+context_files:
+  - docs/features/context-stack/technical.yaml

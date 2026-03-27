@@ -1,0 +1,53 @@
+# Phase 3 - Backend Stacks (python-library stack)
+task: extract_python_library_api_patterns
+id: TASK-020
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/reviewer-library-py.md
+  and extract content for context/python-library/api_patterns.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "Library API Design" (public API surface, type hints, docstrings)
+    - "Code Quality" (Python best practices, error handling, security)
+    - "Naming conventions" (interactors, repositories, DTOs, OutputContext)
+
+  Transformation rules: Convert imperative to declarative, preserve API design
+  details, add template headings from TASK-004.
+
+  Content scope: Library public API design. Public API surface with __init__.py
+  and __all__. Complete type hints on public methods. Docstrings with
+  Args/Returns/Raises. Backwards compatibility with deprecation strategy.
+  Semantic versioning (MAJOR.MINOR.PATCH). Code quality (Python best practices,
+  error handling with exception chaining, security, performance).
+
+stack: python-library
+source_file: plugins/python-development/agents/reviewer-library-py.md
+
+files_to_create:
+  - context/python-library/api_patterns.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/python-library/api_patterns.md
+  - Contains all 7 sections from the api_patterns.md template
+  - Public API surface design is documented (__init__.py, __all__)
+  - Type hints requirements are described
+  - Docstring conventions (Args/Returns/Raises) are included
+  - Backwards compatibility and deprecation strategy are documented
+  - Semantic versioning rules are described
+  - Content traces back to reviewer-library-py.md
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/reviewer-library-py.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

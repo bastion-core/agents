@@ -1,0 +1,55 @@
+# Phase 4 - Validation and Review
+task: validate_autonomy_all_files
+id: TASK-025
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "4 - Validation and Review"
+depends_on:
+  - TASK-013
+  - TASK-014
+  - TASK-015
+  - TASK-016
+  - TASK-017
+  - TASK-018
+  - TASK-019
+  - TASK-020
+  - TASK-021
+  - TASK-022
+  - TASK-023
+  - TASK-024
+
+scope: |
+  Review every context file individually to verify it is comprehensible and
+  useful without needing to read the full source agent specification.
+
+  For each file, verify:
+    - A developer unfamiliar with the agent spec can understand the architecture,
+      patterns, or state management approach by reading only this file
+    - The file does not reference "see the agent spec for details" or similar
+    - The file contains sufficient context (library names, pattern details,
+      structural examples) to be actionable
+    - The file does not assume prior knowledge of the agent spec structure
+
+  Files to validate (18 total):
+    - context/flutter-app/{architecture,widget_patterns,state_management}.md
+    - context/flutter-library/{architecture,widget_patterns,state_management}.md
+    - context/nextjs-app/{architecture,widget_patterns,state_management}.md
+    - context/python-api/{architecture,api_patterns,state_management}.md
+    - context/python-library/{architecture,api_patterns,state_management}.md
+    - context/python-celery/{architecture,api_patterns,state_management}.md
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: medium
+
+acceptance:
+  - All 18 files have been individually reviewed for autonomy
+  - No file requires the source agent spec to be understood
+  - No file references "see the agent spec" or equivalent
+  - Each file contains actionable technical content
+  - Issues found are documented with file path and specific concern
+
+context_files:
+  - docs/features/context-stack/technical.yaml

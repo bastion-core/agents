@@ -1,0 +1,61 @@
+# Phase 1 - Foundation (flutter-app stack)
+task: extract_flutter_app_state_management
+id: TASK-008
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-005
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/mobile-flutter.md
+  and extract content for context/flutter-app/state_management.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "State Management" (BLoC + Freezed, conventions, Event/State/BLoC templates)
+    - "Helper Pattern for Complex BLoCs"
+    - "BLoC UI Consumption" (BlocBuilder, BlocConsumer, BlocListener)
+    - "Dependency Injection" (get_it, registration types, feature registration)
+    - "Networking and Error Handling" (Result<T>, RequestError)
+    - "Global vs Local BLoC Providers"
+
+  Transformation rules to apply:
+    - Convert agent templates to documentary reference examples
+    - Preserve BLoC, Freezed, get_it pattern details
+    - Document DI registration types (registerFactory for BLoCs, registerLazySingleton for services)
+    - Include Result<T> and RequestError patterns
+    - Add structural headings per state_management.md template (TASK-005)
+
+  Content scope: BLoC with Freezed sealed unions. Event and State conventions.
+  Event/State/BLoC templates. Helper pattern for complex BLoCs. UI consumption
+  (BlocBuilder, BlocConsumer, BlocListener). DI with get_it. Error handling with
+  Result<T> and RequestError. Global vs local providers.
+
+stack: flutter-app
+source_file: plugins/flutter-development/agents/mobile-flutter.md
+
+files_to_create:
+  - context/flutter-app/state_management.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-app/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - BLoC + Freezed pattern is fully documented
+  - Event, State, and BLoC templates are included as reference examples
+  - Helper pattern for complex BLoCs is documented
+  - UI consumption patterns (BlocBuilder, BlocConsumer, BlocListener) are documented
+  - DI with get_it is documented (registerFactory vs registerLazySingleton)
+  - Result<T> and RequestError error handling patterns are documented
+  - Global vs local BLoC providers distinction is documented
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/mobile-flutter.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

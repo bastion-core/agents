@@ -1,0 +1,55 @@
+# Phase 1 - Foundation (flutter-app stack)
+task: extract_flutter_app_widget_patterns
+id: TASK-007
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+  - TASK-003
+
+scope: |
+  Read the source agent spec at plugins/flutter-development/agents/mobile-flutter.md
+  and extract content for context/flutter-app/widget_patterns.md.
+
+  Source sections to extract (per product.yaml mapping):
+    - "UI Components" (discovery rule, component resolution flow, expected structure)
+    - "Reference Example (Voltop Charging App)" (VoltopButton, VoltopText, etc.)
+    - "UI Component Rules"
+
+  Transformation rules to apply:
+    - Convert imperative instructions to declarative documentation
+    - Preserve component names (VoltopButton, VoltopText, etc.)
+    - Document the component resolution flow (project -> library -> Flutter raw)
+    - Preserve component categories (Buttons, Typography, Inputs, Feedback, Overlays, Colors, Icons)
+    - Add structural headings per widget_patterns.md template (TASK-003)
+
+  Content scope: UI abstraction layer. Mandatory discovery rule. Component resolution
+  flow (project -> library -> Flutter raw). Expected component structure by category.
+  Voltop reference components. Rules (never raw widgets, never inline colors).
+
+stack: flutter-app
+source_file: plugins/flutter-development/agents/mobile-flutter.md
+
+files_to_create:
+  - context/flutter-app/widget_patterns.md
+
+estimated_effort: medium
+
+acceptance:
+  - File exists at context/flutter-app/widget_patterns.md
+  - Contains all 6 sections from the widget_patterns.md template
+  - Component resolution flow is documented (project -> library -> Flutter raw)
+  - All component categories are listed (Buttons, Typography, Inputs, Feedback, Overlays, Colors, Icons)
+  - Voltop reference components are mentioned
+  - Discovery rule is documented
+  - No imperative agent instructions remain
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/flutter-development/agents/mobile-flutter.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

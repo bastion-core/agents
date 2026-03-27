@@ -1,0 +1,62 @@
+# Phase 3 - Backend Stacks (python-celery stack)
+task: extract_python_celery_state_management
+id: TASK-024
+level: L3
+parent: technical.yaml
+status: PENDING
+phase: "3 - Backend Stacks"
+depends_on:
+  - TASK-011
+  - TASK-012
+
+scope: |
+  Read the source agent spec at plugins/python-development/agents/backend-py.md
+  and extract content for context/python-celery/state_management.md.
+
+  IMPORTANT: This file adapts state management patterns to the Celery worker context.
+
+  Source sections to extract (per product.yaml mapping):
+    - Interactor Pattern applied to scheduled tasks
+    - Repository Pattern for data access from workers
+    - Transaction and database session management in task context
+
+  Adaptation rules (in addition to standard transformation):
+    - Adapt Interactor pattern from request-response to task execution
+    - Document scoped session management for workers (not request-scoped)
+    - Document transaction management per task (commit/rollback per task)
+    - Adapt DI from FastAPI Depends to worker-context DI
+    - Preserve Repository Pattern (applies equally)
+
+  Content scope: Interactor pattern applied to Celery tasks. Repository Pattern
+  for data access from workers (scoped sessions). Transaction management in task
+  context (commit/rollback per task). DI in worker context.
+
+  RISK: Same caveat as TASK-022 and TASK-023 regarding Celery-specific adaptation.
+  Refer to context/python-api/state_management.md (TASK-011) as baseline.
+
+stack: python-celery
+source_file: plugins/python-development/agents/backend-py.md
+
+files_to_create:
+  - context/python-celery/state_management.md
+
+estimated_effort: large
+
+acceptance:
+  - File exists at context/python-celery/state_management.md
+  - Contains all 6 sections from the state_management.md template
+  - Interactor pattern adapted for Celery task execution is documented
+  - Repository Pattern for worker data access is described
+  - Scoped session management (not request-scoped) is documented
+  - Transaction management per task (commit/rollback) is described
+  - DI in worker context is documented
+  - Content is architecturally consistent with python-api stack patterns
+  - File is between 100 and 500 lines
+  - File is self-contained
+  - Language is English (technical)
+
+context_files:
+  - plugins/python-development/agents/backend-py.md
+  - context/python-api/state_management.md
+  - docs/features/context-stack/product.yaml
+  - docs/features/context-stack/technical.yaml

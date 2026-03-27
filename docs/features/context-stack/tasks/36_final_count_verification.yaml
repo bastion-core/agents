@@ -1,0 +1,41 @@
+# Phase 5 - Finalization
+task: final_count_verification
+id: TASK-036
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "5 - Finalization"
+depends_on:
+  - TASK-035
+
+scope: |
+  Run a final automated check to verify the exact counts match the
+  product.yaml requirements.
+
+  Checks to perform:
+    - find context/ -name "*.md" | wc -l == 18
+    - ls context/ | wc -l == 6 (directories only)
+    - Each directory has exactly 3 files:
+      - flutter-app: 3 files
+      - flutter-library: 3 files
+      - nextjs-app: 3 files
+      - python-api: 3 files
+      - python-library: 3 files
+      - python-celery: 3 files
+
+  This is the final acceptance gate before the feature is considered complete.
+
+stack: all
+source_file: null
+files_to_create: []
+estimated_effort: small
+
+acceptance:
+  - Exactly 18 .md files exist under context/
+  - Exactly 6 directories exist under context/
+  - Each directory has exactly 3 .md files
+  - File names match the expected names per stack type
+  - All files are tracked by git (not ignored)
+
+context_files:
+  - docs/features/context-stack/product.yaml
