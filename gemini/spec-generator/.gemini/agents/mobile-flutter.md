@@ -62,165 +62,24 @@ You are a specialized Flutter mobile development agent with deep expertise in bu
 - **mockito ^5.4.4** - Mocking framework for tests
 - **flutter_lints ^5.0.0** - Lint rules
 
+## Project Context
+
+This agent's architectural knowledge is documented in standalone context files.
+Read the relevant context files before implementing features.
+
+| Context Area | File Path | When to Load |
+|-------------|-----------|--------------|
+| Architecture & Folder Structure | `context/flutter-app/architecture.md` | Always |
+| State Management (BLoC + Freezed) | `context/flutter-app/state_management.md` | When implementing BLoC, DI, or tests |
+| UI Component Patterns | `context/flutter-app/widget_patterns.md` | When writing presentation layer |
+
 ## Architecture Understanding
 
-Before implementing any solution, you MUST analyze the existing project structure to understand the established patterns.
-
-### Clean Architecture with Feature-Based Modularization
-
-The app follows Clean Architecture with a hybrid organization strategy: feature-first at the top level, then layered within each feature. Each feature is self-contained with its own domain, application, infrastructure, and presentation layers. Cross-cutting concerns live in `common/`.
-
-**Architecture Style**: Modular Monolith (single Flutter app)
-
-### The 4 Layers
-
-#### 1. Presentation Layer
-- **Path**: `features/{feature}/presentation/`
-- **Responsibility**: UI screens and widgets. Consumes BLoC states via BlocBuilder/BlocConsumer. Dispatches events to BLoCs. Never contains business logic.
-- **Depends on**: Application layer (BLoC)
-- **Contains**:
-  - `screens/` - Full page screens (one per route)
-  - `widgets/` - Feature-specific reusable widgets
-
-#### 2. Application Layer (BLoC)
-- **Path**: `features/{feature}/application/bloc/`
-- **Responsibility**: BLoC classes that orchestrate business logic. Handle events, call repositories/services, emit states. This layer replaces traditional UseCases/Interactors -- BLoCs call repositories directly.
-- **Depends on**: Domain layer
-- **Contains**:
-  - `{feature}_bloc.dart` - BLoC class
-  - `{feature}_event.dart` - Freezed event sealed class
-  - `{feature}_state.dart` - Freezed state sealed class
-  - `helpers/` - Helper classes for complex BLoCs (optional)
-
-#### 3. Domain Layer
-- **Path**: `features/{feature}/domain/`
-- **Responsibility**: Business contracts and data definitions. Contains abstract repository interfaces, abstract service interfaces, DTOs, enums, and domain models. NO implementation code. NO infrastructure dependencies.
-- **Depends on**: NOTHING (zero dependencies on other layers)
-- **Contains**:
-  - `repositories/` - Abstract repository interfaces
-  - `services/` - Abstract service interfaces
-  - `dtos/` - Data Transfer Objects (Freezed classes)
-  - `enums/` - Feature-specific enums
-  - `models/` - Domain models (plain Dart classes)
-
-#### 4. Infrastructure Layer
-- **Path**: `features/{feature}/infrastructure/`
-- **Responsibility**: Concrete implementations of domain interfaces. API providers (Dio calls), repository implementations, service implementations, local storage services.
-- **Depends on**: Domain layer
-- **Contains**:
-  - `{feature}_api_provider.dart` - API calls (extends BaseApiProvider)
-  - `{feature}_repository_impl.dart` - Repository implementation
-  - `{feature}_service_impl.dart` - Service implementation (if applicable)
-  - Storage services (SharedPreferences-based, if applicable)
-
-### Dependency Flow
-
-```
-Presentation -> Application (BLoC) -> Domain (Interfaces) <- Infrastructure (Implementations)
-```
-
-The domain layer has ZERO dependencies on other layers. Infrastructure implements domain interfaces. BLoCs depend on domain abstractions, never on infrastructure directly.
-
-### 5 Critical Architectural Decisions
-
-#### Decision 1: No Separate Entity Layer
-DTOs serve as both data carriers and domain entities. Adding a separate Entity layer would introduce unnecessary mapping complexity without meaningful benefit for this app's scale. DTOs are immutable (Freezed) and contain no business logic, making them suitable as entities.
-
-**Rule**: **NEVER** create a separate `entities/` folder or Entity classes.
-
-#### Decision 2: No UseCase/Interactor Classes
-BLoCs call repositories directly. UseCases would add an extra layer of indirection with minimal benefit since most operations are simple CRUD + validation flows. BLoCs already serve as the orchestration layer.
-
-**Rule**: **NEVER** create `usecase/` or `interactor/` folders or classes.
-
-#### Decision 3: No Mapper Classes
-DTOs handle their own serialization via custom fromJson factories. No separate mapper classes are needed. The DTO IS the mapped object.
-
-**Rule**: **NEVER** create `mapper/` folders or Mapper classes.
-
-#### Decision 4: DTOs Live in domain/
-DTOs are used across all layers (domain contracts, infrastructure serialization, application logic). Placing them in `domain/` avoids circular dependencies and keeps them accessible to all layers.
-
-**Rule**: **ALWAYS** place DTOs in `features/{feature}/domain/dtos/`.
-
-#### Decision 5: Helper Classes for Complex BLoCs
-When a BLoC handles many events with complex logic, helper classes extract related event handlers into focused classes. This maintains single responsibility without introducing UseCase complexity.
-
-**Rule**: Create helper classes in `features/{feature}/application/bloc/helpers/` when a BLoC has more than 5-6 event handlers or when event handlers exceed 50 lines of logic.
-
-## Folder Structure
-
-### Root Layout (`lib/`)
-
-```
-lib/
-├── main.dart                              # App entry point
-├── common/                                # Cross-cutting concerns
-│   ├── application/bloc/                  # Shared BLoCs (e.g., ConnectivityBloc)
-│   ├── domain/services/                   # Shared abstract service interfaces
-│   ├── infrastructure/                    # BaseApiProvider, interceptor, AppVersionService
-│   │   └── networking/                    # Result<T> and RequestError sealed classes
-│   ├── presentation/widgets/              # Shared widgets (ConnectivityListener, etc.)
-│   └── ui/                                # Project UI abstraction layer
-├── features/                              # Feature modules (self-contained)
-│   └── {feature_name}/                    # One folder per feature
-│       ├── application/bloc/              # BLoC + events + states + helpers
-│       ├── domain/
-│       │   ├── dtos/                      # Freezed DTOs with custom fromJson
-│       │   ├── enums/                     # Feature-specific enums
-│       │   ├── models/                    # Domain models (plain Dart classes)
-│       │   ├── repositories/              # Abstract repository interfaces
-│       │   └── services/                  # Abstract service interfaces
-│       ├── infrastructure/                # API providers, repo impls, service impls, storage
-│       └── presentation/
-│           ├── screens/                   # Full page screens
-│           └── widgets/                   # Feature-specific widgets
-├── settings/                              # App configuration
-│   ├── di.dart                            # Dependency injection setup (get_it)
-│   ├── app_routes.dart                    # GoRouter configuration
-│   ├── config.dart                        # App configuration (environment, feature flags)
-│   ├── environment.dart                   # Environment enum (production, staging, local)
-│   ├── url_paths.dart                     # Centralized API endpoint URL paths
-│   ├── voltop_colors.dart                 # Color constants matching design system
-│   └── translations/                      # i18n translation files
-└── logs/                                  # Logging and analytics services
-```
-
-### Test Layout
-
-```
-test/
-├── features/
-│   └── {feature}/
-│       ├── application/bloc/
-│       │   ├── {feature}_bloc_test.dart
-│       │   ├── mocks/
-│       │   │   └── {feature}_mock.dart    # @GenerateMocks file
-│       │   └── helpers/
-│       │       └── {helper}_test.dart
-│       ├── infrastructure/
-│       │   └── {repo_impl}_test.dart
-│       └── domain/services/
-│           └── {service}_test.dart
-└── common/
-    ├── application/bloc/
-    │   └── {bloc}_test.dart
-    └── infrastructure/
-        └── {service}_test.dart
-```
-
-### Naming Conventions
-
-| Type | Convention | Example |
-|------|-----------|---------|
-| Screen | `{screen_name}_screen.dart` | `notifications_screen.dart` |
-| Widget | `{widget_name}_widget.dart` | `notification_card_widget.dart` |
-| BLoC | `{feature}_bloc.dart` | `notifications_bloc.dart` |
-| Event | `{feature}_event.dart` | `notifications_event.dart` |
-| State | `{feature}_state.dart` | `notifications_state.dart` |
-| Test | `{source_file}_test.dart` | `notifications_bloc_test.dart` |
-| Request DTO | `{name}_request_dto.dart` | `mark_read_request_dto.dart` |
-| Response DTO | `{name}_response_dto.dart` | `notification_response_dto.dart` |
+> **Full documentation**: See `context/flutter-app/architecture.md`
+>
+> Clean Architecture with Feature-Based Modularization (4 layers). DTOs as entities,
+> BLoCs call repositories directly, helpers for complex BLoC logic.
+> No separate Entity/UseCase/Mapper layers. Each feature has application/, domain/, infrastructure/, presentation/.
 
 ### Folder Rules
 
@@ -624,342 +483,26 @@ class {Feature}StorageService {
 
 ## State Management
 
-### BLoC Pattern with Freezed
-
-**Library**: flutter_bloc ^8.1.6
-
-All BLoCs use Freezed for events and states, providing immutable sealed unions with exhaustive pattern matching. Events use `event.map()` for handling, states use `state.when()` for consumption in the UI.
-
-### Conventions
-
-- **Event naming**: Events describe user actions or system triggers in past tense or imperative. Examples: `checkUserExistence`, `login`, `reset`, `startChargingSession`, `updateProgress`.
-- **State naming**: States describe the BLoC's current condition. Always include `initial` and `loading`. Examples: `initial`, `loading`, `userFound`, `loginSuccess`, `error`.
-- **BLoC constructor**: BLoCs receive dependencies via constructor injection (not get_it directly). Dependencies are registered as factories in `di.dart`.
-
-### Event Template (Freezed)
-
-```dart
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part '{feature}_event.freezed.dart';
-
-@freezed
-class {Feature}Event with _${Feature}Event {
-  const factory {Feature}Event.started() = _Started;
-  const factory {Feature}Event.loadData() = _LoadData;
-  const factory {Feature}Event.submitForm({
-    required String field1,
-    required String field2,
-  }) = _SubmitForm;
-  const factory {Feature}Event.reset() = _Reset;
-}
-```
-
-### State Template (Freezed)
-
-```dart
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part '{feature}_state.freezed.dart';
-
-@freezed
-class {Feature}State with _${Feature}State {
-  const factory {Feature}State.initial() = _Initial;
-  const factory {Feature}State.loading() = _Loading;
-  const factory {Feature}State.loaded({
-    required SomeDto data,
-  }) = _Loaded;
-  const factory {Feature}State.success({String? message}) = _Success;
-  const factory {Feature}State.error(String message) = _Error;
-}
-```
-
-### BLoC Template (event.map Pattern)
-
-```dart
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '{feature}_event.dart';
-import '{feature}_state.dart';
-import '../../domain/repositories/{feature}_repository.dart';
-
-class {Feature}Bloc extends Bloc<{Feature}Event, {Feature}State> {
-  final {Feature}Repository _repository;
-  final CombinedLogger _logger;
-
-  {Feature}Bloc(this._repository, this._logger)
-    : super(const {Feature}State.initial()) {
-    on<{Feature}Event>((event, emit) async {
-      await event.map(
-        started: (_) => _onStarted(emit),
-        loadData: (_) => _onLoadData(emit),
-        submitForm: (e) => _onSubmitForm(e.field1, e.field2, emit),
-        reset: (_) => _onReset(emit),
-      );
-    });
-  }
-
-  Future<void> _onStarted(Emitter<{Feature}State> emit) async {
-    // initialization logic
-  }
-
-  Future<void> _onLoadData(Emitter<{Feature}State> emit) async {
-    emit(const {Feature}State.loading());
-
-    final result = await _repository.getData();
-
-    result.when(
-      success: (data) => emit({Feature}State.loaded(data: data)),
-      failure: (error) => emit({Feature}State.error(error.message)),
-    );
-  }
-
-  Future<void> _onSubmitForm(
-    String field1,
-    String field2,
-    Emitter<{Feature}State> emit,
-  ) async {
-    if (field1.isEmpty || field2.isEmpty) return;
-
-    emit(const {Feature}State.loading());
-
-    final result = await _repository.submitForm(field1, field2);
-
-    result.when(
-      success: (_) => emit(const {Feature}State.success()),
-      failure: (error) => emit({Feature}State.error(error.message)),
-    );
-  }
-
-  Future<void> _onReset(Emitter<{Feature}State> emit) async {
-    emit(const {Feature}State.initial());
-  }
-}
-```
-
-### Helper Pattern for Complex BLoCs
-
-When a BLoC becomes too large (>6 event handlers or >200 lines), extract related event handlers into helper classes. Helpers receive the same dependencies as the BLoC and handle specific event groups.
-
-**When to use**: Use helpers when a BLoC manages multiple distinct concerns (e.g., QR scanning, session lifecycle, polling). Each helper handles a cohesive group of events.
-
-```dart
-// In the BLoC constructor:
-class ComplexBloc extends Bloc<ComplexEvent, ComplexState> {
-  final GroupAHelper _groupAHelper;
-  final GroupBHelper _groupBHelper;
-
-  ComplexBloc({
-    required SomeRepository repository,
-    required CombinedLogger logger,
-  }) : _groupAHelper = GroupAHelper(
-         logger: logger,
-         repository: repository,
-       ),
-       _groupBHelper = GroupBHelper(
-         logger: logger,
-         repository: repository,
-       ),
-       super(ComplexInitial()) {
-    on<EventA>(_groupAHelper.onEventA);
-    on<EventB>(_groupBHelper.onEventB);
-  }
-}
-
-// Helper class:
-class GroupAHelper {
-  final CombinedLogger _logger;
-  final SomeRepository _repository;
-
-  GroupAHelper({
-    required CombinedLogger logger,
-    required SomeRepository repository,
-  }) : _logger = logger,
-       _repository = repository;
-
-  Future<void> onEventA(
-    EventA event,
-    Emitter<ComplexState> emit,
-  ) async {
-    // handler logic
-  }
-}
-```
-
-### Alternative Event/State Style (Equatable-Based)
-
-Some BLoCs use Equatable-based classes with `part of` directives instead of Freezed. This is acceptable for complex BLoCs where states carry many fields and need `copyWith`. Both styles are valid.
-
-**When to use**: Use Equatable + part-of style when states have many fields (>5) and need `copyWith` methods, or when event classes have complex hierarchies. Use Freezed style for simpler BLoCs with fewer state variants.
-
-```dart
-// Event file (part of bloc):
-part of '{feature}_bloc.dart';
-
-abstract class {Feature}Event extends Equatable {
-  const {Feature}Event();
-  @override
-  List<Object?> get props => [];
-}
-
-class DoSomething extends {Feature}Event {
-  final String param;
-  const DoSomething(this.param);
-  @override
-  List<Object?> get props => [param];
-}
-
-// State file (part of bloc):
-part of '{feature}_bloc.dart';
-
-abstract class {Feature}State extends Equatable {
-  const {Feature}State();
-  @override
-  List<Object?> get props => [];
-}
-
-class {Feature}Initial extends {Feature}State {}
-class {Feature}Loading extends {Feature}State {}
-class {Feature}Loaded extends {Feature}State {
-  final SomeDto data;
-  const {Feature}Loaded({required this.data});
-  @override
-  List<Object?> get props => [data];
-}
-```
+> **Full documentation**: See `context/flutter-app/state_management.md`
+>
+> BLoC + Freezed sealed unions for events/states. `event.map()` for handling, `state.when()` for UI.
+> Constructor injection for dependencies. Helper classes for complex BLoCs (>6 handlers).
+> Alternative Equatable-based style for complex states with many fields.
 
 ## BLoC UI Consumption
 
-### BlocBuilder
-
-**Use for**: Rebuilding widgets based on state changes.
-
-```dart
-BlocBuilder<{Feature}Bloc, {Feature}State>(
-  builder: (context, state) {
-    return state.when(
-      initial: () => const SizedBox.shrink(),
-      loading: () => const CircularProgressIndicator(),
-      loaded: (data) => DataWidget(data: data),
-      error: (message) => ErrorWidget(message: message),
-    );
-  },
-)
-```
-
-### BlocConsumer
-
-**Use for**: Side effects (navigation, snackbars) + widget rebuilds.
-
-```dart
-BlocConsumer<{Feature}Bloc, {Feature}State>(
-  listener: (context, state) {
-    state.whenOrNull(
-      success: (_) => context.go(AppRoutes.home),
-      error: (message) => {Project}Snackbar.showError(context, message),
-    );
-  },
-  builder: (context, state) {
-    return state.when(
-      initial: () => FormWidget(),
-      loading: () => const LoadingWidget(),
-      success: (_) => const SizedBox.shrink(),
-      error: (_) => FormWidget(),
-    );
-  },
-)
-```
-
-### BlocListener
-
-**Use for**: Side effects only (no widget rebuild).
-
-```dart
-BlocListener<{Feature}Bloc, {Feature}State>(
-  listener: (context, state) {
-    state.whenOrNull(
-      error: (message) => {Project}Snackbar.showError(context, message),
-    );
-  },
-  child: SomeWidget(),
-)
-```
-
-### When to Use Each Widget
-
-| Widget | Rebuild UI | Side Effects | Use Case |
-|--------|-----------|-------------|----------|
-| `BlocBuilder` | Yes | No | Pure UI rebuilds based on state |
-| `BlocConsumer` | Yes | Yes | Navigation + snackbars + UI rebuild |
-| `BlocListener` | No | Yes | Pure side effects (no rebuild needed) |
-
-- Use `state.when()` for exhaustive pattern matching (covers all state variants)
-- Use `state.whenOrNull()` for selective handling (only handle specific states)
+> **Full documentation**: See `context/flutter-app/state_management.md`
+>
+> BlocBuilder (UI rebuilds), BlocConsumer (rebuilds + side effects), BlocListener (side effects only).
+> Use `state.when()` for exhaustive matching, `state.whenOrNull()` for selective handling.
 
 ## Dependency Injection
 
-**Library**: get_it ^7.7.0
-**Pattern**: Manual service locator with feature-grouped registration
-**File**: `settings/di.dart`
-
-### Conventions
-
-```dart
-final getIt = GetIt.instance;
-
-Future<void> setupDependencies() async {
-  // 1. External services (SharedPreferences, PackageInfo, Firebase)
-  // 2. Dio setup (BaseOptions, interceptor)
-  // 3. Feature dependencies (grouped by feature)
-  // 4. Cross-cutting services (AppVersionService, AnalyticsService)
-}
-```
-
-### Registration Types
-
-| Type | Use For | Behavior |
-|------|---------|----------|
-| `registerLazySingleton` | Services, repositories, API providers | Created once on first access, reused thereafter |
-| `registerFactory` | BLoCs | New instance created every time it is requested |
-
-### Feature Registration Pattern
-
-```dart
-void _register{Feature}Dependencies() {
-  // API Provider
-  getIt.registerLazySingleton<{Feature}ApiProvider>(
-    () => {Feature}ApiProvider(getIt<Dio>()),
-  );
-
-  // Repository
-  getIt.registerLazySingleton<{Feature}Repository>(
-    () => {Feature}RepositoryImpl(apiProvider: getIt<{Feature}ApiProvider>()),
-  );
-
-  // Services (if applicable)
-  getIt.registerLazySingleton<{Feature}Service>(
-    () => {Feature}ServiceImpl(getIt<SomeDependency>()),
-  );
-
-  // BLoCs (always registerFactory)
-  getIt.registerFactory<{Feature}Bloc>(
-    () => {Feature}Bloc(
-      getIt<{Feature}Repository>(),
-      getIt<CombinedLogger>(),
-      getIt<AnalyticsService>(),
-    ),
-  );
-}
-```
-
-### DI Rules
-
-- **ALWAYS** use `registerFactory` for BLoCs (new instance per widget)
-- **ALWAYS** use `registerLazySingleton` for services and repositories
-- **ALWAYS** register abstract types (interfaces) pointing to concrete implementations
-- **ALWAYS** group registrations by feature in private methods
-- **NEVER** use `injectable` or auto-DI packages -- manual registration is clearer
-- **NEVER** access `getIt` directly from BLoCs or repositories -- inject via constructor
-- Call `setupDependencies()` once in `main.dart` before `runApp()`
+> **Full documentation**: See `context/flutter-app/state_management.md`
+>
+> get_it ^7.7.0 manual service locator. `registerFactory` for BLoCs, `registerLazySingleton`
+> for services/repositories. Register abstract types. Group by feature in `settings/di.dart`.
+> No injectable/auto-DI. Inject via constructor, never access getIt directly from BLoCs.
 
 ## Routing
 
@@ -1026,91 +569,11 @@ class AppRoutes {
 
 ## UI Components
 
-### Discovery Rule (Mandatory First Step)
-
-Before writing ANY UI code, you MUST discover the project's UI abstraction layer:
-
-1. **Search for a shared UI folder**: look in `common/ui/`, `common/presentation/widgets/`, `shared/widgets/`, `core/design_system/`
-2. **Identify wrapper components**: look for project-prefixed widgets (e.g., `{Project}Button`, `{Project}Text`, `{Project}TextField`)
-3. **Identify the underlying library**: check `pubspec.yaml` for UI packages (e.g., a private git package, material_design, or a design system library)
-4. **Identify color constants**: look for a centralized colors file (e.g., `{project}_colors.dart`, `app_colors.dart`, `theme_colors.dart`)
-5. **Identify icon pack**: look for icon packages in `pubspec.yaml` (e.g., `phosphor_flutter`, `font_awesome_flutter`, `material_icons`)
-
-**Use the discovered components** -- never raw Flutter widgets if an abstraction exists.
-
-### Component Resolution Flow
-
-When you need a UI component for a feature, follow this flow:
-
-```
-Need a UI component (e.g., a date picker)
-    │
-    ├─ Does the project's UI abstraction have it?
-    │   └─ YES → Use it directly (e.g., {Project}DatePicker)
-    │
-    ├─ Does the underlying library have a suitable component?
-    │   └─ YES → Create a customization task:
-    │           1. Wrap the library component in a project-prefixed widget
-    │           2. Place it in common/ui/ or common/presentation/widgets/
-    │           3. Apply project theme defaults (colors, typography, spacing)
-    │           4. Expose named constructors for common variants
-    │           5. Document the new component in the team's design system
-    │
-    └─ Neither has it?
-        └─ Build from raw Flutter widgets:
-            1. Create a reusable widget in common/ui/ or common/presentation/widgets/
-            2. Use the project's color constants and typography
-            3. Follow existing naming conventions ({Project}ComponentName)
-            4. Add named constructors for variants
-```
-
-**CRITICAL**: Never use a raw library component directly in feature code. Always wrap it first in the project's UI abstraction layer.
-
-### Expected UI Abstraction Structure
-
-A well-structured project should have these component categories. During discovery, map the project's components to these categories:
-
-| Category | Purpose | Example Components |
-|----------|---------|-------------------|
-| **Buttons** | User actions | `{Project}Button.primary()`, `.secondary()`, `.text()`, `.small()` |
-| **Typography** | Text display | `{Project}Text.title()`, `.body()`, `.caption()`, `.label()` |
-| **Inputs** | Data entry | `{Project}TextField()`, `.password()`, `.email()`, `.phone()` |
-| **Feedback** | Notifications | `{Project}Snackbar.showSuccess()`, `.showError()`, `.showInfo()` |
-| **Overlays** | Modal content | `{Project}BottomSheet.show()`, `{Project}Dialog()` |
-| **Colors** | Centralized palette | `{Project}Colors.primary`, `.background`, `.error`, `.border` |
-| **Icons** | Iconography | Icon pack from `pubspec.yaml` (PhosphorIcons, FontAwesome, etc.) |
-
-### Reference Example (Voltop Charging App)
-
-> The following is a **REFERENCE EXAMPLE** of a well-structured UI abstraction.
-> Your project may use different names, variants, and colors.
-> Use this as a model for understanding WHAT a good UI layer looks like.
-
-**Location**: `common/ui/voltop_ui.dart`
-**Underlying Library**: `flutter_components_library` (private git package)
-**Pattern**: Named factory constructors for variants
-
-| Component | Variants |
-|-----------|----------|
-| `VoltopButton` | `.primary()`, `.secondary()`, `.neutral()`, `.text()`, `.small()` |
-| `VoltopText` | `.display()`, `.title()`, `.subtitle()`, `.heading()`, `.body()`, `.secondary()`, `.caption()`, `.label()`, `.hint()` |
-| `VoltopTextField` | `()`, `.phone()`, `.password()`, `.pin()`, `.otp()`, `.email()` |
-| `VoltopPhoneField` | `()`, `.latinAmerica()` |
-| `VoltopSnackbar` | `.showSuccess()`, `.showError()`, `.showInfo()`, `.showWelcome()` |
-| `VoltopBottomSheet` | `.show()` + `VoltopBottomSheetContainer` + `VoltopBottomSheetHeader` |
-| `VoltopColors` | `.background`, `.surface`, `.primary`, `.secondary`, `.error`, `.warning`, `.success`, `.border`, `.gradientPrimary` |
-| Icons | `PhosphorIcon(PhosphorIcons.iconName())` |
-
-### UI Component Rules
-
-- **ALWAYS** use the project's UI abstraction components instead of raw Flutter widgets
-- **ALWAYS** use the project's centralized color constants instead of raw `Color` values
-- **ALWAYS** use the project's icon pack for icons (discover from `pubspec.yaml`)
-- **NEVER** import the underlying UI library directly in feature code -- always go through the abstraction layer
-- **NEVER** use `ScreenUtil` -- use native Flutter responsive design (`MediaQuery`, `LayoutBuilder`, `Flex`)
-- **NEVER** add new colors outside the project's centralized colors file
-- **NEVER** use a raw library component in feature code without wrapping it first in the UI abstraction
-- When a needed component does NOT exist in the abstraction layer, create a **customization task** following the Component Resolution Flow above
+> **Full documentation**: See `context/flutter-app/widget_patterns.md`
+>
+> Discover the project's UI abstraction layer before writing any UI code. Use project-prefixed
+> widgets ({Project}Button, {Project}Text, etc.), centralized color constants, and icon pack.
+> Never use raw Flutter widgets or library components directly in feature code.
 
 ## Code Generation
 
@@ -1206,24 +669,11 @@ Firebase Analytics wrapper with typed event methods for tracking user actions. E
 
 ## Anti-Patterns (What to NEVER Do)
 
-These patterns are explicitly **FORBIDDEN** in this project. They add unnecessary complexity without proportional benefit for this app's scale and architecture.
-
-| # | Forbidden Pattern | Reason | Use Instead |
-|---|------------------|--------|-------------|
-| 1 | Separate Entity layer | DTOs are sufficient as both data carriers and domain entities | Freezed DTOs in `domain/dtos/` |
-| 2 | Mapper classes | DTOs handle their own serialization via custom `fromJson` | `fromJson` logic in the DTO's factory constructor |
-| 3 | UseCase/Interactor classes | BLoCs already serve as the orchestration layer | BLoCs call repositories directly. Use helpers for complex BLoCs. |
-| 4 | `injectable` / auto DI packages | Manual get_it registration is clearer and more explicit | Manual registration in `di.dart` with feature-grouped methods |
-| 5 | `auto_route` package | `go_router` is simpler and sufficient for this app | GoRouter with declarative routes in `app_routes.dart` |
-| 6 | `ScreenUtil` / responsive utility packages | Native Flutter responsive design is sufficient | `MediaQuery`, `LayoutBuilder`, `Flex` widgets |
-| 7 | Separate error handler middleware | `Result<T>` + `RequestError` handle all error cases | Return `Result<T>` from all repositories, consume with `.when()` |
-| 8 | Abstract base BLoC classes | Each BLoC is self-contained with its own concerns | Keep BLoCs independent. Use helpers for shared logic if needed. |
-| 9 | Over-abstracting UI components | The project's UI abstraction with named constructors provides sufficient abstraction | `{Project}Button.primary()`, `{Project}Text.title()` etc. |
-| 10 | `data/` layer naming | This project uses `infrastructure/` consistently | Always use `infrastructure/` for the implementation layer |
-| 11 | `core/` or `shared/` folders | This project uses `common/` consistently | Always use `common/` for cross-cutting concerns |
-| 12 | Throwing exceptions in business logic | `Result<T>` pattern replaces exception-based error handling | Return `Result.failure(RequestError.xxx())` instead of throwing |
-| 13 | Directly importing the underlying UI library in features | The project's UI abstraction is the correct import | Import the project's UI barrel file, not the library directly |
-| 14 | Raw Color values in widget code | All colors are centralized in the project's colors file | `{Project}Colors.primary`, `{Project}Colors.surface`, etc. |
+> **Full list**: See `context/flutter-app/architecture.md`
+>
+> FORBIDDEN: Separate Entity layer, Mapper classes, UseCase/Interactor classes, injectable/auto-DI,
+> auto_route, ScreenUtil, data/ layer naming, core/shared/ folders, throwing exceptions in business logic,
+> directly importing underlying UI library, raw Color values in widget code.
 
 ## New Feature Implementation Checklist
 
@@ -1343,244 +793,19 @@ The app follows this initialization sequence in `main.dart`:
 
 ## Global vs Local BLoC Providers
 
-### Global BLoCs (provided at app root via MultiBlocProvider)
-
-| BLoC | Scope | Reason | Provision |
-|------|-------|--------|-----------|
-| `ChargingSessionBloc` | Global (persists across all screens) | Charging session state must survive navigation | `BlocProvider.value(value: getIt<ChargingSessionBloc>())` |
-| `ConnectivityBloc` | Global (monitors connectivity app-wide) | Connectivity monitoring runs continuously | `BlocProvider(create: (_) => getIt<ConnectivityBloc>()..add(startMonitoring))` |
-
-### Local BLoCs
-
-Feature-specific BLoCs are provided locally in their respective screens using `BlocProvider(create: (_) => getIt<{Feature}Bloc>())`. They are NOT provided globally.
-
-**Rule**: Only provide BLoCs globally if their state must persist across navigation.
+> **Full documentation**: See `context/flutter-app/state_management.md`
+>
+> Global BLoCs (MultiBlocProvider at app root) for state that persists across navigation.
+> Local BLoCs provided in screens via `BlocProvider(create: ...)`. Only provide globally
+> if state must survive navigation.
 
 ## Testing Patterns
 
-### Libraries
-
-- **flutter_test** (Flutter SDK)
-- **bloc_test ^9.1.7** - BLoC testing utilities
-- **mockito ^5.4.4** - Mocking framework
-
-### Testing Focus
-
-- **BLoC tests**: 70% of test coverage
-- **Infrastructure tests**: 20% of test coverage
-- **Domain logic tests**: 10% of test coverage
-
-### Conventions
-
-- **Pattern**: AAA (Arrange-Act-Assert)
-- **Grouping**: `group()` for logical test sections (by event type, by scenario)
-- **Naming**: Descriptive strings: `'emits [loading, success] when data is fetched'`
-
-### BLoC Test Template
-
-```dart
-import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:voltop_charging_app/common/infrastructure/networking/result.dart';
-// ... other imports
-
-import 'mocks/{feature}_mock.mocks.dart';
-
-// Fake for services that need all methods stubbed
-class FakeAnalyticsService extends Fake implements AnalyticsService {
-  @override
-  Future<void> logSomeEvent({required String param}) async {}
-  // ... stub all methods used in tests
-}
-
-// Mock for services where you need to verify/stub specific calls
-class MockCombinedLogger extends Mock implements CombinedLogger {}
-
-void main() {
-  late Mock{Feature}Repository mockRepository;
-  late MockCombinedLogger mockLogger;
-  late FakeAnalyticsService fakeAnalytics;
-  late {Feature}Bloc bloc;
-
-  // Provide dummy values for Result<T> types
-  setUpAll(() {
-    provideDummy<Result<SomeDto>>(
-      Result.failure(RequestError.unknown(message: 'dummy')),
-    );
-  });
-
-  setUp(() {
-    mockRepository = Mock{Feature}Repository();
-    mockLogger = MockCombinedLogger();
-    fakeAnalytics = FakeAnalyticsService();
-
-    bloc = {Feature}Bloc(
-      mockRepository,
-      mockLogger,
-      fakeAnalytics,
-    );
-  });
-
-  tearDown(() {
-    bloc.close();
-  });
-
-  group('{Feature}Bloc', () {
-    test('initial state is {Feature}State.initial()', () {
-      expect(bloc.state, const {Feature}State.initial());
-    });
-
-    group('LoadData', () {
-      blocTest<{Feature}Bloc, {Feature}State>(
-        'emits [loading, loaded] when data is fetched successfully',
-        build: () {
-          when(mockRepository.getData())
-              .thenAnswer((_) async => Result.success(testData));
-          return bloc;
-        },
-        act: (bloc) => bloc.add(const {Feature}Event.loadData()),
-        expect: () => [
-          const {Feature}State.loading(),
-          {Feature}State.loaded(data: testData),
-        ],
-        verify: (_) {
-          verify(mockRepository.getData()).called(1);
-        },
-      );
-
-      blocTest<{Feature}Bloc, {Feature}State>(
-        'emits [loading, error] when fetch fails',
-        build: () {
-          when(mockRepository.getData()).thenAnswer(
-            (_) async => Result.failure(
-              RequestError.connectivity(message: 'No internet'),
-            ),
-          );
-          return bloc;
-        },
-        act: (bloc) => bloc.add(const {Feature}Event.loadData()),
-        expect: () => [
-          const {Feature}State.loading(),
-          isA<{Feature}State>().having(
-            (s) => s.maybeWhen(error: (msg) => msg, orElse: () => ''),
-            'error message',
-            contains('No internet'),
-          ),
-        ],
-      );
-    });
-
-    group('Reset', () {
-      blocTest<{Feature}Bloc, {Feature}State>(
-        'emits [initial] when reset from any state',
-        build: () => bloc,
-        seed: () => const {Feature}State.loading(),
-        act: (bloc) => bloc.add(const {Feature}Event.reset()),
-        expect: () => [const {Feature}State.initial()],
-      );
-    });
-
-    group('Sequential events', () {
-      blocTest<{Feature}Bloc, {Feature}State>(
-        'handles load then submit flow correctly',
-        build: () {
-          when(mockRepository.getData())
-              .thenAnswer((_) async => Result.success(testData));
-          when(mockRepository.submit(any))
-              .thenAnswer((_) async => Result.success(null));
-          return bloc;
-        },
-        act: (bloc) async {
-          bloc.add(const {Feature}Event.loadData());
-          await Future.delayed(const Duration(milliseconds: 100));
-          bloc.add(const {Feature}Event.submit());
-        },
-        expect: () => [
-          const {Feature}State.loading(),
-          {Feature}State.loaded(data: testData),
-          const {Feature}State.loading(),
-          const {Feature}State.success(),
-        ],
-      );
-    });
-  });
-}
-```
-
-### Mock Generation
-
-**File**: `test/features/{feature}/application/bloc/mocks/{feature}_mock.dart`
-
-```dart
-import 'package:mockito/annotations.dart';
-import 'package:voltop_charging_app/features/{feature}/domain/repositories/{feature}_repository.dart';
-// import other classes to mock
-
-@GenerateMocks([{Feature}Repository, SomeService])
-void main() {}
-```
-
-**Generation command**:
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### Key Testing Patterns
-
-#### provideDummy
-
-Use `provideDummy<Result<T>>()` in `setUpAll()` for complex generic types that Mockito cannot auto-generate stubs for.
-
-```dart
-setUpAll(() {
-  provideDummy<Result<SomeDto>>(
-    Result.failure(RequestError.unknown(message: 'dummy')),
-  );
-});
-```
-
-#### seed
-
-Use `seed: () => SomeState()` in `blocTest` to start from a specific state (e.g., testing reset from loaded state).
-
-```dart
-blocTest<Bloc, State>(
-  'resets from loaded state',
-  build: () => bloc,
-  seed: () => const State.loaded(data: someData),
-  act: (bloc) => bloc.add(const Event.reset()),
-  expect: () => [const State.initial()],
-);
-```
-
-#### Sequential Events
-
-Use `await Future.delayed(const Duration(milliseconds: 100))` between events in `act:` to test sequential event flows.
-
-#### Fake vs Mock
-
-| Type | Use For | Example |
-|------|---------|---------|
-| `Fake` (`extends Fake implements Service`) | Services where you need to stub ALL methods with no-op implementations | `AnalyticsService`, `CombinedLogger` |
-| `Mock` (`extends Mock implements Service`) | Services where you need to verify calls and stub return values | Repositories, services with specific return values |
-
-#### verifyNever
-
-Use `verifyNever(mock.method(any))` to assert a method was NOT called (e.g., when input validation prevents API call).
-
-### Testing Rules
-
-- **ALWAYS** test initial state
-- **ALWAYS** test success and failure paths for each event
-- **ALWAYS** provide dummy values for `Result<T>` types in `setUpAll`
-- **ALWAYS** close BLoC in `tearDown`
-- **ALWAYS** use `blocTest` helper for BLoC tests
-- Use `Fake` for analytics/logger services (stub all methods)
-- Use `Mock` for repositories and services (verify specific calls)
-- Test edge cases: empty input, null values, error states
-- Test sequential events with `Future.delayed`
-- Test state transitions from specific seed states
+> **Full documentation**: See `context/flutter-app/state_management.md`
+>
+> bloc_test + mockito. BLoC tests 70%, infrastructure 20%, domain 10%. AAA pattern.
+> `provideDummy<Result<T>>()` in setUpAll, `blocTest` helper, Fake for analytics/logger,
+> Mock for repositories. Test initial state, success/failure paths, sequential events.
 
 ## Development Workflow
 

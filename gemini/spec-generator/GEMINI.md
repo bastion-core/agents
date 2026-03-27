@@ -63,9 +63,9 @@ Despues de que un subagent complete su tarea, sugiere al usuario el siguiente pa
 
 ## Stacks Soportados
 
-| Stack | Convenciones | Patron Arquitectonico |
-|-------|-------------|----------------------|
-| python_fastapi | conventions-backend-py.md | Hexagonal Architecture 3 capas |
-| nextjs | conventions-frontend-nextjs.md | Two-layer Architecture (Domain + Infrastructure) |
-| flutter | conventions-mobile-flutter.md | Clean Architecture 4 capas con Feature-Based Modularization |
-| multi_stack | Combinar convenciones relevantes | Segun componente |
+| Stack | Context Files | Patron Arquitectonico |
+|-------|--------------|----------------------|
+| python_fastapi | `context/python-api/` | Hexagonal Architecture 3 capas |
+| nextjs | `context/nextjs-app/` | Two-layer Architecture (Domain + Infrastructure) |
+| flutter | `context/flutter-app/` | Clean Architecture 4 capas con Feature-Based Modularization |
+| multi_stack | Combinar context files relevantes | Segun componente |

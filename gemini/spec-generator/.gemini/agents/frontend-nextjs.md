@@ -56,111 +56,24 @@ These are the versions validated in production. The specific versions may vary a
 | Vitest | 3.x |
 | @testing-library/react | 14.0.0 |
 
+## Project Context
+
+This agent's architectural knowledge is documented in standalone context files.
+Read the relevant context files before implementing features.
+
+| Context Area | File Path | When to Load |
+|-------------|-----------|--------------|
+| Two-layer Architecture & Folder Structure | `context/nextjs-app/architecture.md` | Always |
+| State Management (Zustand + Discriminated Unions) | `context/nextjs-app/state_management.md` | When implementing stores or state |
+| Component & Hook Patterns | `context/nextjs-app/widget_patterns.md` | When writing UI components or hooks |
+
 ## Architecture Understanding
 
-Before implementing any solution, you MUST analyze the existing project structure to understand the established patterns.
-
-### Two-layer Architecture (Domain + Infrastructure)
-
-The project follows a strict **Two-layer Architecture** enforced by `eslint-plugin-hexagonal-architecture` at error level. This is NOT a three-layer or four-layer architecture. There is NO application layer, NO UseCase classes, NO Interactors, NO Ploc pattern.
-
-```
-Data Flow:  Component -> Store -> DataAccess -> API
-```
-
-### The 2 Layers
-
-#### 1. Domain Layer
-- **Path**: `src/core/{module}/domain/`
-- **Responsibility**: Pure business rules. No external dependencies. Defines types, entities, DTOs, enums, constants, and state interfaces.
-- **Contains**:
-  - `entities/` -- Types and entities (pure TypeScript types)
-  - `dtos/` -- Data Transfer Objects (request/response shapes)
-  - `enums/` -- String enumerations for domain values
-  - `states/` -- State interfaces for stores (discriminated unions)
-  - `consts/` -- Domain constants
-- **Allowed imports**:
-  - Nothing external to the domain of the same module
-  - Shared types from `@core/common/domain`
-- **Forbidden imports**:
-  - `infrastructure/*`
-  - React, Next.js, Zustand, Axios -- absolutely nothing from infrastructure
-
-#### 2. Infrastructure Layer
-- **Path**: `src/core/{module}/infrastructure/`
-- **Responsibility**: Technical layer containing data access (HTTP), stores, services with real logic, helpers, and UI components. Depends on domain/.
-- **Contains**:
-  - `data-access/` -- HTTP calls (concrete class, no interface)
-  - `services/` -- Only if real logic exists (e.g., DraftsService)
-  - `helpers/` -- Utility functions for repeated patterns
-  - `store/` -- Small stores per concern (~60-100 lines)
-  - `ui/` -- screens, components, hooks, feature-table
-- **Allowed imports**:
-  - `domain/` of the same module
-  - `@core/common` (any layer)
-  - External libraries (React, Zustand, Axios, etc.)
-- **Forbidden imports**:
-  - `infrastructure/` of OTHER modules (use domain types instead)
-
-### Dependency Direction
-
-```
-infrastructure -> domain   (ALWAYS)
-domain -> infrastructure   (NEVER)
-```
-
-Infrastructure depends on domain. Domain NEVER imports from infrastructure. This is enforced by `eslint-plugin-hexagonal-architecture` at error level.
-
-### Key Differences vs Backend Architecture
-
-| Concept | Backend (Python) | Frontend (Next.js) |
-|---------|-----------------|-------------------|
-| Layers | 3 (Domain + Application + Infrastructure) | 2 (Domain + Infrastructure) |
-| Orchestration | UseCase/Interactor classes | Stores call DataAccess directly |
-| DI | Factory functions inject interfaces | DataAccess instantiated at module level |
-| DataAccess | Repository interface in domain (Port) | Concrete class, NO interface in domain |
-| State | N/A (stateless) | Zustand stores with discriminated unions |
-| Error handling | OutputErrorContext / OutputSuccessContext | Either monad with fold() |
-
-## Folder Structure
-
-### Module Structure
-
-Every feature/module follows this standard directory layout:
-
-```
-src/core/{module-name}/
-├── domain/
-│   ├── entities/          # Types and entities
-│   ├── dtos/              # Data Transfer Objects
-│   ├── enums/             # Enumerations
-│   ├── states/            # State interfaces for stores
-│   └── consts/            # Domain constants
-└── infrastructure/
-    ├── data-access/       # HTTP calls (concrete class, no interface)
-    ├── services/          # Only if real logic exists (e.g., DraftsService)
-    ├── helpers/           # Utility functions for repeated patterns
-    ├── store/             # Small stores per concern (~60-100 lines)
-    └── ui/
-        ├── screens/       # Screen components
-        ├── components/    # Reusable components of the module
-        ├── {feature}-table/  # Table + columns + toolbar
-        └── hooks/         # Custom hooks
-```
-
-### Route Structure (App Router)
-
-```
-src/app/[locale]/{feature}/
-├── page.tsx                      # Main page (server component wrapper)
-├── [id]/
-│   └── page.tsx                  # Detail page
-└── layout.tsx                    # Optional feature layout
-```
-
-### Shared Code Location
-
-Shared code across modules lives in `src/core/common/` with the same domain + infrastructure split.
+> **Full documentation**: See `context/nextjs-app/architecture.md`
+>
+> Two-layer Architecture (Domain + Infrastructure) enforced by eslint-plugin-hexagonal-architecture.
+> No application layer, no UseCase/Interactor/Ploc. Data flow: Component -> Store -> DataAccess -> API.
+> Domain is pure TypeScript types. Infrastructure contains stores, data-access, UI, helpers, services.
 
 ### Path Aliases
 
@@ -301,60 +214,10 @@ getAll: async (params) => {
 
 ## Discriminated Union States
 
-States for the UI are modeled using discriminated unions with a `kind` field. This enables safe type narrowing in components.
-
-**Location**: `src/core/{module}/domain/states/`
-
-### Template
-
-```typescript
-// DriversState.ts
-import type { ServiceError } from '@core/common/domain'
-import type { Driver } from '../entities/Driver'
-
-export interface LoadingDriversState {
-  kind: 'LoadingDriversState'
-}
-
-export interface LoadedDriversState {
-  kind: 'LoadedDriversState'
-  data: Driver[]
-  totalRows?: number
-}
-
-export interface ErrorDriversState {
-  kind: 'ErrorDriversState'
-  serviceError: ServiceError
-}
-
-export type DriversState =
-  | LoadingDriversState
-  | LoadedDriversState
-  | ErrorDriversState
-
-// Constants to avoid magic strings:
-export const LOADING_KIND = 'LoadingDriversState'
-export const LOADED_KIND = 'LoadedDriversState'
-export const ERROR_KIND = 'ErrorDriversState'
-```
-
-### Rules
-
-- **ALWAYS** use `kind` as the discriminator field
-- **ALWAYS** define constants for kind values (avoid magic strings)
-- Narrow with `state.kind === LOADED_KIND` (NEVER use `instanceof`)
-- Each state has ONLY the fields relevant to that state
-- States live in `domain/states/`
-
-### Type Narrowing in Components
-
-```typescript
-if (dataState.kind === ERROR_KIND) {
-  return <ErrorHandler errorState={dataState.serviceError} />
-}
-
-const data = dataState.kind === LOADED_KIND ? dataState.data : []
-```
+> **Full documentation**: See `context/nextjs-app/state_management.md`
+>
+> States use `kind` field as discriminator (Loading/Loaded/Error). Define constants for kind values.
+> Narrow with `state.kind === LOADED_KIND`. States live in `domain/states/`.
 
 ## Domain Layer Types
 
@@ -591,326 +454,39 @@ response.fold(
 
 ## Zustand Store Pattern
 
-Zustand stores are the core of the infrastructure layer. They orchestrate the flow from DataAccess to state. Stores are small, focused, and divided by concern.
-
-**Location**: `src/core/{module}/infrastructure/store/`
-
-### Template
-
-```typescript
-// DriversListStore.ts
-import { create } from 'zustand'
-import { baseApiUrl } from '@core/common/infrastructure/services/apiEndpoints'
-import type {
-  DriversListStoreState,
-  DriversListStoreActions,
-} from '../../domain/states/DriversListStoreState'
-import { DriversDataAccess } from '../data-access'
-
-// DataAccess instantiated at MODULE level (outside the store)
-const driversDataAccess = new DriversDataAccess(baseApiUrl)
-
-export const useDriversListStore = create<
-  DriversListStoreState & DriversListStoreActions
->((set, get) => ({
-  // Initial state
-  items: [],
-  isLoadingList: false,
-  pagination: null,
-
-  // Actions -- call DataAccess directly, fold response in place
-  loadItems: async () => {
-    set({ isLoadingList: true })
-    const response = await driversDataAccess.getAll(get().queryParams)
-    response.fold(
-      (error) => set({ isLoadingList: false, items: [] }),
-      (success) => {
-        const data = Array.isArray(success.data)
-          ? success.data[0]
-          : success.data
-        set({
-          isLoadingList: false,
-          items: data.list || [],
-          pagination: { totalRows: data.totalRows },
-        })
-      }
-    )
-  },
-
-  // Cross-store communication when needed:
-  // useOtherStore.getState().someAction()
-
-  reset: () =>
-    set({ items: [], isLoadingList: false, pagination: null }),
-}))
-```
-
-### Store State & Actions Interfaces (in domain/states/)
-
-```typescript
-// DriversListStoreState.ts (domain/states/)
-import type { Driver } from '../entities/Driver'
-import type { GetDriversDto } from '../dtos/GetDriversDto'
-
-export interface DriversListStoreState {
-  items: Driver[]
-  isLoadingList: boolean
-  pagination: { totalRows: number } | null
-  queryParams?: GetDriversDto
-}
-
-export interface DriversListStoreActions {
-  loadItems: () => Promise<void>
-  reset: () => void
-}
-```
-
-### Rules (CRITICAL)
-
-- **Multiple stores per module**, divided by concern (list, detail, form)
-- **DataAccess instantiated OUTSIDE the store**, at module level
-- **State and Actions** in SEPARATE interfaces (in `domain/states/`)
-- **Stores call DataAccess directly** -- NO Ploc, NO UseCase, NO Interactor
-- **`response.fold()` DIRECTLY in store actions** -- no intermediate layer
-- **Boolean loading flags**: `isLoadingList`, `isLoadingDetail`, etc.
-- **UI orchestrates initial load** via `useEffect` in screens
-- **Cross-store**: `useOtherStore.getState().action()` for inter-store communication
-- **`set()` for state updates** (immutable)
-- **Consume with selectors**: `useStore((s) => ({ field: s.field }))`
-- **Ideal size**: ~60-100 lines per store. If it grows beyond that, split by concern.
-
-### Reset Pattern
-
-```typescript
-reset: () => set({ items: [], isLoadingList: false, pagination: null })
-```
-
-### Cross-Store Communication
-
-```typescript
-// From inside one store, call another store's action:
-useOtherStore.getState().someAction()
-```
+> **Full documentation**: See `context/nextjs-app/state_management.md`
+>
+> Multiple small stores per module (~60-100 lines), divided by concern. DataAccess instantiated
+> at module level. `response.fold()` directly in actions. Boolean loading flags. State/Actions
+> interfaces in `domain/states/`. Cross-store via `useOtherStore.getState().action()`.
 
 ## State Management Rules
 
-### When to Use Zustand Store
-
-- Data shared between multiple components
-- Data that persists between navigations
-- State of domain entities (drivers, vehicles, etc.)
-- State of async operations (loading, error, success)
-- Server-side paginated or filtered data
-
-### When to Use Local State (`useState`)
-
-- Temporary UI state (modal open/closed, active tab)
-- Form state (React Hook Form handles it)
-- Local search/filter within a component
-- Toggle, hover, focus states
-- Derived values with `useMemo`
-
-### When to Use URL State (`searchParams`)
-
-- Filters that should be shareable via URL
-- Pagination (page, perPage)
-- Route parameters ([id], [locale])
+> **Full documentation**: See `context/nextjs-app/state_management.md`
+>
+> Zustand stores for shared/persistent data and async operations. `useState` for temporary UI state.
+> URL `searchParams` for shareable filters and pagination.
 
 ## Component Pattern
 
-### Template
-
-```tsx
-'use client'
-
-import { useTranslations } from 'next-intl'
-import { useDriversListStore } from '@core/drivers/infrastructure/store/DriversListStore'
-import {
-  LOADED_KIND,
-  ERROR_KIND,
-} from '@core/drivers/domain/states/DriversState'
-
-interface DriverCardProps {
-  id: string
-  onAction: (data: Driver) => void
-}
-
-export default function DriverCard({ id, onAction }: DriverCardProps) {
-  const t = useTranslations('drivers')
-  const { dataState } = useDriversListStore((s) => ({
-    dataState: s.dataState,
-  }))
-
-  if (dataState.kind === ERROR_KIND) {
-    return <ErrorHandler errorState={dataState.serviceError} />
-  }
-
-  const data = dataState.kind === LOADED_KIND ? dataState.data : []
-
-  return (
-    <div className="flex flex-col gap-4">
-      <h1>{t('title')}</h1>
-      {/* UI content */}
-    </div>
-  )
-}
-```
-
-### Rules
-
-- `'use client'` ONLY when the component uses hooks, events, or state
-- Props defined with `interface` (not type alias for props)
-- Visible text ALWAYS via `useTranslations()` (never hardcoded)
-- Store state via specific selectors (do not destructure everything)
-- Verify `state.kind` before accessing data
-- Styles with Tailwind classes, use `cn()` for conditionals
-- Export as `default` for pages, named export for reusable components
-
-### Store Consumption Pattern
-
-```typescript
-// CORRECT: specific selector
-const { dataState } = useModuleStore((s) => ({
-  dataState: s.dataState,
-}))
-
-// WRONG: destructuring everything
-const { everything } = useModuleStore()
-```
+> **Full documentation**: See `context/nextjs-app/widget_patterns.md`
+>
+> `'use client'` only when hooks/events/state are used. Props with `interface`. Text via `useTranslations()`.
+> Store consumption via specific selectors. Verify `state.kind` before accessing data. Tailwind + `cn()`.
 
 ## Custom Hook Pattern
 
-**Location**: `src/core/{module}/infrastructure/ui/hooks/`
-
-### Template
-
-```typescript
-'use client'
-
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useDriversListStore } from '@core/drivers/infrastructure/store/DriversListStore'
-
-export const useDriversPreview = (params: PreviewParams) => {
-  // 1. Local state
-  const [searchValue, setSearchValue] = useState('')
-
-  // 2. Store integration
-  const { data, fetchData } = useDriversListStore((s) => ({
-    data: s.items,
-    fetchData: s.loadItems,
-  }))
-
-  // 3. Computed values (memoized)
-  const filteredData = useMemo(
-    () => data.filter((item) => item.name.includes(searchValue)),
-    [data, searchValue]
-  )
-
-  // 4. Side effects
-  useEffect(() => {
-    fetchData(params)
-  }, [params])
-
-  // 5. Handlers
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value)
-  }, [])
-
-  // 6. Return object (not array)
-  return {
-    filteredData,
-    searchValue,
-    handleSearch,
-  }
-}
-```
-
-### Internal Structure (6 sections in order)
-
-1. **Local state** (`useState`)
-2. **Store integration** (`useStore` with selectors)
-3. **Computed values** (`useMemo` for expensive derivations)
-4. **Side effects** (`useEffect`)
-5. **Handlers** (`useCallback` for handlers passed as props)
-6. **Return object** (not array, for better readability)
-
-### Rules
-
-- `use` prefix mandatory
-- Place in `infrastructure/ui/hooks/`
-- `useMemo` for expensive computed derivations
-- `useCallback` for handlers passed as props to memoized components
-- `useRef` for initialization flags (avoid double calls in StrictMode)
-- Return **object** (not array)
+> **Full documentation**: See `context/nextjs-app/widget_patterns.md`
+>
+> `use` prefix, placed in `infrastructure/ui/hooks/`. 6 sections: local state, store integration,
+> computed values (useMemo), side effects (useEffect), handlers (useCallback), return object.
 
 ## Page Pattern (App Router)
 
-Pages are minimal wrappers that import Screen components. NEVER put business logic in pages.
-
-### Template
-
-```tsx
-// src/app/[locale]/drivers/page.tsx
-import DriversScreen from '@core/drivers/infrastructure/ui/screens/DriversScreen'
-
-export default function DriversPage() {
-  return <DriversScreen />
-}
-```
-
-```tsx
-// src/app/[locale]/drivers/[id]/page.tsx
-import DriverDetailScreen from '@core/drivers/infrastructure/ui/screens/DriverDetailScreen'
-
-export default function DriverDetailPage() {
-  return <DriverDetailScreen />
-}
-```
-
-### Screen Components (`infrastructure/ui/screens/`)
-
-Screens orchestrate the initial data load and compose stores, hooks, and module components.
-
-```tsx
-'use client'
-
-import { useEffect, useRef } from 'react'
-import { useTranslations } from 'next-intl'
-import { useDriversListStore } from '@core/drivers/infrastructure/store/DriversListStore'
-import { DriversTable } from '../drivers-table/DriversTable'
-
-export default function DriversScreen() {
-  const t = useTranslations('drivers')
-  const { loadItems, isLoadingList } = useDriversListStore((s) => ({
-    loadItems: s.loadItems,
-    isLoadingList: s.isLoadingList,
-  }))
-
-  const initialized = useRef(false)
-
-  useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true
-      loadItems()
-    }
-  }, [])
-
-  return (
-    <div className="flex flex-col gap-6 p-6">
-      <h1 className="text-2xl font-bold">{t('title')}</h1>
-      <DriversTable isLoading={isLoadingList} />
-    </div>
-  )
-}
-```
-
-### Rules
-
-- Pages are **minimal wrappers** that import Screen components
-- NO business logic in pages
-- Use dynamic routes with `[param]` for IDs
-- Screen components live in `infrastructure/ui/screens/`
-- Screens orchestrate initial load with `useEffect` + `useRef` for initialization guard
+> **Full documentation**: See `context/nextjs-app/widget_patterns.md`
+>
+> Pages are minimal wrappers importing Screen components. No business logic in pages.
+> Screens in `infrastructure/ui/screens/` orchestrate initial load with `useEffect` + `useRef`.
 
 ## Component Guidelines
 

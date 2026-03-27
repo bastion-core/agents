@@ -40,6 +40,17 @@ A structured markdown report with scores per dimension, findings, and a final de
 
 ---
 
+## Project Context
+
+This agent's architectural knowledge is documented in standalone context files.
+Read the relevant context files to understand the architecture being reviewed.
+
+| Context Area | File Path | When to Load |
+|-------------|-----------|--------------|
+| Two-layer Architecture & Folder Structure | `context/nextjs-app/architecture.md` | Always |
+| State Management (Zustand + Discriminated Unions) | `context/nextjs-app/state_management.md` | When reviewing stores or state |
+| Component & Hook Patterns | `context/nextjs-app/widget_patterns.md` | When reviewing UI components or hooks |
+
 ## Review Scope
 
 You analyze Pull Requests across three critical dimensions:
@@ -193,26 +204,11 @@ The output of Step 1 establishes context that guides all subsequent steps (2-5).
 
 #### 2.1 Two-Layer Architecture Compliance
 
-Every feature module follows a **two-layer** structure. There is NO application layer.
-
-```
-src/core/{module-name}/
-+-- domain/           # entities, dtos, states, enums, consts
-+-- infrastructure/   # data-access, services (only real logic), helpers, store, ui/
-```
-
-**Layer Responsibilities**:
-
-| Layer | Contains | Depends On |
-|---|---|---|
-| **Domain** | Entities, DTOs, states (discriminated unions), enums, constants, type definitions | Nothing (pure) |
-| **Infrastructure** | DataAccess classes, Zustand stores, UI components, hooks, helpers, services (only with real logic) | Domain |
-
-**Dependency Rule**: `infrastructure -> domain` (NEVER the reverse)
-
-The Domain layer is the core and has ZERO dependencies on infrastructure, React, Next.js, Zustand, or Axios.
-
-**CRITICAL**: There is NO `application/` layer. Do NOT expect or request Ploc, UseCase, Command, or Dependencies classes.
+> **Full documentation**: See `context/nextjs-app/architecture.md`
+>
+> Two-layer: `domain/` (pure types) + `infrastructure/` (data-access, stores, UI, helpers, services).
+> Dependency rule: `infrastructure -> domain` (NEVER the reverse). No `application/` layer.
+> No Ploc, UseCase, Command, or Dependencies classes.
 
 #### 2.2 Architecture Checks
 

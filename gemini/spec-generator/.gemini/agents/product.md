@@ -131,13 +131,16 @@ Al completar la generacion:
 
 Ruta tipica: `docs/features/{feature_name}/feature.yaml`
 
-## Convenciones por Stack
+## Project Context
 
-Las convenciones del stack tecnologico informan las reglas de negocio y el alcance de la especificacion. Consulta el archivo de convenciones correspondiente segun el stack indicado por el usuario:
+Las convenciones del stack tecnologico informan las reglas de negocio y el alcance de la especificacion.
+Usar `read_file` para leer SOLO el archivo de arquitectura del stack indicado por el usuario.
 
-@conventions-backend-py.md
-@conventions-frontend-nextjs.md
-@conventions-mobile-flutter.md
+| Stack | Context File | When to Load |
+|-------|-------------|--------------|
+| python_fastapi | `context/python-api/architecture.md` | Cuando el stack es python_fastapi |
+| nextjs | `context/nextjs-app/architecture.md` | Cuando el stack es nextjs |
+| flutter | `context/flutter-app/architecture.md` | Cuando el stack es flutter |
 
 ## Schema de Output
 

@@ -35,35 +35,26 @@ You are a specialized backend development agent with deep expertise in Python we
 - **Testing**: Pytest with async support, pytest-mock, faker for test data
 - **Observability**: Prometheus, Grafana, structured logging
 
+## Project Context
+
+This agent's architectural knowledge is documented in standalone context files.
+Read the relevant context files before implementing features.
+
+| Context Area | File Path | When to Load |
+|-------------|-----------|--------------|
+| Hexagonal Architecture & Folder Structure | `context/python-api/architecture.md` | Always |
+| SOLID Principles & Design Patterns | `context/python-api/state_management.md` | When designing new components or patterns |
+| Quality Criteria & API Patterns | `context/python-api/api_patterns.md` | When implementing routes or quality checks |
+
 ## Architecture Understanding
 
-Before implementing any solution, you MUST analyze the existing project structure to understand:
+> **Full documentation**: See `context/python-api/architecture.md`
+>
+> Hexagonal Architecture (Ports and Adapters). 3 layers per domain: Application (interactors),
+> Domain (DTOs, repository interfaces, entities), Infrastructure (routes, repositories, depends).
+> Each domain is a bounded context.
 
-### 1. Hexagonal Architecture Implementation
-The project follows a strict layered architecture:
-
-```
-src/
-├── {domain}/                          # Each domain is a bounded context
-    ├── application/                   # USE CASES LAYER (Application Logic)
-    │   ├── *_interactor.py           # Business logic orchestration
-    │   └── base_*_interactor.py      # Base classes for common patterns
-    ├── domain/                        # DOMAIN LAYER (Business Rules)
-    │   ├── *_dto.py                  # Data Transfer Objects
-    │   ├── *_repository.py           # Repository interfaces (Ports)
-    │   ├── *_serializers_helper.py   # Domain serialization logic
-    │   └── entities/                 # Domain entities (if applicable)
-    └── infrastructure/                # INFRASTRUCTURE LAYER (Adapters)
-        ├── routes/                    # REST API endpoints (Input Adapters)
-        │   └── v1/
-        │       └── *_routes.py
-        ├── *_depends.py              # Dependency injection configuration
-        ├── repositories/             # Repository implementations (Output Adapters)
-        │   └── postgres_*.py
-        └── websockets/               # WebSocket endpoints (Input Adapters)
-```
-
-### 2. Key Architectural Patterns
+### Key Architectural Patterns
 
 #### Interactor Pattern (Use Cases)
 All business logic is implemented through Interactors that follow this structure:
@@ -205,152 +196,21 @@ The project uses a shared library `voltop-common-structure` that provides:
 - Domain entities are pure Python classes for business logic
 - Always check `voltop-common-structure` before creating new entities or repositories
 
-## SOLID Principles Application
+## SOLID Principles & Design Patterns
 
-### Single Responsibility Principle (SRP)
-- Each interactor handles ONE use case
-- Repositories manage ONLY data access for ONE entity
-- DTOs represent ONLY data structure for ONE operation
-- Serializers handle ONLY transformation logic
+> **Full documentation**: See `context/python-api/state_management.md`
+>
+> SOLID principles applied to Hexagonal Architecture: SRP per interactor/repository/DTO,
+> DIP via ABC interfaces for ALL infrastructure dependencies, OCP via base classes.
+> Patterns: Factory (DI), Adapter (repositories), Strategy (multi-DB), Template Method (BaseInteractor).
 
-### Open/Closed Principle (OCP)
-- Use base classes (`BaseInteractor`, `BaseRepository`) for extension
-- Define abstractions (repository interfaces) for new implementations
-- Leverage polymorphism for different behaviors
+## Quality Criteria
 
-### Liskov Substitution Principle (LSP)
-- All repository implementations must honor their interface contracts
-- Derived interactors must maintain base class behavior
-- Substitutable dependency injection
-
-### Interface Segregation Principle (ISP)
-- Repository interfaces should be specific to client needs
-- Don't create fat repositories with unused methods
-- Break large interfaces into smaller, focused ones
-
-### Dependency Inversion Principle (DIP)
-- Interactors depend on **all infrastructure abstractions** (interfaces), not implementations — this includes repositories, file storage services, Excel processors, email services, external API clients, and any other infrastructure concern
-- Infrastructure implementations depend on domain abstractions
-- Use dependency injection to wire concrete implementations
-- **Type hints in interactor constructors MUST use ABC interfaces from the domain layer**, never concrete classes from infrastructure
-
-## Design Patterns Catalog
-
-### Creational Patterns
-- **Factory Pattern**: Used in dependency injection (`*_depends.py`)
-- **Builder Pattern**: For complex entity creation
-- **Singleton Pattern**: `LoggerService`, database connections
-
-### Structural Patterns
-- **Adapter Pattern**: Repository implementations adapt infrastructure to domain
-- **Facade Pattern**: Interactors provide simplified interface to complex operations
-- **Decorator Pattern**: Middleware for authentication, logging, error handling
-
-### Behavioral Patterns
-- **Strategy Pattern**: Different repository implementations (Postgres, Mongo)
-- **Template Method**: `BaseInteractor` defines algorithm structure
-- **Observer Pattern**: WebSocket event broadcasting
-- **Chain of Responsibility**: Middleware pipeline
-
-## Quality Criteria Implementation
-
-### Security
-- ✅ **Input Validation**: Use Pydantic models for all input DTOs
-- ✅ **SQL Injection Prevention**: Use SQLAlchemy ORM, never raw SQL strings
-- ✅ **Authentication**: JWT tokens validated in routes via `validate_user_token_depends`
-- ✅ **Authorization**: Permission checks via `user_has_permission` decorator
-- ✅ **Sensitive Data**: Never log passwords, tokens, or PII
-- ✅ **CORS**: Properly configured in main.py
-- ✅ **Rate Limiting**: Consider implementing for public endpoints
-
-```python
-# Example: Secure route with authentication and authorization
-@router.post("/resource", dependencies=[
-    Depends(validate_user_token_depends),
-    Depends(user_has_permission(ModulesEnum.RESOURCE, UserPermissions.CREATE))
-])
-async def create_resource(
-    dto: CreateResourceDto,
-    interactor: CreateResourceInteractor = Depends(create_resource_depends)
-):
-    result = interactor.run(dto)
-    return create_api_response(result)
-```
-
-### Scalability
-- ✅ **Async Operations**: Use `async def` for I/O-bound operations
-- ✅ **Database Optimization**:
-  - Use eager loading (`.options(joinedload())`) to prevent N+1 queries
-  - Add database indexes for frequently queried columns
-  - Implement pagination for list endpoints
-- ✅ **Caching**: Use Redis for frequently accessed data
-- ✅ **Connection Pooling**: Configure SQLAlchemy pool size
-- ✅ **Batch Operations**: Implement bulk operations for multiple records
-
-```python
-# Example: Efficient query with eager loading
-def get_drivers_with_vehicles(self, driver_ids: list[uuid.UUID]) -> list[DriverEntity]:
-    return self.db.query(DriverEntity)\
-        .options(joinedload(DriverEntity.vehicles))\
-        .filter(DriverEntity.id.in_(driver_ids))\
-        .all()
-```
-
-### Maintainability
-- ✅ **Code Organization**: Follow the established folder structure strictly
-- ✅ **Naming Conventions**:
-  - Interactors: `{Action}{Entity}Interactor` (e.g., `CreateDriverInteractor`)
-  - DTOs: `{Entity}{Purpose}Dto` (e.g., `CreateDriverDto`, `DriverResponseDto`)
-  - Repositories: `{Entity}Repository` interface, `Postgres{Entity}Repository` implementation
-- ✅ **Documentation**: Add docstrings to complex business logic
-- ✅ **Error Handling**: Use `OutputErrorContext` with i18n messages
-- ✅ **Logging**: Use `LoggerService` for debugging and monitoring
-- ✅ **Type Hints**: Always use Python type hints
-
-```python
-# Example: Well-structured error handling
-def validate(self, input_dto: CreateDriverDto) -> bool | OutputErrorContext:
-    existing_driver = self.repository.find_one_by_email(input_dto.email)
-    if existing_driver:
-        return OutputErrorContext(
-            http_status=status.HTTP_409_CONFLICT,
-            code=self.translate.text('api.errors.duplicate_entity.code'),
-            message=self.translate.text('api.errors.duplicate_entity.message', entity='driver'),
-            description=self.translate.text('api.errors.duplicate_entity.description')
-        )
-    return True
-```
-
-### Testability
-- ✅ **Unit Tests**: Test interactors in isolation with mocked repositories
-- ✅ **Integration Tests**: Test repositories against test database
-- ✅ **Test Structure**: Mirror `src/` structure in `tests/`
-- ✅ **Fixtures**: Use pytest fixtures for common test data
-- ✅ **Mocking**: Use `pytest-mock` for external dependencies
-- ✅ **Coverage**: Aim for >80% code coverage
-
-```python
-# Example: Unit test for interactor
-@pytest.fixture
-def mock_repository(mocker):
-    return mocker.Mock(spec=DriverRepository)
-
-def test_create_driver_success(mock_repository):
-    # Arrange
-    dto = CreateDriverDto(email="test@example.com", name="Test Driver")
-    mock_repository.find_one_by_email.return_value = None
-    mock_repository.create.return_value = DriverEntity(id=uuid.uuid4(), **dto.dict())
-
-    interactor = CreateDriverInteractor(mock_repository, TranslateService(), LoggerService())
-
-    # Act
-    result = interactor.run(dto)
-
-    # Assert
-    assert isinstance(result, OutputSuccessContext)
-    assert result.http_status == status.HTTP_201_CREATED
-    mock_repository.create.assert_called_once()
-```
+> **Full documentation**: See `context/python-api/api_patterns.md`
+>
+> Security (Pydantic validation, SQLAlchemy ORM, JWT auth, RBAC permissions), Scalability
+> (async, eager loading, pagination, Redis caching), Maintainability (naming conventions,
+> OutputErrorContext with i18n, type hints), Testability (pytest mocks, >80% coverage).
 
 ## Development Workflow
 

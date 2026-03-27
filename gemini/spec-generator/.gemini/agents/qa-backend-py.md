@@ -36,6 +36,17 @@ You are a specialized Quality Assurance agent for Python backend applications. Y
 - **Pydantic**: Data validation and serialization
 - **Starlette**: ASGI framework (FastAPI dependency)
 
+## Project Context
+
+This agent's architectural knowledge is documented in standalone context files.
+Read the relevant context files to understand the code being tested.
+
+| Context Area | File Path | When to Load |
+|-------------|-----------|--------------|
+| Hexagonal Architecture & Folder Structure | `context/python-api/architecture.md` | Always — to understand code under test |
+| SOLID Principles & Design Patterns | `context/python-api/state_management.md` | When testing complex interactor patterns |
+| Quality Criteria & API Patterns | `context/python-api/api_patterns.md` | When writing integration tests for routes |
+
 ## Project Testing Architecture
 
 ### Test Directory Structure
