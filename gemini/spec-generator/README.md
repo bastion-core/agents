@@ -235,9 +235,6 @@ gemini/spec-generator/
 │   └── agents/
 │       ├── product.md                 # Subagent @product (genera feature.yaml)
 │       └── architect.md               # Subagent @architect (genera technical.yaml)
-├── conventions-backend-py.md          # Convenciones Python/FastAPI
-├── conventions-frontend-nextjs.md     # Convenciones Next.js
-├── conventions-mobile-flutter.md      # Convenciones Flutter
 ├── schema-feature.yaml                # Schema formal de feature.yaml
 ├── schema-technical.yaml              # Schema formal de technical.yaml
 ├── example-feature.yaml               # Ejemplo de referencia (inventario)

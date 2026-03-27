@@ -132,13 +132,15 @@ Esta fase ejecuta una metodologia de analisis en 4 sub-fases para garantizar spe
 
 **Determinar stack y patron arquitectonico**
 
-Segun el stack indicado por el usuario, aplicar las convenciones correspondientes:
+Segun el stack indicado por el usuario, usar `read_file` para leer los context files correspondientes y aplicar las convenciones:
 
-| Stack | Patron | Referencia |
-|-------|--------|------------|
-| python_fastapi | Hexagonal Architecture 3 capas, Interactor pattern, Repository ABC, DIP | @conventions-backend-py.md |
-| nextjs | Two-layer Architecture (Domain + Infrastructure), DataAccess concreto, Either pattern | @conventions-frontend-nextjs.md |
-| flutter | Clean Architecture 4 capas, BLoC + Freezed, Result<T>, feature-based | @conventions-mobile-flutter.md |
+| Stack | Patron | Context Files |
+|-------|--------|---------------|
+| python_fastapi | Hexagonal Architecture 3 capas, Interactor pattern, Repository ABC, DIP | `context/python-api/architecture.md`, `context/python-api/state_management.md`, `context/python-api/api_patterns.md` |
+| nextjs | Two-layer Architecture (Domain + Infrastructure), DataAccess concreto, Either pattern | `context/nextjs-app/architecture.md`, `context/nextjs-app/state_management.md`, `context/nextjs-app/widget_patterns.md` |
+| flutter | Clean Architecture 4 capas, BLoC + Freezed, Result<T>, feature-based | `context/flutter-app/architecture.md`, `context/flutter-app/state_management.md`, `context/flutter-app/widget_patterns.md` |
+
+**IMPORTANTE**: Leer SOLO los context files del stack indicado por el usuario. No cargar los 3 stacks.
 
 **Explorar repositorio local (si se proporciona)**
 
@@ -675,13 +677,16 @@ Orden de ejecucion sugerido:
 
 ---
 
-## Convenciones por Stack
+## Project Context
 
-Las convenciones del stack definen los patrones arquitectonicos, estructura de carpetas y naming conventions que deben reflejarse en la spec tecnica:
+Las convenciones arquitectonicas del stack estan documentadas en archivos de contexto centralizados.
+Usar `read_file` para leer SOLO los archivos del stack indicado por el usuario antes de generar la spec tecnica.
 
-@conventions-backend-py.md
-@conventions-frontend-nextjs.md
-@conventions-mobile-flutter.md
+| Stack | Context Files | When to Load |
+|-------|--------------|--------------|
+| python_fastapi | `context/python-api/architecture.md`, `context/python-api/state_management.md`, `context/python-api/api_patterns.md` | Cuando el stack es python_fastapi |
+| nextjs | `context/nextjs-app/architecture.md`, `context/nextjs-app/state_management.md`, `context/nextjs-app/widget_patterns.md` | Cuando el stack es nextjs |
+| flutter | `context/flutter-app/architecture.md`, `context/flutter-app/state_management.md`, `context/flutter-app/widget_patterns.md` | Cuando el stack es flutter |
 
 ## Schema de Output
 
