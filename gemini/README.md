@@ -72,8 +72,8 @@ Gemini CLI necesita saber **cual proyecto GCP usar** y en **que region**. Config
 **Opcion A — Temporal (solo para la sesion actual):**
 
 ```bash
-export GOOGLE_CLOUD_PROJECT="tu-project-id"
-export GOOGLE_CLOUD_LOCATION="us-central1"
+export GOOGLE_CLOUD_PROJECT="still-smithy-407213"
+export GOOGLE_CLOUD_LOCATION="global"
 ```
 
 **Opcion B — Permanente (persiste entre sesiones):**
@@ -82,24 +82,22 @@ Agrega estas lineas al final de tu archivo de perfil de shell:
 
 Para zsh (macOS default):
 ```bash
-echo 'export GOOGLE_CLOUD_PROJECT="tu-project-id"' >> ~/.zshrc
-echo 'export GOOGLE_CLOUD_LOCATION="us-central1"' >> ~/.zshrc
+echo 'export GOOGLE_CLOUD_PROJECT="still-smithy-407213"' >> ~/.zshrc
+echo 'export GOOGLE_CLOUD_LOCATION="global"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
 Para bash:
 ```bash
-echo 'export GOOGLE_CLOUD_PROJECT="tu-project-id"' >> ~/.bashrc
-echo 'export GOOGLE_CLOUD_LOCATION="us-central1"' >> ~/.bashrc
+echo 'export GOOGLE_CLOUD_PROJECT="still-smithy-407213"' >> ~/.bashrc
+echo 'export GOOGLE_CLOUD_LOCATION="global"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Reemplaza `tu-project-id` con el ID real de tu proyecto GCP.
-
-| Variable | Que es | Donde encontrarla |
-|----------|--------|-------------------|
-| `GOOGLE_CLOUD_PROJECT` | ID del proyecto GCP con Vertex AI habilitado | Consola GCP > Dashboard > Project ID |
-| `GOOGLE_CLOUD_LOCATION` | Region de Vertex AI donde se ejecuta el modelo | Usar `us-central1` (misma region del cluster GKE del equipo) |
+| Variable | Que es | Valor |
+|----------|--------|-------|
+| `GOOGLE_CLOUD_PROJECT` | ID del proyecto GCP con Vertex AI habilitado | `still-smithy-407213` |
+| `GOOGLE_CLOUD_LOCATION` | Region de Vertex AI donde se ejecuta el modelo | `global` |
 
 ### Paso 6: Sincronizar agentes globalmente
 
