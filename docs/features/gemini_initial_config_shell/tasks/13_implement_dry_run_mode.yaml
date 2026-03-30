@@ -1,0 +1,44 @@
+# Phase 3 - Dry Run and Cleanup
+task: implement_dry_run_mode
+id: TASK-013
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "3 - Dry Run and Cleanup"
+depends_on:
+  - TASK-012
+
+scope: |
+  Implementar el modo --dry-run que muestra los comandos gcloud que se
+  ejecutarian sin ejecutarlos realmente.
+
+  Implementar:
+    - Funcion execute_or_dry_run() que encapsula la logica de ejecucion:
+      - Si DRY_RUN=true: muestra el comando con log_dry_run y retorna 0
+      - Si DRY_RUN=false: ejecuta el comando normalmente
+    - Refactorizar los pasos del pipeline (TASK-006 a TASK-012) para usar
+      execute_or_dry_run() en lugar de ejecutar comandos directamente
+    - Al finalizar en modo dry-run, mostrar mensaje indicando que
+      ninguna operacion fue ejecutada
+
+  El dry-run debe ejecutar las validaciones de prerequisitos normalmente
+  (verificar gcloud, auth, proyecto) pero NO ejecutar operaciones en GCP.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - La funcion execute_or_dry_run() esta implementada
+  - En modo --dry-run se muestran todos los comandos gcloud sin ejecutar
+  - Las validaciones de prerequisitos se ejecutan normalmente en dry-run
+  - Los comandos se muestran con log_dry_run (color cyan)
+  - Al finalizar se muestra "[DRY RUN] Ninguna operacion fue ejecutada"
+  - Todos los pasos del pipeline usan execute_or_dry_run()
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml
+  - docs/features/gemini_initial_config_shell/technical-proposal.md

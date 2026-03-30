@@ -1,0 +1,42 @@
+# Phase 1 - Foundation
+task: implement_error_trap
+id: TASK-005
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-002
+
+scope: |
+  Implementar el error handling centralizado usando trap en ERR.
+  El trap captura errores inesperados durante la ejecucion del pipeline
+  y muestra un diagnostico util antes de salir.
+
+  Implementar:
+    - Funcion error_handler() que recibe linea y codigo de salida
+    - trap 'error_handler $LINENO $?' ERR
+    - Diagnostico segun exit code:
+        - code 2: prerequisito faltante, mostrar que instalar/configurar
+        - code 3: permiso insuficiente, mostrar roles necesarios
+        - code 4: error de red, verificar conectividad
+        - code 5: Vertex AI inaccesible, verificar API y permisos
+    - Sugerir al usuario ejecutar --cleanup para revertir cambios parciales
+    - No ejecutar rollback automatico (decision arquitectonica ADR-004 del technical.yaml)
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El trap captura errores y muestra linea y codigo de salida
+  - El diagnostico diferencia entre los exit codes 2, 3, 4 y 5
+  - El mensaje de error sugiere --cleanup para revertir cambios parciales
+  - No se ejecuta rollback automatico ante errores
+  - El error se muestra en rojo usando log_error
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

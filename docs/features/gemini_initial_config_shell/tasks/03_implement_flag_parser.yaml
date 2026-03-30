@@ -1,0 +1,46 @@
+# Phase 1 - Foundation
+task: implement_flag_parser
+id: TASK-003
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-002
+
+scope: |
+  Implementar el parseo de flags CLI usando while-case con pattern matching.
+  Este metodo soporta flags largos y cortos sin depender de getopt de GNU
+  (no disponible por defecto en macOS).
+
+  Flags a implementar:
+    - --project / -p: ID del proyecto GCP (string, opcional)
+    - --email / -e: email del desarrollador (string, opcional)
+    - --dev-name / -n: nombre identificador del desarrollador (string, opcional)
+    - --region / -r: region de Vertex AI (string, opcional, default: us-central1)
+    - --dry-run / -d: previsualizar sin ejecutar (boolean, default: false)
+    - --cleanup / -c: revertir la configuracion (boolean, default: false)
+    - --help / -h: mostrar ayuda (boolean)
+
+  La funcion show_help() debe mostrar documentacion completa de todos los
+  flags con descripciones y valores por defecto.
+
+  Flags invalidos o desconocidos deben generar un error con exit code 1.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - Los 7 flags (largos y cortos) se parsean correctamente
+  - Los valores por defecto se aplican cuando no se proporcionan flags
+  - --help muestra documentacion completa y sale con exit code 0
+  - Flags desconocidos generan error con exit code 1
+  - --dry-run y --cleanup son mutuamente excluyentes (error si ambos se pasan)
+  - Las variables PROJECT_ID, USER_EMAIL, DEV_NAME, REGION, DRY_RUN, CLEANUP quedan asignadas
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

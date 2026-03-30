@@ -1,0 +1,63 @@
+# Phase 4 - Testing and Validation
+task: update_readme_with_setup_script
+id: TASK-018
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "4 - Testing and Validation"
+depends_on:
+  - TASK-015
+
+scope: |
+  Actualizar el archivo gemini/spec-generator/README.md para integrar el
+  script setup-gemini.sh como metodo recomendado de configuracion de
+  autenticacion con Vertex AI mediante Service Account Impersonation.
+
+  Cambios requeridos:
+
+  1. Reemplazar el Paso 4 actual ("Configurar credenciales de autenticacion (ADC)")
+     que usa gcloud auth application-default login manual, por un nuevo Paso 4
+     que ejecuta el script setup-gemini.sh:
+       - Explicar que el script automatiza la creacion de SA, permisos e impersonation
+       - Mostrar el comando de ejecucion con flags
+       - Mostrar ejemplo con --dry-run para previsualizar
+       - Mencionar que solo se ejecuta una vez por desarrollador
+
+  2. Actualizar la seccion "Autenticacion Alternativa: Service Account" para
+     referenciar el script setup-gemini.sh en lugar de documentar el flujo
+     manual de crear SA y descargar JSON key. Mantener la opcion de JSON key
+     solo para CI/CD o entornos sin navegador.
+
+  3. Actualizar la seccion de Troubleshooting:
+     - Agregar entrada para errores comunes del script (permisos IAM insuficientes)
+     - Actualizar la entrada "Could not automatically determine credentials" para
+       referenciar el script como solucion
+     - Agregar entrada para como revertir la configuracion con --cleanup
+
+  4. Mantener los demas pasos (1, 2, 3, 5, 6, 7) sin cambios ya que siguen
+     siendo validos.
+
+  No modificar la estructura general del README ni agregar secciones nuevas
+  innecesarias. El objetivo es reemplazar el flujo manual por el automatizado.
+
+files_to_create: []
+
+files_to_modify:
+  - gemini/spec-generator/README.md
+
+estimated_effort: small
+
+acceptance:
+  - El Paso 4 del README referencia el script setup-gemini.sh como metodo recomendado
+  - Se muestra el comando de ejecucion del script con ejemplo de flags
+  - Se incluye ejemplo de --dry-run
+  - La seccion "Autenticacion Alternativa" referencia el script y mantiene JSON key solo para CI/CD
+  - La seccion Troubleshooting incluye errores del script y solucion con --cleanup
+  - Los pasos 1, 2, 3, 5, 6, 7 no se modifican
+  - El README sigue siendo coherente y navegable de principio a fin
+
+context_files:
+  - gemini/spec-generator/README.md
+  - docs/features/gemini_initial_config_shell/product.yaml
+  - docs/features/gemini_initial_config_shell/technical.yaml
+  - scripts/setup-gemini.sh

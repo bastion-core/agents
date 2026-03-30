@@ -1,0 +1,39 @@
+# Phase 4 - Testing and Validation
+task: validate_error_scenarios
+id: TASK-017
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "4 - Testing and Validation"
+depends_on:
+  - TASK-015
+
+scope: |
+  Validar los escenarios de error definidos en product.yaml tests_scope
+  y technical.yaml error_handling.
+
+  Escenarios a validar:
+    1. gcloud no instalado -> exit code 2, mensaje claro
+    2. Sesion gcloud no activa -> exit code 2, mensaje con instrucciones
+    3. Project ID invalido -> exit code 2, mensaje indicando proyecto no encontrado
+    4. Dev name con caracteres invalidos -> exit code 1, formato esperado
+    5. Flags desconocidos -> exit code 1, mensaje de uso
+    6. --dry-run y --cleanup simultaneos -> exit code 1, mensaje de exclusividad
+    7. Sin permisos de IAM admin -> exit code 3, roles necesarios
+
+  Para escenarios que requieren condiciones especificas del entorno (gcloud
+  no instalado, sin internet), documentar el procedimiento de validacion
+  manual.
+
+files_to_create: []
+estimated_effort: medium
+
+acceptance:
+  - Cada escenario de error produce el exit code esperado
+  - Los mensajes de error son claros e indican como resolver el problema
+  - Ningun escenario de error deja el script en un estado colgado
+  - Los escenarios se documentan con el procedimiento de validacion
+
+context_files:
+  - docs/features/gemini_initial_config_shell/product.yaml
+  - docs/features/gemini_initial_config_shell/technical.yaml

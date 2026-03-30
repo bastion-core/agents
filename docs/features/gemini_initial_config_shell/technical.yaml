@@ -1,0 +1,425 @@
+# technical.yaml
+feature: gemini_initial_config_shell
+layer: script  # Shell script de automatizacion (no API, no agente)
+
+architecture:
+  pattern: Sequential Pipeline Script (Validate-Execute-Verify)
+  entry: Ejecucion directa del script bash setup-gemini.sh con flags de configuracion
+  use_case: >
+    Automatizar la configuracion de Service Account Impersonation en GCP para que
+    los desarrolladores puedan usar Gemini CLI con Vertex AI sin necesidad de
+    re-autenticarse manualmente cada dia. El script crea un Service Account dedicado,
+    asigna permisos minimos (Vertex AI User), configura impersonation y genera
+    Application Default Credentials (ADC).
+  interfaces: []
+
+  decisions:
+    - id: ADR-001
+      title: Script bash monolitico en lugar de multiples scripts o Makefile
+      rationale: >
+        Un unico script bash con funciones internas es suficiente para la complejidad
+        del flujo (7 pasos secuenciales). Un Makefile o multiples scripts fragmentarian
+        el flujo sin beneficio, ya que cada paso depende del anterior. El script
+        monolitico permite error handling centralizado con trap y flujo de rollback
+        coherente.
+      alternatives_rejected:
+        - Makefile con targets por paso (fragmenta el flujo, dificulta error handling y rollback)
+        - Multiples scripts invocados por un orquestador (complejidad innecesaria para un flujo lineal)
+        - Terraform/Pulumi (over-engineering para un setup de developer que es un one-time-run)
+
+    - id: ADR-002
+      title: Idempotencia mediante verificacion previa de recursos
+      rationale: >
+        Antes de cada operacion de creacion (Service Account, IAM binding),
+        el script verifica si el recurso ya existe. Esto permite re-ejecutar
+        el script de forma segura sin errores por duplicidad ni efectos
+        secundarios. Los comandos gcloud retornan codigos de salida predecibles
+        que permiten esta verificacion.
+      alternatives_rejected:
+        - Crear siempre y capturar error de duplicado (menos explicito, dificulta debugging)
+        - Archivo de estado local para tracking (agrega complejidad y riesgo de desincronizacion)
+
+    - id: ADR-003
+      title: Flags CLI con getopts en lugar de argumentos posicionales
+      rationale: >
+        Los flags nombrados (--project, --email, --dev-name, --region) son
+        auto-documentados, permiten valores por defecto y son compatibles con
+        --dry-run y --cleanup. Los argumentos posicionales serian ambiguos
+        para 4+ parametros y no permitirian flags booleanos.
+      alternatives_rejected:
+        - Argumentos posicionales (ambiguos con 4+ parametros, no permiten flags booleanos)
+        - Archivo de configuracion .env (agrega una dependencia mas y un paso de setup previo)
+        - Prompts interactivos (no son scriptables ni reproducibles en CI)
+
+    - id: ADR-004
+      title: Service Account Impersonation en lugar de Service Account Key JSON
+      rationale: >
+        Impersonation no requiere almacenar archivos de credenciales en disco,
+        eliminando el riesgo de exposicion de secrets. Las credenciales son efimeras
+        (tokens de corta duracion) y no necesitan rotacion manual. Google Cloud
+        recomienda impersonation sobre key files para desarrollo local.
+      alternatives_rejected:
+        - Service Account Key JSON (archivo de secrets en disco, requiere rotacion, riesgo de leak en git)
+        - Workload Identity Federation (requiere infraestructura adicional, orientado a CI/CD no a developer local)
+
+    - id: ADR-005
+      title: Flag --cleanup para reversion completa de la configuracion
+      rationale: >
+        El flag --cleanup ejecuta las operaciones inversas en orden reverso
+        (limpiar config gcloud, revocar IAM bindings, eliminar Service Account).
+        Esto permite al desarrollador deshacer la configuracion sin intervenir
+        manualmente en la consola de GCP. El cleanup es idempotente como el setup.
+      alternatives_rejected:
+        - Script separado de cleanup (fragmenta la logica, puede desincronizarse del setup)
+        - No ofrecer cleanup (obliga al usuario a limpiar manualmente en la consola GCP)
+
+    - id: ADR-006
+      title: Flag --dry-run para previsualizar operaciones sin ejecutarlas
+      rationale: >
+        El dry-run muestra los comandos gcloud exactos que se ejecutarian,
+        permitiendo al desarrollador revisar y validar antes de aplicar
+        cambios en GCP. Esto es especialmente util la primera vez que
+        se ejecuta el script o cuando se usa en proyectos nuevos.
+      alternatives_rejected:
+        - No ofrecer dry-run (el usuario no puede validar antes de ejecutar)
+        - Modo interactivo con confirmacion por paso (mas lento, no reproducible)
+
+pipeline:
+  - validate_prerequisites:
+      input: Entorno del desarrollador (terminal con gcloud CLI)
+      process: >
+        Verificar que gcloud CLI esta instalado y accesible en PATH.
+        Verificar que el usuario tiene una sesion activa (gcloud auth list).
+        Verificar que hay un proyecto GCP configurado o que se proporciono via --project.
+        Verificar que la API de Vertex AI esta habilitada en el proyecto.
+        Parsear y validar flags de entrada (--project, --email, --dev-name, --region).
+        Aplicar valores por defecto donde corresponda (region=us-central1, email del usuario activo, dev-name del username del email).
+      output: Variables de entorno validadas (PROJECT_ID, USER_EMAIL, DEV_NAME, REGION)
+
+  - create_service_account:
+      input: Variables validadas (PROJECT_ID, DEV_NAME)
+      process: >
+        Verificar si el Service Account gemini-{DEV_NAME} ya existe en el proyecto.
+        Si no existe, crear el Service Account con gcloud iam service-accounts create.
+        Asignar display-name descriptivo "Gemini Dev - {DEV_NAME}".
+        Si ya existe, informar al usuario y continuar al siguiente paso (idempotencia).
+      output: Service Account gemini-{DEV_NAME}@{PROJECT_ID}.iam.gserviceaccount.com creado o existente
+
+  - assign_vertex_ai_role:
+      input: Service Account creado, PROJECT_ID
+      process: >
+        Verificar si el IAM binding roles/aiplatform.user ya existe para el Service Account.
+        Si no existe, asignar el rol con gcloud projects add-iam-policy-binding.
+        Si ya existe, informar y continuar (idempotencia).
+        Este es el permiso minimo necesario para usar Gemini via Vertex AI.
+      output: Service Account con rol roles/aiplatform.user asignado en el proyecto
+
+  - grant_impersonation_permission:
+      input: Service Account, USER_EMAIL
+      process: >
+        Verificar si el IAM binding roles/iam.serviceAccountTokenCreator ya existe
+        para el usuario sobre el Service Account.
+        Si no existe, asignar con gcloud iam service-accounts add-iam-policy-binding.
+        Si ya existe, informar y continuar (idempotencia).
+        Este permiso permite al usuario generar tokens efimeros del Service Account.
+      output: Usuario con permiso de impersonation sobre el Service Account
+
+  - configure_gcloud_impersonation:
+      input: Service Account email completo
+      process: >
+        Configurar gcloud para usar impersonation por defecto con
+        gcloud config set auth/impersonate_service_account.
+        Esta configuracion persiste en el perfil gcloud del usuario.
+      output: Configuracion gcloud actualizada con impersonation por defecto
+
+  - generate_adc:
+      input: Service Account email completo
+      process: >
+        Generar Application Default Credentials (ADC) con impersonation mediante
+        gcloud auth application-default login --impersonate-service-account.
+        Este paso abre una ventana del navegador para autorizar el flujo OAuth.
+        Las credenciales generadas se almacenan automaticamente en la ubicacion
+        estandar de ADC del sistema (~/.config/gcloud/application_default_credentials.json).
+      output: ADC configurado con impersonation del Service Account
+
+  - verify_access:
+      input: Configuracion completa (ADC + impersonation)
+      process: >
+        Ejecutar un comando de verificacion gcloud ai models list --region={REGION} --limit=1
+        para confirmar que el usuario puede acceder a Vertex AI a traves del
+        Service Account. Si falla, mostrar diagnostico del error.
+        Si tiene exito, mostrar mensaje de confirmacion con instrucciones de uso.
+      output: Confirmacion de acceso exitoso a Vertex AI o diagnostico de error
+
+  - show_summary:
+      input: Resultado de todos los pasos anteriores
+      process: >
+        Mostrar resumen de la configuracion realizada con colores.
+        Incluir el Service Account creado, los permisos asignados y la region configurada.
+        Mostrar instrucciones de siguiente paso para usar Gemini CLI.
+        Incluir comando para revertir la configuracion (--cleanup).
+      output: Resumen visual en la terminal con instrucciones de uso
+
+cli_interface:
+  script_name: setup-gemini.sh
+  usage: "./setup-gemini.sh [FLAGS]"
+
+  flags:
+    - flag: "--project"
+      short: "-p"
+      type: string
+      required: false
+      default: "proyecto activo en gcloud config"
+      description: ID del proyecto GCP donde configurar el Service Account
+
+    - flag: "--email"
+      short: "-e"
+      type: string
+      required: false
+      default: "email del usuario activo en gcloud auth"
+      description: Email del desarrollador que usara impersonation
+
+    - flag: "--dev-name"
+      short: "-n"
+      type: string
+      required: false
+      default: "username extraido del email (parte antes del @)"
+      description: Nombre identificador del desarrollador para el Service Account
+
+    - flag: "--region"
+      short: "-r"
+      type: string
+      required: false
+      default: "us-central1"
+      description: Region de Vertex AI para la verificacion de acceso
+
+    - flag: "--dry-run"
+      short: "-d"
+      type: boolean
+      required: false
+      default: false
+      description: Mostrar los comandos que se ejecutarian sin ejecutarlos
+
+    - flag: "--cleanup"
+      short: "-c"
+      type: boolean
+      required: false
+      default: false
+      description: Revertir la configuracion (eliminar SA, revocar permisos, limpiar config)
+
+    - flag: "--help"
+      short: "-h"
+      type: boolean
+      required: false
+      default: false
+      description: Mostrar ayuda con descripcion de todos los flags
+
+error_handling:
+  strategy: >
+    El script usa set -euo pipefail para fallar inmediatamente ante errores.
+    Un trap en ERR captura el codigo de salida y la linea del error,
+    mostrando un mensaje diagnostico con colores antes de salir.
+    Cada paso del pipeline tiene validaciones previas para prevenir
+    errores predecibles (permisos, recursos inexistentes, red).
+
+  rollback_on_failure: >
+    Si el script falla a mitad del pipeline, NO ejecuta rollback automatico.
+    En su lugar, muestra un mensaje indicando el paso que fallo y sugiere
+    al usuario ejecutar --cleanup para revertir los cambios parciales.
+    Esto evita rollbacks parciales que podrian dejar el estado mas inconsistente.
+
+  exit_codes:
+    - code: 0
+      meaning: Configuracion completada exitosamente
+    - code: 1
+      meaning: Error general (flag invalido, error inesperado)
+    - code: 2
+      meaning: Prerequisito no cumplido (gcloud no instalado, usuario no autenticado)
+    - code: 3
+      meaning: Error de permisos en GCP (no tiene permisos para crear SA o asignar roles)
+    - code: 4
+      meaning: Error de red o timeout al comunicarse con GCP APIs
+    - code: 5
+      meaning: Error en la verificacion de acceso a Vertex AI
+
+  colored_output:
+    method: "codigos ANSI con fallback a tput cuando disponible"
+    colors:
+      info: "azul (\\033[0;34m) - progreso de pasos"
+      success: "verde (\\033[0;32m) - operacion completada"
+      warning: "amarillo (\\033[0;33m) - recurso ya existe (idempotencia)"
+      error: "rojo (\\033[0;31m) - error que detiene la ejecucion"
+      dry_run: "cyan (\\033[0;36m) - comando que se ejecutaria"
+
+security_considerations:
+  - principle: Principio de minimo privilegio
+    detail: >
+      El Service Account solo recibe el rol roles/aiplatform.user,
+      que es el permiso minimo para usar Vertex AI. No se asignan
+      roles de editor o propietario del proyecto.
+
+  - principle: Sin secrets en disco
+    detail: >
+      Se usa Service Account Impersonation en lugar de Key JSON.
+      No se almacenan archivos de credenciales de largo plazo en disco.
+      Los tokens son efimeros y se renuevan automaticamente.
+
+  - principle: Sin secrets en el script
+    detail: >
+      El script no contiene ningun secret, API key ni token hardcodeado.
+      Todos los valores sensibles se obtienen de gcloud CLI en runtime.
+
+  - principle: Sin secrets en logs
+    detail: >
+      El modo --dry-run muestra comandos gcloud pero no tokens ni credenciales.
+      Los mensajes de error no exponen informacion sensible de IAM policies.
+
+  - principle: Impersonation sobre un SA individual por desarrollador
+    detail: >
+      Cada desarrollador tiene su propio Service Account (gemini-{dev_name}),
+      permitiendo auditoria individual de uso de Vertex AI en Cloud Audit Logs
+      y revocacion de acceso por desarrollador sin afectar a otros.
+
+files_to_create:
+  - path: scripts/setup-gemini.sh
+    description: Script principal de configuracion con todas las funciones, pipeline y manejo de errores
+    estimated_lines: 350-450
+
+dependencies:
+  - gcloud_cli: >
+      Google Cloud SDK (gcloud) instalado y accesible en PATH.
+      Requerido para todas las operaciones de IAM, Service Accounts
+      y configuracion de ADC. Minimo version 400+.
+  - vertex_ai_api: >
+      API de Vertex AI (aiplatform.googleapis.com) habilitada en el proyecto GCP.
+      Necesaria para que el Service Account pueda acceder a modelos Gemini.
+  - iam_permissions: >
+      El usuario que ejecuta el script debe tener permisos de
+      iam.serviceAccounts.create, resourcemanager.projects.setIamPolicy
+      y iam.serviceAccounts.setIamPolicy en el proyecto GCP.
+      Tipicamente cubierto por el rol roles/owner o roles/iam.admin.
+  - bash_4_plus: >
+      Bash version 4.0 o superior para soporte de arrays asociativos
+      y funciones avanzadas. macOS incluye bash 3.2 por defecto pero
+      el script debe ser compatible con bash 3.2 o documentar zsh como alternativa.
+  - internet_connectivity: >
+      Conexion a internet activa para comunicarse con las APIs de GCP
+      (IAM, Vertex AI, Auth).
+
+constraints:
+  - El script debe funcionar en macOS (zsh/bash) y Linux (bash)
+  - No debe requerir dependencias externas mas alla de gcloud CLI
+  - Debe ser ejecutable sin permisos de root/sudo
+  - El nombre del Service Account debe cumplir el formato de GCP (6-30 caracteres, lowercase, guiones)
+  - La region por defecto (us-central1) debe coincidir con la region del cluster GKE del equipo
+
+implementation_phases:
+  - phase: "1 - Foundation"
+    description: >
+      Implementar la estructura base del script: parseo de flags,
+      validacion de prerequisitos, funciones de utilidad (colores,
+      logging, error handling con trap) y esqueleto del pipeline.
+    tasks:
+      - Definir funciones de colores y logging (info, success, warning, error)
+      - Implementar parseo de flags con getopts o while-case
+      - Implementar validaciones de prerequisitos (gcloud, auth, proyecto)
+      - Configurar set -euo pipefail y trap para error handling
+      - Implementar flag --help con documentacion de uso
+    estimated_duration:
+      optimistic: 2 horas
+      probable: 4 horas
+      pessimistic: 6 horas
+
+  - phase: "2 - Core Pipeline"
+    description: >
+      Implementar los 7 pasos del pipeline principal: creacion de SA,
+      asignacion de roles, impersonation, ADC y verificacion.
+      Cada paso incluye verificacion de idempotencia.
+    depends_on:
+      - "1 - Foundation"
+    tasks:
+      - Implementar creacion de Service Account con verificacion de existencia
+      - Implementar asignacion de rol Vertex AI con verificacion de binding
+      - Implementar grant de impersonation con verificacion de binding
+      - Implementar configuracion de gcloud impersonation
+      - Implementar generacion de ADC
+      - Implementar verificacion de acceso a Vertex AI
+      - Implementar resumen final con instrucciones de uso
+    estimated_duration:
+      optimistic: 3 horas
+      probable: 5 horas
+      pessimistic: 8 horas
+
+  - phase: "3 - Dry Run and Cleanup"
+    description: >
+      Implementar los modos especiales: --dry-run para previsualizar
+      comandos y --cleanup para revertir la configuracion completa.
+    depends_on:
+      - "2 - Core Pipeline"
+    tasks:
+      - Implementar modo --dry-run que muestra comandos sin ejecutar
+      - Implementar --cleanup con reversion en orden inverso
+      - Verificar idempotencia del cleanup (no falla si el recurso ya no existe)
+    estimated_duration:
+      optimistic: 2 horas
+      probable: 3 horas
+      pessimistic: 5 horas
+
+  - phase: "4 - Testing and Validation"
+    description: >
+      Pruebas manuales del script en un proyecto GCP real.
+      Verificar los 3 modos (normal, dry-run, cleanup) y todos
+      los escenarios de error documentados.
+    depends_on:
+      - "3 - Dry Run and Cleanup"
+    tasks:
+      - Probar setup completo en proyecto GCP limpio
+      - Probar idempotencia (re-ejecutar el script sobre configuracion existente)
+      - Probar --dry-run y verificar que no modifica ningun recurso
+      - Probar --cleanup y verificar que revierte completamente
+      - Probar escenarios de error (sin gcloud, sin permisos, sin internet)
+      - Probar en macOS y Linux
+    estimated_duration:
+      optimistic: 1 hora
+      probable: 2 horas
+      pessimistic: 4 horas
+
+total_estimated_duration:
+  optimistic: 8 horas (1 dia)
+  probable: 14 horas (2 dias)
+  pessimistic: 23 horas (3 dias)
+  notes: >
+    Las fases son estrictamente secuenciales. La fase de testing
+    requiere acceso a un proyecto GCP con permisos de administrador de IAM.
+
+risks:
+  - risk: Incompatibilidad de bash entre macOS (bash 3.2 por defecto) y Linux (bash 5+)
+    probability: Medium
+    impact: Medium
+    mitigation: >
+      Usar solo features de bash 3.2 (POSIX-compatible) o documentar
+      que el script requiere bash 4+ y sugerir brew install bash en macOS.
+      Alternativamente, usar /bin/sh para maxima portabilidad.
+
+  - risk: El usuario no tiene permisos de IAM Admin para crear Service Accounts
+    probability: Medium
+    impact: High
+    mitigation: >
+      Verificar permisos al inicio del script con un testIamPermissions
+      o intentar una operacion trivial. Mostrar mensaje claro indicando
+      que roles necesita el usuario y sugerir contactar al administrador del proyecto.
+
+  - risk: La API de Vertex AI no esta habilitada en el proyecto
+    probability: Low
+    impact: Medium
+    mitigation: >
+      Verificar con gcloud services list si aiplatform.googleapis.com
+      esta habilitado. Si no, ofrecer habilitarla automaticamente con
+      gcloud services enable o mostrar instrucciones para habilitarla.
+
+  - risk: El Service Account name excede el limite de 30 caracteres de GCP
+    probability: Low
+    impact: Low
+    mitigation: >
+      Validar que el prefijo "gemini-" + dev_name no exceda 30 caracteres.
+      Si excede, truncar dev_name y avisar al usuario.

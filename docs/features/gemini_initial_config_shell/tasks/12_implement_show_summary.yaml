@@ -1,0 +1,44 @@
+# Phase 2 - Core Pipeline
+task: implement_show_summary
+id: TASK-012
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-011
+
+scope: |
+  Implementar el paso 7 del pipeline: mostrar resumen de la configuracion
+  realizada con instrucciones de uso.
+
+  El resumen debe incluir:
+    - Service Account creado (email completo)
+    - Permisos asignados (roles/aiplatform.user + roles/iam.serviceAccountTokenCreator)
+    - Region de Vertex AI configurada
+    - Instrucciones de siguiente paso para usar Gemini CLI
+    - Comando para revertir la configuracion (--cleanup)
+    - Nota sobre como verificar consumo en GCP Billing
+
+  Formato visual:
+    - Usar un box/recuadro con caracteres ASCII
+    - Colores para destacar valores importantes
+    - Claro y conciso
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El resumen muestra el SA email, roles, region y proyecto
+  - Se incluyen instrucciones de uso de Gemini CLI
+  - Se incluye el comando de cleanup para revertir
+  - El formato es visual con box ASCII y colores
+  - Se usa log_step para mostrar "[Paso 7/7] Configuracion completada"
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml
+  - docs/features/gemini_initial_config_shell/product.yaml

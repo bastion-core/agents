@@ -63,6 +63,84 @@ WORKFLOWS_REPO=https://github.com/company/workflows.git ./scripts/sync-workflows
 
 ---
 
+### gemini/setup-gemini.sh
+
+Automatiza la configuracion de Service Account Impersonation en GCP para usar Gemini CLI con Vertex AI sin re-autenticarse diariamente.
+
+**Purpose**: Crear un Service Account dedicado por desarrollador, asignar permisos de Vertex AI, configurar impersonation y generar ADC. Se ejecuta una sola vez.
+
+**Prerequisites**:
+- gcloud CLI instalado y autenticado (`gcloud auth login`)
+- Proyecto GCP con API de Vertex AI habilitada
+
+**Usage**:
+```bash
+# Setup con defaults (proyecto: still-smithy-407213, region: global, email y dev-name del usuario activo)
+./scripts/gemini/setup-gemini.sh
+
+# Setup con parametros explicitos
+./scripts/gemini/setup-gemini.sh --project my-project --email dev@empresa.com --dev-name juan
+
+# Previsualizar comandos sin ejecutar
+./scripts/gemini/setup-gemini.sh --dry-run
+
+# Revertir toda la configuracion
+./scripts/gemini/setup-gemini.sh --cleanup --dev-name juan
+
+# Previsualizar cleanup
+./scripts/gemini/setup-gemini.sh --cleanup --dry-run --dev-name juan
+```
+
+**Flags**:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--project` | `-p` | `still-smithy-407213` | ID del proyecto GCP |
+| `--email` | `-e` | Email del usuario activo | Email del desarrollador |
+| `--dev-name` | `-n` | Username del email | Identificador para el Service Account |
+| `--region` | `-r` | `global` | Region de Vertex AI |
+| `--dry-run` | `-d` | `false` | Previsualizar sin ejecutar |
+| `--cleanup` | `-c` | `false` | Revertir configuracion |
+| `--help` | `-h` | - | Mostrar ayuda |
+
+**What it does (setup)**:
+1. Valida prerequisitos (gcloud, autenticacion, proyecto, API de Vertex AI, permisos IAM)
+2. Crea Service Account `gemini-{dev-name}@{project}.iam.gserviceaccount.com`
+3. Asigna rol `roles/aiplatform.user` al Service Account
+4. Otorga `roles/iam.serviceAccountTokenCreator` al usuario sobre el SA
+5. Configura `gcloud config set auth/impersonate_service_account`
+6. Genera Application Default Credentials con impersonation
+7. Verifica acceso a Vertex AI (usa `us-central1` si la region es `global`)
+
+**What it does (cleanup)**: Revierte en orden inverso (unset config, revocar permisos, eliminar SA).
+
+**Idempotent**: El script verifica la existencia de cada recurso antes de crearlo. Se puede re-ejecutar sin errores.
+
+**Sin permisos de IAM Admin**: Si el desarrollador no tiene permisos para crear Service Accounts o asignar roles IAM (`resourcemanager.projects.setIamPolicy`), el script detecta esto automaticamente y muestra los comandos exactos que el admin de GCP debe ejecutar. Despues de que el admin ejecute los comandos, el desarrollador vuelve a correr el script y los pasos 1-3 se saltan por idempotencia.
+
+---
+
+### gemini/sync-agents.sh
+
+Sincroniza los subagents de Gemini CLI a la configuracion global del usuario.
+
+**Purpose**: Habilitar los subagents (`@product`, `@architect`, etc.) globalmente para invocarlos desde cualquier repositorio.
+
+**Usage**:
+```bash
+./scripts/gemini/sync-agents.sh
+```
+
+**What it does**:
+1. Crea el directorio `~/.gemini/agents/` si no existe
+2. Copia los agentes de `gemini/spec-generator/.gemini/agents/` a la configuracion global
+3. Copia archivos de soporte (convenciones, esquemas, ejemplos)
+4. Configura `~/.gemini/GEMINI.md` con las instrucciones de orquestacion
+
+**Re-run**: Ejecutar de nuevo para actualizar los agentes despues de cambios en el repositorio.
+
+---
+
 ## 🗑️ Removed Scripts
 
 ### ~~sync-agents.sh~~ (REMOVED)
@@ -178,6 +256,33 @@ Make scripts executable:
 ```bash
 chmod +x scripts/validate-agents.sh
 chmod +x scripts/sync-workflows.sh
+chmod +x scripts/gemini/setup-gemini.sh
+chmod +x scripts/gemini/sync-agents.sh
+```
+
+### setup-gemini.sh shows "Share the following commands with your GCP admin"
+
+El desarrollador no tiene permisos de IAM Admin. El script muestra los comandos que el admin debe ejecutar. Copiar el bloque completo y enviarselo al admin. Despues de que el admin lo ejecute, correr el script de nuevo:
+```bash
+./scripts/gemini/setup-gemini.sh --dev-name your-name
+```
+Los pasos 1-3 se saltaran (ya configurados por el admin) y solo se ejecutaran los pasos 4-7.
+
+### setup-gemini.sh fails at "Vertex AI API not enabled"
+
+Enable the API first:
+```bash
+gcloud services enable aiplatform.googleapis.com --project=YOUR_PROJECT_ID
+```
+
+### setup-gemini.sh fails at Step 6 with "404 Not Found"
+
+La region configurada no soporta el endpoint de Vertex AI para listar modelos. El default `global` se maneja automaticamente (usa `us-central1` para verificacion). Si usas otra region, verificar que sea valida para Vertex AI.
+
+### Reverting setup-gemini.sh configuration
+
+```bash
+./scripts/gemini/setup-gemini.sh --cleanup --dev-name your-name
 ```
 
 ---

@@ -1,0 +1,52 @@
+# Phase 3 - Dry Run and Cleanup
+task: implement_cleanup_mode
+id: TASK-014
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "3 - Dry Run and Cleanup"
+depends_on:
+  - TASK-013
+
+scope: |
+  Implementar el modo --cleanup que revierte toda la configuracion en
+  orden inverso al setup.
+
+  Pasos de cleanup (orden inverso al pipeline):
+    1. Limpiar gcloud config auth/impersonate_service_account
+       - Comando: gcloud config unset auth/impersonate_service_account
+    2. Revocar roles/iam.serviceAccountTokenCreator del usuario sobre el SA
+       - Verificar si el binding existe antes de revocar
+       - Comando: gcloud iam service-accounts remove-iam-policy-binding {SA_EMAIL} --member="user:{USER_EMAIL}" --role="roles/iam.serviceAccountTokenCreator"
+       - Si no existe: log_warning y continuar
+    3. Revocar roles/aiplatform.user del SA en el proyecto
+       - Verificar si el binding existe antes de revocar
+       - Comando: gcloud projects remove-iam-policy-binding {PROJECT_ID} --member="serviceAccount:{SA_EMAIL}" --role="roles/aiplatform.user"
+       - Si no existe: log_warning y continuar
+    4. Eliminar el Service Account
+       - Verificar si el SA existe antes de eliminar
+       - Comando: gcloud iam service-accounts delete {SA_EMAIL} --quiet
+       - Si no existe: log_warning y continuar
+    5. Mostrar resumen de cleanup
+
+  El cleanup debe ser idempotente: si un recurso ya no existe, continuar
+  sin error. El cleanup tambien respeta el modo --dry-run.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: medium
+
+acceptance:
+  - Los 4 pasos de cleanup se ejecutan en orden inverso al setup
+  - Cada paso verifica la existencia del recurso antes de actuar
+  - Si el recurso no existe, se muestra warning y se continua (idempotencia)
+  - El cleanup respeta --dry-run (muestra comandos sin ejecutar)
+  - Se muestra resumen de cleanup al finalizar
+  - --cleanup y --dry-run pueden combinarse
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml
+  - docs/features/gemini_initial_config_shell/technical-proposal.md
