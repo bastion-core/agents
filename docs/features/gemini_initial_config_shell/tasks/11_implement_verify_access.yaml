@@ -1,0 +1,42 @@
+# Phase 2 - Core Pipeline
+task: implement_verify_access
+id: TASK-011
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-010
+
+scope: |
+  Implementar el paso 6 del pipeline: verificar que el acceso a Vertex AI
+  funciona correctamente con la configuracion aplicada.
+
+  Flujo:
+    1. Ejecutar verificacion de acceso:
+       - Comando: gcloud ai models list --region={REGION} --limit=1
+    2. Si tiene exito: log_success indicando acceso verificado
+    3. Si falla: log_error con diagnostico y exit code 5
+       - Sugerir verificar que la API esta habilitada
+       - Sugerir verificar permisos del SA
+       - Sugerir esperar unos minutos (propagacion de IAM)
+
+  En modo --dry-run: mostrar el comando que se ejecutaria sin ejecutarlo.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - Se ejecuta gcloud ai models list para verificar acceso
+  - Exito muestra log_success con confirmacion
+  - Fallo muestra log_error con diagnostico y sugerencias
+  - Fallo sale con exit code 5
+  - En modo dry-run se muestra el comando sin ejecutar
+  - Se usa log_step para mostrar "[Paso 6/7] Verificando acceso a Vertex AI..."
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

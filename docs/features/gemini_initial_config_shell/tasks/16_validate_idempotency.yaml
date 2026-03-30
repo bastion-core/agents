@@ -1,0 +1,41 @@
+# Phase 4 - Testing and Validation
+task: validate_idempotency
+id: TASK-016
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "4 - Testing and Validation"
+depends_on:
+  - TASK-015
+
+scope: |
+  Validar que el script es completamente idempotente ejecutandolo dos
+  veces consecutivas con los mismos parametros.
+
+  Verificaciones:
+    1. Primera ejecucion: todos los pasos se ejecutan y crean recursos
+    2. Segunda ejecucion: los pasos detectan recursos existentes y muestran
+       warnings sin errores
+    3. El estado final de GCP es identico despues de ambas ejecuciones
+    4. No hay bindings duplicados en IAM policies
+
+  Tambien validar idempotencia del cleanup:
+    1. Primera ejecucion de cleanup: revierte todos los recursos
+    2. Segunda ejecucion de cleanup: detecta que los recursos no existen
+       y muestra warnings sin errores
+
+  Esta tarea requiere acceso a un proyecto GCP real para validacion.
+
+files_to_create: []
+estimated_effort: medium
+
+acceptance:
+  - El script se ejecuta dos veces sin errores
+  - La segunda ejecucion muestra warnings para recursos ya existentes
+  - No se crean recursos duplicados
+  - El cleanup se ejecuta dos veces sin errores
+  - La segunda ejecucion de cleanup muestra warnings para recursos no encontrados
+
+context_files:
+  - docs/features/gemini_initial_config_shell/product.yaml
+  - docs/features/gemini_initial_config_shell/technical.yaml

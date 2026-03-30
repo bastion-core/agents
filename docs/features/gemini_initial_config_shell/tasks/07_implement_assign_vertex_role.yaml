@@ -1,0 +1,40 @@
+# Phase 2 - Core Pipeline
+task: implement_assign_vertex_role
+id: TASK-007
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-006
+
+scope: |
+  Implementar el paso 2 del pipeline: asignar el rol roles/aiplatform.user
+  al Service Account para acceso a Vertex AI.
+
+  Flujo:
+    1. Verificar si el IAM binding ya existe para el SA en el proyecto
+       - Comando: gcloud projects get-iam-policy {PROJECT_ID} --flatten="bindings[].members" --filter="bindings.role:roles/aiplatform.user AND bindings.members:serviceAccount:{SA_EMAIL}" --format="value(bindings.role)"
+       - Si existe: log_warning y continuar (idempotencia)
+    2. Si no existe, asignar el rol:
+       - Comando: gcloud projects add-iam-policy-binding {PROJECT_ID} --member="serviceAccount:{SA_EMAIL}" --role="roles/aiplatform.user" --condition=None
+    3. Mostrar log_success confirmando la asignacion del rol
+
+  En modo --dry-run: mostrar el comando que se ejecutaria sin ejecutarlo.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El rol roles/aiplatform.user se asigna al SA en el proyecto
+  - Si el binding ya existe, no se duplica y se muestra warning
+  - En modo dry-run se muestra el comando sin ejecutar
+  - Se usa log_step para mostrar "[Paso 2/7] Asignando rol de Vertex AI..."
+  - Errores de permisos se capturan con exit code 3
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

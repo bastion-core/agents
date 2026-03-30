@@ -1,0 +1,36 @@
+# Phase 1 - Foundation
+task: create_script_skeleton
+id: TASK-001
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on: []
+
+scope: |
+  Crear el archivo scripts/setup-gemini.sh con la estructura base del script:
+  - Shebang (#!/usr/bin/env bash)
+  - Header con descripcion, uso y autor
+  - set -euo pipefail para error handling estricto
+  - Declaracion de variables globales (colores ANSI, version del script)
+  - Esqueleto de la funcion main() que invocara las funciones del pipeline
+  - Hacer el archivo ejecutable (chmod +x)
+
+  El script debe ser ejecutable pero no realizar ninguna operacion real todavia.
+  Solo debe mostrar un mensaje de "setup-gemini.sh v1.0" al ejecutarse.
+
+files_to_create:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El archivo scripts/setup-gemini.sh existe y es ejecutable
+  - El script tiene shebang #!/usr/bin/env bash
+  - set -euo pipefail esta configurado al inicio
+  - Las variables de colores ANSI estan definidas (INFO, SUCCESS, WARNING, ERROR, DRY_RUN, RESET)
+  - La funcion main() existe como esqueleto
+  - El script se ejecuta sin errores y muestra la version
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

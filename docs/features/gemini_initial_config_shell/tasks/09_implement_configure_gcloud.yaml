@@ -1,0 +1,39 @@
+# Phase 2 - Core Pipeline
+task: implement_configure_gcloud
+id: TASK-009
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-008
+
+scope: |
+  Implementar el paso 4 del pipeline: configurar gcloud para usar
+  impersonation por defecto.
+
+  Flujo:
+    1. Configurar impersonation por defecto:
+       - Comando: gcloud config set auth/impersonate_service_account {SA_EMAIL}
+    2. Mostrar log_success confirmando la configuracion
+
+  Este paso es idempotente por naturaleza (gcloud config set sobrescribe
+  el valor anterior sin error).
+
+  En modo --dry-run: mostrar el comando que se ejecutaria sin ejecutarlo.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - gcloud config set auth/impersonate_service_account se ejecuta con el SA_EMAIL
+  - En modo dry-run se muestra el comando sin ejecutar
+  - Se usa log_step para mostrar "[Paso 4/7] Configurando gcloud con impersonation..."
+  - El paso se ejecuta sin verificacion previa (config set es idempotente)
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

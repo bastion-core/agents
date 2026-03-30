@@ -1,0 +1,45 @@
+# Phase 2 - Core Pipeline
+task: implement_generate_adc
+id: TASK-010
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-009
+
+scope: |
+  Implementar el paso 5 del pipeline: generar Application Default Credentials
+  con impersonation habilitada.
+
+  Flujo:
+    1. Informar al usuario que se abrira una ventana del navegador para
+       autorizar el flujo OAuth
+    2. Ejecutar la generacion de ADC:
+       - Comando: gcloud auth application-default login --impersonate-service-account={SA_EMAIL}
+    3. Verificar que el archivo ADC se genero correctamente en la ubicacion
+       estandar (~/.config/gcloud/application_default_credentials.json)
+    4. Mostrar log_success confirmando la generacion de ADC
+
+  En modo --dry-run: mostrar el comando que se ejecutaria sin ejecutarlo.
+  No abrir el navegador.
+
+  Nota: este paso requiere interaccion del usuario (autorizar en el navegador).
+  El script debe informar esto claramente antes de ejecutar.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El comando gcloud auth application-default login se ejecuta con --impersonate-service-account
+  - El usuario es informado de que se abrira el navegador antes de ejecutar
+  - En modo dry-run se muestra el comando sin ejecutar ni abrir navegador
+  - Se usa log_step para mostrar "[Paso 5/7] Generando Application Default Credentials..."
+  - Se verifica la existencia del archivo ADC despues de la generacion
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

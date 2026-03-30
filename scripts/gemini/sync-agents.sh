@@ -6,9 +6,10 @@
 
 set -e
 
-# Obtener el directorio del script
+# Obtener el directorio raiz del repositorio (dos niveles arriba de scripts/gemini/)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-SRC_DIR="$SCRIPT_DIR/spec-generator"
+REPO_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+SRC_DIR="$REPO_ROOT/gemini/spec-generator"
 
 GEMINI_DIR="$HOME/.gemini"
 AGENTS_DIR="$GEMINI_DIR/agents"

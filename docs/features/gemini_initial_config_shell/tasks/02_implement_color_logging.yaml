@@ -1,0 +1,42 @@
+# Phase 1 - Foundation
+task: implement_color_logging
+id: TASK-002
+level: L1
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-001
+
+scope: |
+  Implementar las funciones de logging con colores ANSI para feedback visual
+  en la terminal. Las funciones deben ser reutilizables por todos los pasos
+  del pipeline.
+
+  Funciones a implementar:
+    - log_info(): mensaje en azul para progreso de pasos
+    - log_success(): mensaje en verde para operaciones completadas
+    - log_warning(): mensaje en amarillo para recursos ya existentes (idempotencia)
+    - log_error(): mensaje en rojo para errores que detienen la ejecucion
+    - log_dry_run(): mensaje en cyan para comandos que se ejecutarian en modo dry-run
+    - log_step(): mensaje con formato "[Paso N/7] Descripcion..." para el pipeline
+
+  Todas las funciones deben respetar la variable NO_COLOR si esta definida
+  en el entorno (estandar no-color.org) y escribir errores a stderr.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - Las 6 funciones de logging estan implementadas
+  - Los colores ANSI se aplican correctamente (azul, verde, amarillo, rojo, cyan)
+  - Si la variable NO_COLOR esta definida, los mensajes se muestran sin colores
+  - Los mensajes de error se escriben a stderr
+  - log_step muestra el formato "[Paso N/7] Descripcion"
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

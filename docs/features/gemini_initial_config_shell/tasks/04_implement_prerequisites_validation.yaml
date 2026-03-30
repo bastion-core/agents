@@ -1,0 +1,55 @@
+# Phase 1 - Foundation
+task: implement_prerequisites_validation
+id: TASK-004
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "1 - Foundation"
+depends_on:
+  - TASK-003
+
+scope: |
+  Implementar la fase de validacion de prerequisitos del pipeline.
+  Esta fase se ejecuta antes de cualquier operacion en GCP y verifica
+  que el entorno del desarrollador esta correctamente configurado.
+
+  Validaciones a implementar (en orden):
+    1. gcloud CLI instalado y accesible en PATH
+       - Verificar con: command -v gcloud
+       - Error: exit code 2
+    2. Usuario autenticado en gcloud
+       - Verificar con: gcloud auth list --filter=status:ACTIVE --format="value(account)"
+       - Si no se paso --email, usar el email del usuario activo como default
+       - Error: exit code 2
+    3. Proyecto GCP configurado y accesible
+       - Si no se paso --project, obtener con: gcloud config get-value project
+       - Verificar acceso con: gcloud projects describe {PROJECT_ID}
+       - Error: exit code 2
+    4. API de Vertex AI habilitada
+       - Verificar con: gcloud services list --enabled --filter="name:aiplatform.googleapis.com"
+       - Error: exit code 2, mostrar comando para habilitar manualmente
+    5. Inputs validos
+       - dev_name: solo lowercase, numeros y guiones, 1-24 caracteres (gemini- prefix = 30 max)
+       - Si no se paso --dev-name, extraer del email (parte antes del @)
+       - Error: exit code 1
+
+  Si todas las validaciones pasan, mostrar resumen de la configuracion
+  que se va a aplicar antes de continuar.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: medium
+
+acceptance:
+  - Las 5 validaciones se ejecutan en orden secuencial
+  - Cada validacion falla con el exit code correcto (1 o 2 segun el caso)
+  - Los valores por defecto se resuelven automaticamente (email, project, dev-name)
+  - El dev-name se valida contra el formato de SA de GCP (lowercase, guiones, 1-24 chars)
+  - Se muestra resumen de configuracion antes de proceder al pipeline
+  - Mensajes de error son claros e indican como resolver el problema
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

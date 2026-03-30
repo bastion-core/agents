@@ -1,0 +1,92 @@
+# product.yaml
+feature: gemini_initial_config_shell
+owner: product_owner
+version: 1.0
+
+description: |
+  Como desarrollador del equipo de ingenieria,
+  puedo ejecutar un script de shell que automatiza la configuracion inicial
+  de Gemini CLI con autenticacion a Google Cloud Platform mediante
+  Service Account Impersonation, de modo que no necesito ejecutar
+  manualmente el flujo de autenticacion diario (gcloud auth application-default login)
+  y la empresa puede rastrear el consumo individual de Vertex AI por desarrollador
+  a traves de un dashboard de metricas.
+  El script crea una Service Account dedicada para el desarrollador, asigna
+  los permisos necesarios de Vertex AI e impersonation, configura gcloud
+  para usar impersonation por defecto y genera las Application Default Credentials
+  con impersonation habilitada.
+
+acceptance_criteria:
+  - El script crea una Service Account dedicada con el formato gemini-{nombre_desarrollador}@{project_id}.iam.gserviceaccount.com
+  - El script asigna el rol de acceso a Vertex AI a la Service Account creada
+  - El script asigna el permiso de impersonation al usuario personal sobre la Service Account creada
+  - El script configura gcloud para usar impersonation por defecto con la Service Account creada
+  - El script genera las Application Default Credentials con impersonation habilitada
+  - El script verifica que la configuracion funciona correctamente al finalizar y muestra un mensaje de confirmacion
+  - El script valida que gcloud esta instalado y que el usuario tiene una sesion activa antes de ejecutar cualquier paso
+  - El script es idempotente y puede ejecutarse multiples veces sin producir errores ni duplicar recursos
+  - El script muestra mensajes informativos de progreso durante cada paso de la configuracion
+  - El script detiene la ejecucion si un paso falla e informa al usuario el error ocurrido sin continuar con los pasos siguientes
+  - El script es compatible con macOS y Linux
+
+business_rules:
+  - rol_vertex_ai: roles/aiplatform.user es el rol que se asigna a la Service Account para acceso a Vertex AI
+  - rol_impersonation: roles/iam.serviceAccountTokenCreator es el rol que se asigna al usuario personal sobre la Service Account para habilitar impersonation
+  - formato_service_account: el email de la Service Account sigue el formato gemini-{nombre_desarrollador}@{project_id}.iam.gserviceaccount.com
+  - region_por_defecto: us-central1 es la region de Vertex AI que se usa si el desarrollador no especifica una diferente
+  - idempotencia: si la Service Account ya existe, el script no intenta recrearla; si los permisos ya estan asignados, no los duplica
+  - prerequisito_gcloud: el script requiere que gcloud CLI este instalado y que el usuario tenga una sesion autenticada activa
+  - sistemas_operativos: el script es compatible con macOS y Linux; no se requiere soporte para Windows
+  - estrategia_de_consumo: cada desarrollador tiene su propia Service Account para permitir el rastreo individual de consumo de creditos de Vertex AI en GCP
+  - detencion_ante_error: si cualquier paso del script falla, la ejecucion se detiene inmediatamente y se informa el error al usuario
+  - configuracion_gcloud_impersonation: el script ejecuta gcloud config set auth/impersonate_service_account para establecer impersonation por defecto en la configuracion local de gcloud
+  - generacion_adc: el script genera Application Default Credentials usando gcloud auth application-default login con el flag de impersonate-service-account
+
+inputs:
+  - project_id: texto con el identificador del proyecto de GCP donde se creara la Service Account y se asignaran los permisos (obligatorio)
+  - user_email: texto con el email de la cuenta personal de GCP del desarrollador que recibira el permiso de impersonation (obligatorio)
+  - developer_name: texto con el nombre identificador del desarrollador que se usa para nombrar la Service Account, por ejemplo "juan" genera gemini-juan@proyecto.iam.gserviceaccount.com (obligatorio)
+  - vertex_ai_region: texto con la region de Vertex AI a configurar; si no se proporciona, se usa us-central1 por defecto (opcional, default us-central1)
+
+outputs:
+  service_account_creada:
+    descripcion: |
+      Service Account creada en el proyecto de GCP con el formato
+      gemini-{nombre_desarrollador}@{project_id}.iam.gserviceaccount.com,
+      lista para ser usada como identidad de impersonation.
+
+  permisos_iam_asignados:
+    descripcion: |
+      Dos bindings de IAM configurados: el rol de acceso a Vertex AI
+      asignado a la Service Account, y el rol de impersonation asignado
+      al usuario personal del desarrollador sobre la Service Account.
+
+  gcloud_configurado:
+    descripcion: |
+      Configuracion local de gcloud actualizada con impersonation por defecto,
+      de modo que todos los comandos gcloud posteriores usan la Service Account
+      como identidad sin necesidad de especificarlo manualmente.
+
+  adc_generadas:
+    descripcion: |
+      Application Default Credentials generadas con impersonation habilitada,
+      permitiendo que Gemini CLI y cualquier herramienta que use ADC
+      se autentique automaticamente a traves de la Service Account.
+
+  mensaje_verificacion:
+    descripcion: |
+      Mensaje en consola confirmando que todos los pasos se completaron
+      exitosamente y que la configuracion esta lista para usar Gemini CLI
+      con Vertex AI.
+
+tests_scope:
+  - configuracion_exitosa_completa: se proporcionan todos los inputs obligatorios con valores validos y gcloud esta instalado y autenticado -> el script crea la Service Account, asigna permisos, configura gcloud e impersonation, genera ADC y muestra mensaje de verificacion exitosa
+  - gcloud_no_instalado: se ejecuta el script en un entorno donde gcloud CLI no esta instalado -> el script muestra un mensaje de error indicando que gcloud es requerido y se detiene sin ejecutar ningun paso
+  - sesion_gcloud_no_activa: se ejecuta el script con gcloud instalado pero sin sesion autenticada -> el script muestra un mensaje de error indicando que se requiere autenticacion y se detiene sin ejecutar ningun paso
+  - ejecucion_idempotente: se ejecuta el script dos veces consecutivas con los mismos parametros -> la segunda ejecucion completa sin errores, no duplica la Service Account ni los permisos, y muestra mensaje de verificacion exitosa
+  - region_por_defecto: se ejecuta el script sin proporcionar la region de Vertex AI -> el script usa us-central1 como region por defecto
+  - region_personalizada: se ejecuta el script proporcionando una region diferente a la por defecto -> el script usa la region proporcionada en la configuracion
+  - fallo_en_creacion_service_account: la creacion de la Service Account falla por permisos insuficientes del usuario -> el script muestra el error especifico y se detiene sin intentar asignar permisos ni configurar gcloud
+  - fallo_en_asignacion_permisos: la Service Account se crea exitosamente pero la asignacion de permisos IAM falla -> el script muestra el error especifico y se detiene sin continuar con la configuracion de gcloud
+  - project_id_invalido: se proporciona un project_id que no existe en GCP -> el script muestra un mensaje de error indicando que el proyecto no fue encontrado y se detiene
+  - developer_name_con_caracteres_invalidos: se proporciona un nombre de desarrollador con caracteres no permitidos para nombres de Service Account -> el script muestra un mensaje de error indicando el formato esperado y se detiene

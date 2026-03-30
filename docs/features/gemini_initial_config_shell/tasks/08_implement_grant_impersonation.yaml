@@ -1,0 +1,41 @@
+# Phase 2 - Core Pipeline
+task: implement_grant_impersonation
+id: TASK-008
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "2 - Core Pipeline"
+depends_on:
+  - TASK-007
+
+scope: |
+  Implementar el paso 3 del pipeline: otorgar permiso de impersonation
+  al usuario personal sobre el Service Account.
+
+  Flujo:
+    1. Verificar si el IAM binding roles/iam.serviceAccountTokenCreator ya existe
+       para el usuario sobre el SA
+       - Comando: gcloud iam service-accounts get-iam-policy {SA_EMAIL} --flatten="bindings[].members" --filter="bindings.role:roles/iam.serviceAccountTokenCreator AND bindings.members:user:{USER_EMAIL}" --format="value(bindings.role)"
+       - Si existe: log_warning y continuar (idempotencia)
+    2. Si no existe, asignar el permiso:
+       - Comando: gcloud iam service-accounts add-iam-policy-binding {SA_EMAIL} --member="user:{USER_EMAIL}" --role="roles/iam.serviceAccountTokenCreator"
+    3. Mostrar log_success confirmando el permiso de impersonation
+
+  En modo --dry-run: mostrar el comando que se ejecutaria sin ejecutarlo.
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - El rol roles/iam.serviceAccountTokenCreator se asigna al usuario sobre el SA
+  - Si el binding ya existe, no se duplica y se muestra warning
+  - En modo dry-run se muestra el comando sin ejecutar
+  - Se usa log_step para mostrar "[Paso 3/7] Otorgando permiso de impersonation..."
+  - Errores de permisos se capturan con exit code 3
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml

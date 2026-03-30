@@ -1,0 +1,47 @@
+# Phase 4 - Testing and Validation
+task: integrate_main_flow
+id: TASK-015
+level: L2
+parent: technical.yaml
+status: PENDING
+phase: "4 - Testing and Validation"
+depends_on:
+  - TASK-014
+
+scope: |
+  Integrar todos los componentes en la funcion main() y verificar que el
+  flujo completo funciona correctamente.
+
+  La funcion main() debe orquestar:
+    1. Parsear flags (TASK-003)
+    2. Si --help: mostrar ayuda y salir
+    3. Validar prerequisitos (TASK-004)
+    4. Si --cleanup: ejecutar flujo de cleanup (TASK-014)
+    5. Si setup normal: ejecutar pipeline de 7 pasos (TASK-006 a TASK-012)
+    6. Mostrar resumen final
+
+  Verificar:
+    - El flujo completo de setup ejecuta los 7 pasos en orden
+    - El flujo de cleanup ejecuta los 4 pasos en orden inverso
+    - El modo dry-run funciona tanto en setup como en cleanup
+    - Los exit codes son correctos para cada tipo de error
+    - El script termina con exit code 0 en caso de exito
+
+files_to_create: []
+
+files_to_modify:
+  - scripts/setup-gemini.sh
+
+estimated_effort: small
+
+acceptance:
+  - La funcion main() orquesta correctamente los 3 flujos (setup, cleanup, help)
+  - El flujo de setup ejecuta las validaciones y los 7 pasos secuencialmente
+  - El flujo de cleanup ejecuta las validaciones minimas y los 4 pasos de reversion
+  - --dry-run funciona en ambos flujos
+  - Exit code 0 al finalizar exitosamente
+  - El script es auto-contenido y ejecutable directamente
+
+context_files:
+  - docs/features/gemini_initial_config_shell/technical.yaml
+  - docs/features/gemini_initial_config_shell/product.yaml
