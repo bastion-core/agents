@@ -265,7 +265,7 @@ El método moderno usa el sistema de plugins de Claude Code:
 #### 1. Agregar el Marketplace
 
 ```bash
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 ```
 
 #### 2. Instalar Plugins

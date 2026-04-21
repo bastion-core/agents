@@ -1,6 +1,6 @@
 {
   "name": "flutter-development",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Flutter and Dart development agents for mobile app development and code review with Clean Architecture, BLoC+Freezed, and Result<T> error handling",
   "author": {
     "name": "Grinest",
