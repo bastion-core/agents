@@ -1,0 +1,30 @@
+# feature.yaml
+feature: python_agents
+owner: product_owner
+version: "1.1"
+
+description: |
+  Como desarrollador,
+  quiero agentes especializados en Python para generar especificaciones y código de alta calidad,
+  cubriendo backend, DAGs de Airflow y otras herramientas.
+
+acceptance_criteria:
+  - "El sistema provee un agente para desarrollo backend con FastAPI (`backend-py`)."
+  - "El sistema provee un agente para revisión de código de backend con FastAPI (`reviewer-backend-py`)."
+  - "El sistema provee un agente para desarrollo de DAGs de Airflow (`dev-airflow-dags-py`)."
+
+business_rules:
+  - stack_tecnologico: "Python, FastAPI, Airflow"
+  - interaccion_agentes: "Los agentes deben ser capaces de colaborar y utilizar skills compartidas."
+
+inputs:
+  - descripcion_funcionalidad: "Texto descriptivo de la funcionalidad a desarrollar o revisar."
+
+outputs:
+  - especificacion_sdd: "Archivos `feature.yaml`, `change.yaml`, `technical.yaml`."
+  - codigo_python: "Archivos de código Python siguiendo los patrones de la arquitectura definida."
+
+tests_scope:
+  - caso_exitoso: "Un agente genera una especificación técnica completa a partir de un `feature.yaml`."
+  - error_validacion: "Se intenta generar código con una especificación incompleta."
+  - caso_limite: "Un agente solicita la colaboración de otro para completar una tarea."

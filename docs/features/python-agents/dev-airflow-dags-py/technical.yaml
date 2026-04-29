@@ -1,0 +1,42 @@
+
+feature: python_agents
+layer: agent
+architecture:
+  pattern: "Gemini Agent con Skills"
+  entry: "Invocación del agente `dev-airflow-dags-py` en la CLI de Gemini."
+  use_case: "Generar especificaciones `feature.yaml` y `technical.yaml` para DAGs de Airflow, siguiendo una arquitectura de capas (extraction, transformation, load) y definiendo una estructura de tests clara."
+  component_diagram: |
+    graph TB
+      subgraph "User"
+        A[Usuario]
+      end
+
+      subgraph "Gemini CLI"
+        B(Agente: dev-airflow-dags-py)
+      end
+
+      subgraph "Agent Skills"
+        C(Skill: github-workflow)
+        D(Skill: airflow-dags-py)
+        E(Skill: qa-airflow-dags-py)
+      end
+
+      A --> B
+      B --> C
+      B --> D
+      B --> E
+
+  interfaces:
+    - "CLI: Interfaz de línea de comandos para invocar al agente."
+    - "Skills: `activate_skill` para usar las herramientas `github-workflow`, `airflow-dags-py`, y `qa-airflow-dags-py`."
+dependencies:
+  - name: "Gemini CLI"
+    role: "Plataforma de ejecución para el agente."
+  - name: "Skill: github-workflow"
+    role: "Proporciona herramientas para interactuar con GitHub."
+  - name: "Skill: airflow-dags-py"
+    role: "Proporciona patrones y guías para el desarrollo de DAGs de Airflow."
+  - name: "Skill: qa-airflow-dags-py"
+    role: "Proporciona patrones y guías para el testing de DAGs de Airflow."
+files_to_create:
+  - "gemini/spec-generator/.gemini/agents/dev-airflow-dags-py.md"

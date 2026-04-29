@@ -1,0 +1,20 @@
+
+task: create_agent_definition
+level: L2
+parent: ../technical.yaml
+status: COMPLETED
+assigned_subagent: "general:architect"
+
+scope: |
+  Crear el archivo de definición para el nuevo agente `dev-airflow-dags-py`.
+  El agente debe estar configurado con su prompt inicial, especificando sus capacidades de diseño de DAGs de Airflow, arquitectura de capas, estructura de tests y el uso del patrón AAA.
+
+files_to_create:
+  - gemini/spec-generator/.gemini/agents/dev-airflow-dags-py.md
+
+acceptance:
+  - "El archivo `gemini/spec-generator/.gemini/agents/dev-airflow-dags-py.md` es creado."
+  - "El contenido del archivo define el prompt del agente y las skills que utiliza."
+
+context_files:
+  - ../technical.yaml

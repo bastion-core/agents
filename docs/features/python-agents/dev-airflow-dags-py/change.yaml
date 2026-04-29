@@ -1,0 +1,28 @@
+# change.yaml
+change_id: v1.1-crear-agente-dev-airflow-dags-py
+feature: python_agents
+title: "Crear nuevo agente: dev-airflow-dags-py"
+status: planned
+
+scope:
+  description: |
+    Crear un nuevo agente llamado `dev-airflow-dags-py` especializado en el desarrollo de DAGs de Airflow en Python, capaz de diseñar flujos de datos, proponer estructuras de archivos y asegurar la calidad desde la fase de diseño.
+  in_scope:
+    - "Creación del archivo de definición del agente en `gemini/spec-generator/.gemini/agents/dev-airflow-dags-py.md`."
+    - "El agente utilizará los skills `github-workflow`, `airflow-dags-py`, y `qa-airflow-dags-py`."
+  out_of_scope:
+    - "Implementación de los skills `airflow-dags-py` y `qa-airflow-dags-py`."
+
+acceptance_criteria:
+  - "El archivo `change.yaml` se crea en `docs/features/python-agents/dev-airflow-dags-py/change.yaml`."
+  - "El `feature.yaml` padre (`docs/features/python-agents/feature.yaml`) se actualiza a la versión `1.1`."
+  - "Se crea la definición del agente en `gemini/spec-generator/.gemini/agents/dev-airflow-dags-py.md`."
+
+affected_repos:
+  - agents
+
+metadata:
+  created_by: product_owner
+  created_at: "2024-05-16"
+  target_date: "2024-05-20"
+  priority: high
