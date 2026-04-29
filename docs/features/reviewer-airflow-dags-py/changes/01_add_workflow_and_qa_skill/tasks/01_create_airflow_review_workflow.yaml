@@ -1,0 +1,23 @@
+task: create_airflow_review_workflow
+level: L3
+parent: docs/features/reviewer-airflow-dags-py/changes/01_add_workflow_and_qa_skill/technical.yaml
+status: PENDING
+assigned_subagent: "python-development:reviewer-backend-py"
+scope: |
+  Create a new GitHub Actions workflow file at `git-workflows/python/code-review-airflow-dags-py.yml`.
+  This workflow will trigger on pull requests targeting files under the `dags/` directory.
+  It must be configured to perform a sparse checkout of the agent definition located at `plugins/python-development/agents/reviewer-airflow-dags-py.md`.
+  The final step should execute the `scripts/code-review.sh` script, passing `--agent reviewer-airflow-dags-py` as an argument to invoke the correct agent for the review.
+files_to_create:
+  - git-workflows/python/code-review-airflow-dags-py.yml
+patterns:
+  - "Adapt the existing `git-workflows/python/code-review-backend-py.yml` as a template."
+  - "Ensure the `on.pull_request.paths` includes `dags/**`."
+  - "Use `google-github-actions/checkout` with `sparse-checkout` correctly configured for the agent path."
+acceptance:
+  - "The file `git-workflows/python/code-review-airflow-dags-py.yml` is created."
+  - "The workflow triggers only for PRs modifying files within the `dags/` directory."
+  - "The script execution step correctly calls `scripts/code-review.sh --agent reviewer-airflow-dags-py`."
+context_files:
+  - "git-workflows/python/code-review-backend-py.yml"
+  - "scripts/code-review.sh"

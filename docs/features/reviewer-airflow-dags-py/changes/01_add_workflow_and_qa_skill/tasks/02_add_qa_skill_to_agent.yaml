@@ -1,0 +1,22 @@
+task: add_qa_skill_to_airflow_reviewer_agent
+level: L2
+parent: docs/features/reviewer-airflow-dags-py/changes/01_add_workflow_and_qa_skill/technical.yaml
+status: PENDING
+assigned_subagent: "python-development:reviewer-backend-py"
+scope: |
+  Modify the Airflow DAGs reviewer agent definition to integrate the `qa-backend-py` skill.
+  This involves two changes to the file `plugins/python-development/agents/reviewer-airflow-dags-py.md`:
+  1. Add `qa-backend-py` to the `skills` list in the YAML frontmatter.
+  2. In the main prompt body, under the "Testing y QA" section, add instructions for the agent to use the directives from the `qa-backend-py` skill to analyze unit tests, checking for coverage, relevance, and quality.
+files_to_modify:
+  - path: "plugins/python-development/agents/reviewer-airflow-dags-py.md"
+    description: "Add skill to frontmatter and update testing section in prompt."
+patterns:
+  - "The `skills` list in the frontmatter should contain `[github-workflow, qa-backend-py]`."
+  - "The new instructions in the prompt should explicitly mention using the QA skill's capabilities."
+acceptance:
+  - "The `skills` frontmatter in `reviewer-airflow-dags-py.md` includes `qa-backend-py`."
+  - "The agent's prompt text under the testing section is updated to include directives related to the QA skill."
+context_files:
+  - "plugins/python-development/skills/qa-backend-py.md"
+  - "plugins/python-development/agents/reviewer-airflow-dags-py.md"

@@ -5,6 +5,7 @@ model: sonnet
 color: blue
 skills:
 - github-workflow
+- qa-backend-py
 context:
 - context/airflow-python-dags/architecture.md
 - context/airflow-python-dags/dev_patterns.md
@@ -34,9 +35,11 @@ You analyze Pull Requests across three critical dimensions:
 - Error handling and retry logic in tasks.
 
 ### 3. Testing & Pipeline Integrity (Weight: 30%)
+- **CRITICAL**: Utilize the **`qa-backend-py`** skill to validate test standards.
 - DagBag testing (DAG loadability).
-- Unit tests for transformation logic (interactors/utils).
-- Integration tests for custom operators/hooks.
+- Unit tests for transformation logic (interactors/utils) following the naming and structure patterns of the QA skill.
+- Integration tests for custom operators/hooks using the base classes defined in the project.
+- Coverage validation (Target >90% for new logic).
 - Alembic migration script correctness.
 
 ---

@@ -1,0 +1,18 @@
+task: extract_and_transform_instructions
+level: L2
+parent: docs/features/python-skills/technical.yaml
+status: PENDING
+assigned_subagent: "general:developer"
+scope: |
+  - Read the content of `plugins/python-development/agents/qa-backend-py.md`.
+  - Extract all procedural instructions, testing patterns, naming conventions, and code examples.
+  - Convert the persona-based language ("You are an agent...") into imperative commands ("Follow these steps...").
+  - Remove any conversational text or persona-specific descriptions.
+  - Store the transformed content in a temporary file or variable for the next tasks.
+acceptance: 
+  - The transformed content is purely procedural.
+  - All key technical details from the source file are preserved.
+  - The output is ready to be formatted into the specific skill formats.
+context_files:
+  - plugins/python-development/agents/qa-backend-py.md
+  - docs/features/python-skills/technical.yaml

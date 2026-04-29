@@ -1,0 +1,19 @@
+task: create_gemini_skill
+level: L1
+parent: docs/features/python-skills/technical.yaml
+status: PENDING
+assigned_subagent: "general:developer"
+depends_on:
+  - extract_and_transform_instructions
+scope: |
+  - Take the transformed procedural content from the first task.
+  - Create a new file at `gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md`.
+  - Structure the content according to the Gemini `SKILL.md` format, ensuring it can be parsed by the `activate_skill` tool.
+acceptance:
+  - The file `gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md` is created.
+  - The file is a valid Markdown file.
+  - The content is structured to be used as a Gemini skill.
+files_to_create:
+  - gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md
+context_files:
+  - docs/features/python-skills/tasks/01_extract_and_transform_instructions.yaml
