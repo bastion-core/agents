@@ -1,0 +1,35 @@
+# feature.yaml
+feature: python_skills
+owner: product_owner
+version: "1.0"
+
+description: |
+  Como desarrollador,
+  quiero encapsular los estándares de QA para backend Python en una skill reutilizable (qa-backend-py),
+  para que otros agentes de IA (Claude Code, Gemini) puedan ejecutar los procedimientos de testing de forma consistente.
+
+acceptance_criteria:
+  - "Se crea el archivo de skill para Claude Code en `plugins/python-development/skills/qa-backend-py.md`."
+  - "Se crea el archivo de skill para Gemini CLI en `gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md`."
+  - "El contenido de ambas skills se basa íntegramente en las instrucciones de `plugins/python-development/agents/qa-backend-py.md`."
+  - "Las instrucciones se transforman de una 'identidad de agente' a un 'procedimiento reutilizable' sin pronombres en primera persona."
+  - "Los patrones de testing, nomenclatura y estructura definidos son consistentes entre ambas versiones de la skill."
+
+business_rules:
+  - source_agent_definition: 'plugins/python-development/agents/qa-backend-py.md'
+  - output_format_claude: 'Markdown con frontmatter YAML'
+  - output_format_gemini: 'Directorio con SKILL.md'
+  - content_transformation: "Convertir la identidad de agente en instrucciones procedimentales."
+  - language: 'Español'
+
+inputs:
+  - source_agent_file: 'path: plugins/python-development/agents/qa-backend-py.md'
+
+outputs:
+  - claude_skill_file: 'path: plugins/python-development/skills/qa-backend-py.md'
+  - gemini_skill_file: 'path: gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md'
+
+tests_scope:
+  - caso_exitoso: "Generar la feature spec con todos los campos completos y correctos -> El archivo feature.yaml es creado en la ruta especificada."
+  - error_validacion: "Intentar generar la spec sin la ruta del agente de origen -> El sistema debe solicitar la ruta del archivo base."
+  - caso_limite: "El agente de origen (`qa-backend-py.md`) no existe en la ruta especificada -> El sistema debe informar que el archivo no se encuentra."

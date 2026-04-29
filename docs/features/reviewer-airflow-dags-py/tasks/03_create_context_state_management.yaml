@@ -1,0 +1,20 @@
+task: create_context_state_management_doc
+level: L2
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el archivo de documentación `state_management.md` para el contexto de los DAGs de Airflow.
+  El documento debe cubrir las estrategias para el manejo de estado, incluyendo:
+  - Cómo y cuándo utilizar XComs para pasar información entre tareas.
+  - El uso de Variables de Airflow para configuración y parámetros.
+  - Persistencia de estados intermedios o resultados finales en tablas de KPIs o métricas dedicadas.
+files_to_create:
+  - context/airflow-python-dags/state_management.md
+patterns:
+  - Proveer guías claras sobre cuándo usar XComs vs. Variables.
+  - Definir las limitaciones de cada mecanismo (ej. tamaño de XComs).
+acceptance:
+  - El archivo `context/airflow-python-dags/state_management.md` es creado.
+  - El contenido explica el manejo de XComs, Variables y persistencia en tablas.
+context_files:
+  - docs/features/reviewer-airflow-dags-py/technical.yaml

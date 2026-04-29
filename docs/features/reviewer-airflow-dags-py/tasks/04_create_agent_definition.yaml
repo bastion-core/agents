@@ -1,0 +1,27 @@
+task: create_agent_definition
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on:
+  - create_context_architecture_doc
+  - create_context_dev_patterns_doc
+  - create_context_state_management_doc
+scope: |
+  Crear el archivo de definición del agente `reviewer-airflow-dags-py.md`.
+  El contenido debe basarse en la estructura del agente `reviewer-backend-py.md`, adaptando los pasos de revisión a las especificidades de Airflow, Alembic y Pytest.
+  Debe configurar al agente para que utilice los archivos de contexto creados en las tareas anteriores como su base de conocimiento para la revisión.
+files_to_create:
+  - plugins/python-development/agents/reviewer-airflow-dags-py.md
+patterns:
+  - La estructura del prompt debe seguir el formato de "Pre-Pipeline Gate" y los pasos de revisión (Arquitectura, Calidad, Testing).
+  - El agente debe ser instruido para cargar y utilizar `architecture.md`, `dev_patterns.md`, y `state_management.md`.
+acceptance:
+  - El archivo `plugins/python-development/agents/reviewer-airflow-dags-py.md` es creado.
+  - El prompt del agente está estructurado para la revisión de DAGs de Airflow.
+  - El agente está configurado para usar los tres archivos de contexto.
+context_files:
+  - docs/features/reviewer-airflow-dags-py/technical.yaml
+  - plugins/python-development/agents/reviewer-backend-py.md
+  - context/airflow-python-dags/architecture.md
+  - context/airflow-python-dags/dev_patterns.md
+  - context/airflow-python-dags/state_management.md

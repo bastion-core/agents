@@ -1,0 +1,18 @@
+task: create_claude_qa_airflow_skill
+level: L2
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el archivo de la SKILL `qa-airflow-dags-py.md` para el ecosistema de Claude.
+  El contenido debe detallar rigurosamente la estructura de tests solicitada, incluyendo:
+  - Tecnologías: Airflow, Pytest, Mocks.
+  - Estructura de tests de integración: `tests/dags/{folder_dag_name}/test_{dag_id}.py`.
+  - Estructura de tests unitarios: `tests/scripts/python/{folder_dag_name}/[extraction | transformation | load]/{file_name}/test_{function_name}_from_{class_name}.py`.
+files_to_create:
+  - plugins/python-development/skills/qa-airflow-dags-py.md
+acceptance:
+  - "El archivo `plugins/python-development/skills/qa-airflow-dags-py.md` es creado."
+  - "El contenido define claramente el uso de Pytest y Mocks para DAGs de Airflow."
+  - "La estructura de directorios para tests de integración y unitarios está documentada exactamente como se especifica en el scope."
+context_files:
+  - "docs/features/reviewer-airflow-dags-py/changes/02_create_qa_airflow_skill/technical.yaml"

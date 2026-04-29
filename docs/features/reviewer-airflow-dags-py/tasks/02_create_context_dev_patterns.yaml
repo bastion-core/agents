@@ -1,0 +1,21 @@
+task: create_context_dev_patterns_doc
+level: L2
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el archivo de documentación `dev_patterns.md` para el contexto de los DAGs de Airflow.
+  El documento debe detallar los patrones de desarrollo recomendados, incluyendo:
+  - El uso de la TaskFlow API para la definición de tareas.
+  - Creación y uso de Custom Hooks y/u Operators si aplica.
+  - Patrones de dependencias entre tareas (ej. `depends.py` o similar).
+  - Estándares de nomenclatura para DAGs, tareas y variables.
+files_to_create:
+  - context/airflow-python-dags/dev_patterns.md
+patterns:
+  - El documento debe incluir ejemplos de código para cada patrón.
+  - Debe ser la "fuente de verdad" para las decisiones de implementación en los DAGs.
+acceptance:
+  - El archivo `context/airflow-python-dags/dev_patterns.md` es creado.
+  - El contenido cubre TaskFlow API, Hooks/Operators, manejo de dependencias y nomenclatura.
+context_files:
+  - docs/features/reviewer-airflow-dags-py/technical.yaml

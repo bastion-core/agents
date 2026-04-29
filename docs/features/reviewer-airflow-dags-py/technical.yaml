@@ -1,0 +1,48 @@
+feature: reviewer_airflow_dags_py
+layer: agent
+architecture:
+  pattern: |
+    El agente `reviewer-airflow-dags-py` actúa como un "Pre-Pipeline Gate" para Pull Requests en repositorios de Airflow.
+    Inicia su ejecución al detectar un PR que modifica archivos en los directorios `dags/` o `alembic/`.
+    El proceso de revisión se divide en tres pasos principales:
+    1.  **Análisis de Arquitectura**: Valida la estructura del DAG, el uso de TaskFlow API, la atomicidad de las tareas y las dependencias entre ellas, basándose en `architecture.md`.
+    2.  **Análisis de Calidad**: Revisa la adherencia a estándares de código (PEP8), la presencia de `type hints`, `docstrings` y un manejo de errores robusto, utilizando `dev_patterns.md` como guía.
+    3.  **Análisis de Pruebas y Datos**: Verifica la existencia de pruebas unitarias para la lógica de negocio y la correctitud de los scripts de migración de Alembic.
+  entry: "GitHub Pull Request event en un repositorio configurado con este agente."
+  use_case: |
+    1. Un desarrollador abre un Pull Request con cambios en un DAG.
+    2. El agente es invocado por un workflow de GitHub.
+    3. El agente clona la rama y lee los archivos de contexto (`architecture.md`, `dev_patterns.md`, `state_management.md`).
+    4. Analiza los archivos modificados en el PR.
+    5. Publica una revisión en el PR con comentarios, sugerencias y un estado de aprobación o rechazo.
+  component_diagram: |
+    graph TD
+        subgraph "GitHub"
+            A[Pull Request] -->|Webhook| B(GitHub Actions Workflow)
+        end
+
+        subgraph "Agent Execution Environment"
+            B --> C{Agent: reviewer-airflow-dags-py}
+            C -->|Reads| D[Context: architecture.md]
+            C -->|Reads| E[Context: dev_patterns.md]
+            C -->|Reads| F[Context: state_management.md]
+        end
+
+        subgraph "Code Analysis"
+            C -->|Analyzes| G(Modified DAGs)
+            C -->|Analyzes| H(Alembic Migrations)
+            C -->|Analyzes| I(Pytest Tests)
+        end
+
+        A -->|Posts Comment| C
+dependencies:
+  - name: GitHub API
+    role: "Para leer datos del PR y publicar comentarios de revisión."
+  - name: Git CLI
+    role: "Para clonar el repositorio y acceder a los archivos modificados."
+files_to_create:
+  - "plugins/python-development/agents/reviewer-airflow-dags-py.md"
+  - "context/airflow-python-dags/architecture.md"
+  - "context/airflow-python-dags/dev_patterns.md"
+  - "context/airflow-python-dags/state_management.md"
+files_to_modify: []

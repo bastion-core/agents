@@ -1,0 +1,38 @@
+# feature.yaml
+feature: reviewer_airflow_dags_py
+owner: product_owner
+version: "1.2"
+
+description: |
+  Como un desarrollador del equipo de datos,
+  quiero que el agente `reviewer-airflow-dags-py` revise automáticamente los Pull Requests que modifican DAGs de Apache Airflow.
+  El sistema debe analizar el código para garantizar el cumplimiento de la arquitectura definida, las mejores prácticas de Airflow y la calidad general del código antes de la integración.
+
+acceptance_criteria:
+  - El agente debe realizar revisiones automáticas de PRs, analizando la arquitectura de los DAGs (uso de TaskFlow API, atomicidad de tareas, dependencias), la calidad del código (PEP8, type hints, docstrings, manejo de excepciones) y las pruebas (lógica de transformación, dagbag testing).
+  - El agente debe revisar los scripts de migración de Alembic incluidos en el Pull Request para asegurar su correctitud.
+  - La estructura del prompt del agente debe basarse en el template `plugins/python-development/agents/reviewer-backend-py.md`.
+  - El agente debe utilizar como base de conocimiento los archivos de contexto `context/airflow-python-dags/architecture.md`, `context/airflow-python-dags/dev_patterns.md` y `context/airflow-python-dags/state_management.md`.
+
+business_rules:
+  - stack_tecnologico: Python, Apache Airflow, Alembic, Pytest
+  - directorio_dags: "dags/"
+  - directorio_tests: "tests/"
+  - directorio_migraciones: "alembic/"
+  - prompt_template_base: "plugins/python-development/agents/reviewer-backend-py.md"
+  - revision_foco: "Calidad de DAGs, cumplimiento de PEP8, cobertura de tests, atomicidad de tareas, correctitud de migraciones Alembic."
+
+inputs:
+  - pull_request_data: "Objeto JSON con información del Pull Request, incluyendo URL, rama de origen, rama destino y archivos modificados."
+  - contexto_arquitectura: "Contenido del archivo context/airflow-python-dags/architecture.md"
+  - contexto_patrones_desarrollo: "Contenido del archivo context/airflow-python-dags/dev_patterns.md"
+
+outputs:
+  - revision_pr_exitosa: "Un comentario en el Pull Request de GitHub con el análisis de calidad, sugerencias de mejora y aprobación (si aplica)."
+  - revision_pr_con_cambios: "Un comentario en el Pull Request de GitHub con los cambios bloqueantes solicitados y el estado 'Changes requested'."
+  - error_configuracion: "Un mensaje de error si los archivos de contexto o la información del PR no son accesibles o válidos."
+
+tests_scope:
+  - caso_exitoso: "Un PR que cumple con todas las buenas prácticas de Airflow y PEP8 recibe una revisión de aprobación sin comentarios bloqueantes."
+  - error_validacion: "Un PR que contiene un DAG con tareas no atómicas recibe un comentario solicitando la refactorización de las tareas."
+  - caso_limite: "Un PR que modifica tanto un DAG en `dags/` como un script de migración en `alembic/` es revisado en ambos contextos, validando la lógica del DAG y la sintaxis de la migración."

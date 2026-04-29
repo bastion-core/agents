@@ -1,0 +1,39 @@
+feature: v1.1-add-workflow-and-qa-skill
+layer: agent
+architecture:
+  pattern: "CI/CD Workflow Integration & Agent Skill Enhancement"
+  entry: "GitHub Actions workflow triggered on pull_request to `dags/**` paths."
+  use_case: |
+    1. A developer opens a pull request with changes to Airflow DAGs.
+    2. The `code-review-airflow-dags-py.yml` workflow is triggered.
+    3. The workflow checks out the repository and the specific agent definition.
+    4. It executes the `reviewer-airflow-dags-py` agent.
+    5. The agent, now enhanced with the `qa-backend-py` skill, reviews the code, including an assessment of the unit tests' quality and coverage, providing feedback on the pull request.
+  component_diagram: |
+    graph TD
+        subgraph GitHub Actions
+            A[PR to dags/**] --> B{Workflow: code-review-airflow-dags-py.yml};
+        end
+        subgraph Agent Execution
+            B --> C[Checkout Code & Agent];
+            C --> D[Run scripts/code-review.sh];
+        end
+        subgraph Agent Logic
+            D -- invokes --> E(Agent: reviewer-airflow-dags-py);
+            E -- uses --> F(Skill: qa-backend-py);
+        end
+        subgraph Output
+            E --> G{PR Feedback};
+        end
+dependencies:
+  - name: GitHub Actions
+    role: "CI/CD orchestrator for running the code review workflow."
+  - name: Gemini CLI
+    role: "Execution environment for running the Gemini agent."
+  - name: qa-backend-py skill
+    role: "Provides the agent with specialized directives for validating Python unit tests."
+files_to_create:
+  - git-workflows/python/code-review-airflow-dags-py.yml
+files_to_modify:
+  - path: plugins/python-development/agents/reviewer-airflow-dags-py.md
+    description: "Add `qa-backend-py` to the skills frontmatter and integrate its directives into the prompt's testing validation section."

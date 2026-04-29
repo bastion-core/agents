@@ -1,0 +1,35 @@
+# change.yaml
+change_id: v1.1-02-create-qa-airflow-skill
+feature: reviewer_airflow_dags_py
+title: Crear nueva SKILL de testing para Airflow qa-airflow-dags-py
+status: planned
+
+scope:
+  description: |
+    Este cambio introduce una nueva SKILL especializada, `qa-airflow-dags-py`, para estandarizar y validar las pruebas en el contexto de los DAGs de Airflow.
+    La SKILL definirá las tecnologías, la arquitectura de pruebas y los patrones a seguir, y será integrada en el agente `reviewer-airflow-dags-py`.
+  in_scope:
+    - "Crear el archivo de la SKILL en `plugins/python-development/skills/qa-airflow-dags-py.md`."
+    - "Crear el archivo de la SKILL para Gemini en `gemini/spec-generator/.gemini/skills/qa-airflow-dags-py/SKILL.md`."
+    - "El contenido de la SKILL debe detallar el uso de Airflow, Pytest y Mocks."
+    - "La SKILL debe especificar la estructura de directorios para pruebas de integración y unitarias."
+    - "Actualizar el agente `plugins/python-development/agents/reviewer-airflow-dags-py.md` para que utilice la nueva SKILL `qa-airflow-dags-py` en sus validaciones."
+  out_of_scope:
+    - "La implementación de los tests, solo la definición de la SKILL."
+    - "La modificación de otras SKILLS existentes que no estén directamente relacionadas con la validación de pruebas de Airflow."
+
+acceptance_criteria:
+  - "El archivo `change.yaml` se genera correctamente en la ruta `docs/features/reviewer-airflow-dags-py/changes/02_create_qa_airflow_skill/change.yaml`."
+  - "Los nuevos archivos de la SKILL (`qa-airflow-dags-py.md` y `SKILL.md`) son creados en las rutas especificadas."
+  - "El contenido de la SKILL `qa-airflow-dags-py` incluye las tecnologías (Airflow, Pytest, Mocks) y la arquitectura de pruebas descrita."
+  - "El agente `reviewer-airflow-dags-py.md` es modificado para invocar y utilizar la SKILL `qa-airflow-dags-py`."
+  - "La versión del `feature.yaml` padre (`docs/features/reviewer-airflow-dags-py/feature.yaml`) se incrementa a '1.2'."
+
+affected_repos:
+  - agents
+
+metadata:
+  created_by: product_owner
+  created_at: "2024-05-23"
+  target_date: "2024-05-30"
+  priority: high

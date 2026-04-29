@@ -1,0 +1,26 @@
+feature: create_qa_airflow_skill
+layer: agent
+architecture:
+  pattern: Agent Skill Definition and Integration
+  entry: User invokes the `reviewer-airflow-dags-py` agent for a code review.
+  use_case: |
+    The `reviewer-airflow-dags-py` agent activates and utilizes the newly defined `qa-airflow-dags-py` skill.
+    This skill provides the agent with the specific knowledge of the testing standards for Airflow DAGs, including directory structure, required files, and test types (unit and integration).
+    The agent then uses this context to review the pull request and validate compliance with the testing strategy.
+  component_diagram: |
+    graph TB
+      subgraph "Agent Execution"
+        A["User PR"] -- triggers --> B["reviewer-airflow-dags-py Agent"];
+        B -- activates --> C["qa-airflow-dags-py Skill"];
+        C -- provides context --> B;
+        B -- validates --> A;
+      end
+dependencies:
+  - name: reviewer-airflow-dags-py
+    role: The agent that will consume the new skill.
+files_to_create:
+  - plugins/python-development/skills/qa-airflow-dags-py.md
+  - gemini/spec-generator/.gemini/skills/qa-airflow-dags-py/SKILL.md
+files_to_modify:
+  - path: plugins/python-development/agents/reviewer-airflow-dags-py.md
+    description: "Add `qa-airflow-dags-py` to the agent's frontmatter skills and update the prompt to use the new skill for validating testing structure."

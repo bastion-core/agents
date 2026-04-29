@@ -1,0 +1,18 @@
+task: create_context_architecture_doc
+level: L2
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el archivo de documentación `architecture.md` para el contexto de los DAGs de Airflow.
+  El documento debe describir la organización de la carpeta `dags/`, cómo se estructuran los dominios de negocio dentro de ella, y la relación con el directorio `alembic/` para el versionado de la base de datos que da soporte a los DAGs.
+files_to_create:
+  - context/airflow-python-dags/architecture.md
+patterns:
+  - El documento debe ser claro, conciso y utilizar formato Markdown.
+  - Debe incluir diagramas (Mermaid.js) si ayudan a clarificar la estructura.
+acceptance:
+  - El archivo `context/airflow-python-dags/architecture.md` es creado.
+  - El contenido explica la estructura de directorios `dags/` y `alembic/`.
+  - Se describe cómo se organizan los dominios y subdominios dentro de los DAGs.
+context_files:
+  - docs/features/reviewer-airflow-dags-py/technical.yaml

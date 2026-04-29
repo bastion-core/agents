@@ -1,0 +1,22 @@
+task: update_reviewer_agent_with_qa_skill
+level: L3
+parent: technical.yaml
+status: PENDING
+depends_on:
+  - create_claude_qa_airflow_skill
+  - create_gemini_qa_airflow_skill
+scope: |
+  Actualizar el agente `reviewer-airflow-dags-py` para que utilice la nueva skill `qa-airflow-dags-py`.
+  Se debe:
+  1. Añadir `qa-airflow-dags-py` a la lista de `skills` en el frontmatter del archivo del agente.
+  2. Modificar el prompt del agente para que, al analizar un PR, active explícitamente la nueva skill y use su conocimiento para validar que la estructura de los tests y los archivos de prueba se adhieren al estándar definido.
+  3. Asegurar que las skills existentes (como `qa-backend-py`) se mantengan si son complementarias, o se ajusten las instrucciones si existe solapamiento para evitar conflictos.
+files_to_modify:
+  - plugins/python-development/agents/reviewer-airflow-dags-py.md
+acceptance:
+  - "El frontmatter de `plugins/python-development/agents/reviewer-airflow-dags-py.md` ahora incluye la skill `qa-airflow-dags-py`."
+  - "El prompt del agente ha sido actualizado para invocar la nueva skill y validar la estructura de testing."
+  - "La integración con skills preexistentes es coherente y no introduce conflictos."
+context_files:
+  - "docs/features/reviewer-airflow-dags-py/changes/02_create_qa_airflow_skill/technical.yaml"
+  - "plugins/python-development/skills/qa-airflow-dags-py.md"

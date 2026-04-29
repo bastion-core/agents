@@ -1,0 +1,20 @@
+task: create_claude_skill
+level: L1
+parent: docs/features/python-skills/technical.yaml
+status: PENDING
+assigned_subagent: "general:developer"
+depends_on:
+  - extract_and_transform_instructions
+scope: |
+  - Take the transformed procedural content from the previous task.
+  - Create a new file at `plugins/python-development/skills/qa-backend-py.md`.
+  - Add the required YAML frontmatter for a Claude skill (`name`, `description`, `model`, etc.).
+  - Append the transformed Markdown content to the file.
+acceptance:
+  - The file `plugins/python-development/skills/qa-backend-py.md` is created.
+  - The file contains valid YAML frontmatter.
+  - The body of the file contains the procedural instructions for the QA skill.
+files_to_create:
+  - plugins/python-development/skills/qa-backend-py.md
+context_files:
+  - docs/features/python-skills/tasks/01_extract_and_transform_instructions.yaml

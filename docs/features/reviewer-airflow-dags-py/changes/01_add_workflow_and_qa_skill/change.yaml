@@ -1,0 +1,30 @@
+# change.yaml
+change_id: v1.1-add-workflow-and-qa-skill
+feature: reviewer_airflow_dags_py
+title: Implementar Flujo de Git y Skill de QA para Revisor de Airflow DAGs
+status: planned
+
+scope:
+  description: |
+    Este cambio introduce un workflow de GitHub Actions para la revisión automática de código en DAGs de Airflow y actualiza el agente revisor para que utilice una skill de QA para la validación de pruebas unitarias.
+  in_scope:
+    - "Crear el archivo `git-workflows/python/code-review-airflow-dags-py.yml`."
+    - "Actualizar el agente `reviewer-airflow-dags-py.md` para usar la skill `qa-backend-py.md`."
+  out_of_scope:
+    - "Modificar otros workflows de GitHub."
+    - "Crear nuevas skills, solo se referencia la existente."
+
+acceptance_criteria:
+  - "El archivo `change.yaml` se crea en la ruta especificada."
+  - "El nuevo workflow `code-review-airflow-dags-py.yml` existe y es una copia adaptada de `code-review-backend-py.yml`."
+  - "El agente `reviewer-airflow-dags-py.md` es actualizado para incluir la skill de QA."
+  - "El `feature.yaml` padre es actualizado incrementando su versión a 1.1."
+
+affected_repos:
+  - agents
+
+metadata:
+  created_by: product_owner
+  created_at: "2024-05-20"
+  target_date: "2024-05-20"
+  priority: high

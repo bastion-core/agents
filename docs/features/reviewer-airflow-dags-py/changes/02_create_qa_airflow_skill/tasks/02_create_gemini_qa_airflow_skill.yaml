@@ -1,0 +1,18 @@
+task: create_gemini_qa_airflow_skill
+level: L2
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el archivo de la SKILL `SKILL.md` en la ruta `gemini/spec-generator/.gemini/skills/qa-airflow-dags-py/` para el ecosistema de Gemini.
+  El contenido debe ser una réplica funcional de la skill de Claude, detallando la misma estructura de tests:
+  - Tecnologías: Airflow, Pytest, Mocks.
+  - Estructura de tests de integración: `tests/dags/{folder_dag_name}/test_{dag_id}.py`.
+  - Estructura de tests unitarios: `tests/scripts/python/{folder_dag_name}/[extraction | transformation | load]/{file_name}/test_{function_name}_from_{class_name}.py`.
+files_to_create:
+  - gemini/spec-generator/.gemini/skills/qa-airflow-dags-py/SKILL.md
+acceptance:
+  - "El archivo `gemini/spec-generator/.gemini/skills/qa-airflow-dags-py/SKILL.md` es creado."
+  - "El contenido es compatible con el formato de skills de Gemini."
+  - "La estructura de directorios para tests de integración y unitarios está documentada exactamente como se especifica en el scope."
+context_files:
+  - "docs/features/reviewer-airflow-dags-py/changes/02_create_qa_airflow_skill/technical.yaml"

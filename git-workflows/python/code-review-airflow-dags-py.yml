@@ -1,0 +1,81 @@
+name: Airflow Code Review
+
+# Trigger on ALL PRs so the review script can post out-of-scope feedback
+# for non-Python changes. The script handles file filtering internally
+# and exits early without calling the Claude API when no .py files are found.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'dags/**'
+      - 'tests/**'
+      - 'alembic/**'
+      - 'scripts/**'
+
+# Prevent multiple runs for the same PR
+concurrency:
+  group: code-review-airflow-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  code-review:
+    name: AI Airflow Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout agents marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: bastion-core/agents
+          ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
+          path: .agents-marketplace
+          sparse-checkout: |
+            plugins/python-development/agents/reviewer-airflow-dags-py.md
+            scripts/code-review.sh
+
+      - name: Run code review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          chmod +x .agents-marketplace/scripts/code-review.sh
+          .agents-marketplace/scripts/code-review.sh \
+            --agent .agents-marketplace/plugins/python-development/agents/reviewer-airflow-dags-py.md \
+            --model claude-3-5-sonnet-20241022 \
+            --arch-threshold 7 \
+            --quality-threshold 7 \
+            --test-threshold 8 \
+            --file-pattern '\.py$' \
+            --scope-label 'Airflow' \
+            --max-files 50
+
+      - name: Upload Review Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-airflow-${{ github.event.pull_request.number }}
+          path: |
+            claude_review.md
+            review_context.json
+            changed_files.txt
+            diffs/
+          retention-days: 30

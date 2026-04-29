@@ -1,0 +1,44 @@
+feature: python_skills
+layer: agent
+architecture:
+  pattern: Skill-based agent capabilities
+  entry: Manual or automated execution of the qa-backend-py skill by an agent framework (Claude Code or Gemini).
+  use_case: |
+    The user wants to standardize QA procedures for Python backends.
+    1. The architect analyzes the existing agent definition (`qa-backend-py.md`) to extract testing standards, tools, and patterns.
+    2. The architect defines a transformation process to convert the agent's persona-based instructions into a reusable, procedural skill.
+    3. The architect designs two separate skill formats: one for Claude Code (Markdown with YAML frontmatter) and one for Gemini (structured Markdown `SKILL.md`).
+    4. The implementation tasks are generated to create these two skill files, ensuring content consistency and adherence to each platform's format.
+  component_diagram: |
+    graph TD
+        subgraph "Input"
+            A["`plugins/python-development/agents/qa-backend-py.md` (Agent Persona)"]
+        end
+
+        subgraph "Transformation Process"
+            B["Extract & Refine Instructions"]
+        end
+
+        subgraph "Output"
+            C["`plugins/python-development/skills/qa-backend-py.md` (Claude Skill)"]
+            D["`gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md` (Gemini Skill)"]
+        end
+
+        A --> B
+        B --> C
+        B --> D
+dependencies:
+  - name: qa-backend-py.md
+    role: Source of truth for testing standards and procedures.
+  - name: Claude Code
+    role: Target platform for the skill, requires Markdown with YAML frontmatter format.
+  - name: Gemini CLI
+    role: Target platform for the skill, requires structured SKILL.md format.
+files_to_create:
+  - path: plugins/python-development/skills/qa-backend-py.md
+    description: Skill file for Claude Code, containing procedural instructions for Python backend QA.
+  - path: gemini/spec-generator/.gemini/skills/qa-backend-py/SKILL.md
+    description: Skill file for Gemini CLI, structured for use with the `activate_skill` tool.
+files_to_modify:
+  - path: plugins/python-development/agents/qa-backend-py.md
+    description: Source agent definition file. No modifications are planned, but it is the main input.
