@@ -1,6 +1,6 @@
 {
   "name": "python-development",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Python backend development agents and skills with Clean Architecture, FastAPI, and Celery",
   "author": {
     "name": "Grinest",
