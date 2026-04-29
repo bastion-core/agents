@@ -1,0 +1,13 @@
+task: create_airflow_skill_directory
+level: L1
+parent: technical.yaml
+status: PENDING
+scope: |
+  Crear el directorio para la nueva skill de Airflow DAGs, incluyendo el subdirectorio `references`.
+  La ruta completa es `gemini/spec-generator/.gemini/skills/airflow-dags-py/references/`.
+files_to_create:
+  - gemini/spec-generator/.gemini/skills/airflow-dags-py/references/
+acceptance:
+  - "El directorio `gemini/spec-generator/.gemini/skills/airflow-dags-py/references/` existe."
+context_files:
+  - docs/features/python-skills/changes/01_create_gemini_airflow_skill/technical.yaml

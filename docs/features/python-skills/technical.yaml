@@ -34,6 +34,8 @@ dependencies:
     role: Target platform for the skill, requires Markdown with YAML frontmatter format.
   - name: Gemini CLI
     role: Target platform for the skill, requires structured SKILL.md format.
+# Incremental changes:
+# - docs/features/python-skills/changes/01_create_gemini_airflow_skill/change.yaml
 files_to_create:
   - path: plugins/python-development/skills/qa-backend-py.md
     description: Skill file for Claude Code, containing procedural instructions for Python backend QA.

@@ -1,0 +1,48 @@
+feature: python_skills
+layer: agent
+architecture:
+  pattern: Skill-based agent capabilities
+  entry: Manual or automated execution of the airflow-dags-py skill by an agent framework (Gemini).
+  use_case: |
+    The user wants to create a new Gemini skill to provide expert knowledge on Airflow DAGs development.
+    1. The architect defines the structure of the new skill directory `gemini/spec-generator/.gemini/skills/airflow-dags-py/`.
+    2. The architect designs the `SKILL.md` file, using `github-workflow/SKILL.md` as a template.
+    3. The architect determines the context files needed for the skill, which are the Airflow development standards.
+    4. The implementation tasks are generated to create the directory structure, copy the context files, and create the `SKILL.md` file.
+  component_diagram: |
+    graph TD
+        subgraph "Inputs"
+            A["`context/airflow-python-dags/*.md`"]
+            B["`plugins/general/skills/github-workflow.md` (Template)"]
+        end
+
+        subgraph "Process"
+            C["Define Skill Structure & Content"]
+        end
+
+        subgraph "Output"
+            D["`gemini/spec-generator/.gemini/skills/airflow-dags-py/` (Directory)"]
+            E["`gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md`"]
+            F["`gemini/spec-generator/.gemini/skills/airflow-dags-py/references/*.md`"]
+        end
+
+        A --> C
+        B --> C
+        C --> D
+        C --> E
+        C --> F
+dependencies:
+  - name: airflow-python-dags context
+    role: Source of truth for Airflow DAGs development standards.
+  - name: github-workflow skill
+    role: Template for the new skill's `SKILL.md` file.
+files_to_create:
+  - path: gemini/spec-generator/.gemini/skills/airflow-dags-py/references/architecture.md
+    description: Copied from `context/airflow-python-dags/architecture.md`.
+  - path: gemini/spec-generator/.gemini/skills/airflow-dags-py/references/dev_patterns.md
+    description: Copied from `context/airflow-python-dags/dev_patterns.md`.
+  - path: gemini/spec-generator/.gemini/skills/airflow-dags-py/references/state_management.md
+    description: Copied from `context/airflow-python-dags/state_management.md`.
+  - path: gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md
+    description: The main skill file for Gemini.
+files_to_modify: []

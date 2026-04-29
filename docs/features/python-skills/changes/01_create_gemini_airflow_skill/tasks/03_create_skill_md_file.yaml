@@ -1,0 +1,19 @@
+task: create_airflow_skill_md_file
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on:
+  - copy_airflow_reference_files
+scope: |
+  Crear el archivo `SKILL.md` para la skill `airflow-dags-py`.
+  El contenido debe seguir el formato del `github-workflow/SKILL.md` pero adaptado para la skill de Airflow, referenciando los archivos en la carpeta `references/`.
+files_to_create:
+  - gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md
+patterns:
+  - "Formato de `SKILL.md` debe ser similar a `plugins/general/skills/github-workflow.md`."
+acceptance:
+  - "El archivo `gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md` existe."
+  - "El archivo contiene una descripción de la skill y referencias a los archivos en `references/`."
+context_files:
+  - plugins/general/skills/github-workflow.md
+  - docs/features/python-skills/changes/01_create_gemini_airflow_skill/technical.yaml

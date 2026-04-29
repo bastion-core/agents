@@ -1,0 +1,24 @@
+task: copy_airflow_reference_files
+level: L2
+parent: technical.yaml
+status: PENDING
+depends_on:
+  - create_airflow_skill_directory
+scope: |
+  Copiar los archivos de contexto de Airflow a la nueva carpeta de referencias de la skill.
+  Los archivos a copiar son:
+  - `context/airflow-python-dags/architecture.md`
+  - `context/airflow-python-dags/dev_patterns.md`
+  - `context/airflow-python-dags/state_management.md`
+files_to_create:
+  - gemini/spec-generator/.gemini/skills/airflow-dags-py/references/architecture.md
+  - gemini/spec-generator/.gemini/skills/airflow-dags-py/references/dev_patterns.md
+  - gemini/spec-generator/.gemini/skills/airflow-dags-py/references/state_management.md
+acceptance:
+  - "Los archivos `architecture.md`, `dev_patterns.md`, y `state_management.md` existen en `gemini/spec-generator/.gemini/skills/airflow-dags-py/references/`."
+  - "El contenido de los archivos copiados es idéntico al de los originales."
+context_files:
+  - context/airflow-python-dags/architecture.md
+  - context/airflow-python-dags/dev_patterns.md
+  - context/airflow-python-dags/state_management.md
+  - docs/features/python-skills/changes/01_create_gemini_airflow_skill/technical.yaml
