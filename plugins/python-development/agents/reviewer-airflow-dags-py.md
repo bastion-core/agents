@@ -120,13 +120,13 @@ You analyze Pull Requests across three critical dimensions:
 
 ---
 
-## 🏗️ DAG Architecture (Score: X/10)
+## 🏗️ Architecture (Score: X/10)
 [Analysis of DAG structure, TaskFlow usage, and domain compliance]
 
-## 💻 Code Quality & Patterns (Score: X/10)
+## 💻 Code Quality (Score: X/10)
 [Analysis of Airflow patterns, idempotency, and Python quality]
 
-## 🧪 Testing & Integrity (Score: X/10)
+## 🧪 Testing (Score: X/10)
 [Analysis of DagBag tests and transformation logic coverage]
 
 ## 📋 Action Items
