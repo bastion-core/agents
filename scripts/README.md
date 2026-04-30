@@ -141,6 +141,78 @@ Sincroniza los subagents de Gemini CLI a la configuracion global del usuario.
 
 ---
 
+### claude/setup-claude-vertex.sh
+
+Configura Claude Code CLI para consumir los modelos de Anthropic a traves de Google Vertex AI, usando los creditos de GCP en lugar de una suscripcion de Claude.ai.
+
+**Purpose**: Refrescar las Application Default Credentials, escribir las variables de entorno necesarias en el shell rc del usuario (`~/.zshrc` por defecto) y dejar listo Claude Code para apuntar a Vertex AI.
+
+**Prerequisites**:
+- gcloud CLI instalado y autenticado (`gcloud auth login`)
+- Proyecto GCP con la API de Vertex AI habilitada (`aiplatform.googleapis.com`)
+- Claude Code CLI instalado (`claude`) — opcional, solo necesario para validar `/status`
+
+**Usage**:
+```bash
+# Setup con defaults (proyecto: still-smithy-407213, region: global, shell: ~/.zshrc)
+./scripts/claude/setup-claude-vertex.sh
+
+# Setup con parametros explicitos
+./scripts/claude/setup-claude-vertex.sh --project my-project --region us-east5
+
+# Usar bash en lugar de zsh
+./scripts/claude/setup-claude-vertex.sh --shell-rc ~/.bashrc
+
+# Saltar el login de ADC (si ya esta vigente)
+./scripts/claude/setup-claude-vertex.sh --skip-adc
+
+# Previsualizar cambios sin aplicarlos
+./scripts/claude/setup-claude-vertex.sh --dry-run
+
+# Revertir la configuracion (elimina solo el bloque administrado por el script)
+./scripts/claude/setup-claude-vertex.sh --cleanup
+```
+
+**Flags**:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--project` | `-p` | `still-smithy-407213` | ID del proyecto GCP |
+| `--region` | `-r` | `global` | Region de Vertex AI |
+| `--shell-rc` | `-s` | `~/.zshrc` | Archivo de configuracion del shell a modificar |
+| `--skip-adc` | - | `false` | Omite `gcloud auth application-default login` |
+| `--dry-run` | `-d` | `false` | Previsualizar sin ejecutar |
+| `--cleanup` | `-c` | `false` | Remueve el bloque de configuracion del shell rc |
+| `--help` | `-h` | - | Mostrar ayuda |
+
+**What it does (setup)**:
+1. Valida prerequisitos (gcloud, claude, sesion activa, proyecto accesible, API de Vertex AI habilitada)
+2. Muestra el `claude /status` actual (si `claude` esta instalado) para confirmar la auth previa
+3. Ejecuta `gcloud auth application-default login`, verifica el token ADC y fija el proyecto activo
+4. Escribe un bloque delimitado en el shell rc con las variables:
+   - `CLAUDE_CODE_USE_VERTEX=1`
+   - `ANTHROPIC_VERTEX_PROJECT_ID`
+   - `CLOUD_ML_REGION`
+   - `ANTHROPIC_DEFAULT_OPUS_MODEL` (`claude-opus-4-7`)
+   - `ANTHROPIC_DEFAULT_SONNET_MODEL` (`claude-sonnet-4-6`)
+   - `ANTHROPIC_DEFAULT_HAIKU_MODEL` (`claude-haiku-4-5@20251001`)
+5. Imprime las instrucciones para `source` el shell rc y validar `/status` dentro de Claude
+
+**What it does (cleanup)**: Remueve unicamente el bloque delimitado por `# >>> claude-code vertex-ai setup >>>` ... `# <<< claude-code vertex-ai setup <<<`, sin tocar el resto del shell rc.
+
+**Idempotent**: Cada ejecucion reemplaza el bloque previo en lugar de duplicarlo, por lo que el script puede correrse multiples veces sin acumular entradas.
+
+**Validacion final**: Despues de aplicar la configuracion (`source ~/.zshrc`), abrir Claude Code y ejecutar `/status`. Debe mostrar:
+
+```
+Auth:    Google Vertex AI
+Project: still-smithy-407213
+Region:  global
+Model:   claude-sonnet-4-6
+```
+
+---
+
 ## 🗑️ Removed Scripts
 
 ### ~~sync-agents.sh~~ (REMOVED)
@@ -258,6 +330,7 @@ chmod +x scripts/validate-agents.sh
 chmod +x scripts/sync-workflows.sh
 chmod +x scripts/gemini/setup-gemini.sh
 chmod +x scripts/gemini/sync-agents.sh
+chmod +x scripts/claude/setup-claude-vertex.sh
 ```
 
 ### setup-gemini.sh shows "Share the following commands with your GCP admin"
@@ -284,6 +357,36 @@ La region configurada no soporta el endpoint de Vertex AI para listar modelos. E
 ```bash
 ./scripts/gemini/setup-gemini.sh --cleanup --dev-name your-name
 ```
+
+### setup-claude-vertex.sh: `/status` sigue mostrando `Claude.ai (subscription)`
+
+Despues de ejecutar el script hay que recargar las variables y reiniciar Claude:
+```bash
+source ~/.zshrc
+# Cerrar la sesion activa de Claude y volver a abrir
+claude
+/status
+```
+Si persiste, verifica que las variables se exportaron en la sesion actual:
+```bash
+echo $CLAUDE_CODE_USE_VERTEX $ANTHROPIC_VERTEX_PROJECT_ID $CLOUD_ML_REGION
+```
+
+### setup-claude-vertex.sh: error `PERMISSION_DENIED` al llamar a Vertex AI
+
+Verifica que tu cuenta tenga el rol `roles/aiplatform.user` en el proyecto y que el ADC token este vigente:
+```bash
+gcloud auth application-default print-access-token
+```
+Si el token falla, vuelve a correr el script sin `--skip-adc`.
+
+### Reverting setup-claude-vertex.sh configuration
+
+```bash
+./scripts/claude/setup-claude-vertex.sh --cleanup
+source ~/.zshrc
+```
+Esto remueve solo el bloque agregado por el script; el resto de tu shell rc queda intacto.
 
 ---
 
