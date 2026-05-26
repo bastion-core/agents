@@ -123,12 +123,14 @@ Esta regla aplica **siempre**: tanto en revisiones iniciales como incrementales.
    - Confirmá que el archivo no aparece en "Final File Contents".
    - Considerá que puede haber sido filtrado del prompt por configuración del runner (file pattern). Si el PR description menciona archivos que no están en tu contexto, marcalo como "no pude verificar" en lugar de "falta".
 3. **Los diffs son contexto histórico, no estado actual.** Si un diff muestra un patrón que parece roto pero la "Final File Contents" muestra el código corregido, NO reportes el issue.
-4. **Antes de marcar un Must Fix**, ejecutá mentalmente esta checklist:
+4. **Verificá con git antes de elevar hipótesis a riesgo.** Si tu observación depende de "¿cuándo se creó este archivo?", "¿este archivo ya fue aplicado?", "¿este cambio fue absorbido en otro lugar?", ejecutá `gh pr diff <n>`, `git log --all -- <file>`, `git show <commit>:<file>` **antes** de listar la preocupación. No es válido pedirle al autor "evidencia de X" si X se puede verificar con git en 30 segundos.
+5. **Antes de marcar un Must Fix**, ejecutá mentalmente esta checklist:
    - ¿Lo verifiqué en "Final File Contents"? (No en el diff, no en el PR description.)
    - Si el issue es sobre algo que "debería existir y no existe", ¿el archivo simplemente no fue incluido en mi contexto?
    - Si el issue es sobre una convención, ¿el DDL/config del propio repo declara una excepción explícita?
+   - Si el issue depende de historia (drift, archivos absorbidos, edad del archivo), ¿corrí `git log`/`git show` para confirmarlo?
 
-Solo reportá como **Must Fix** issues que pasen los 4 chequeos. En caso de duda, degradá a **Should Fix** o **Consider**.
+Solo reportá como **Must Fix** issues que pasen los 5 chequeos. En caso de duda, degradá a **Should Fix** o **Consider**.
 
 ---
 
@@ -246,7 +248,13 @@ Columnas estándar:
 - Archivos en `sql/raw/`, `sql/stg/`, `sql/core/`. Nunca en la raíz de `sql/`.
 - Naming: `NNN_<tabla>.sql` (creación, secuencial dentro del esquema) o `NNN_<tabla>_<descripcion>.sql` (cambio posterior).
 - **Idempotencia obligatoria**: `CREATE SCHEMA IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
-- **Drift policy**: si el PR edita un archivo previamente aplicado → **REQUEST_CHANGES inmediato**. Pedir un nuevo archivo `NNN_<tabla>_<que_cambia>.sql`.
+- **Drift policy (edición)**: si el PR **edita** un archivo previamente aplicado → **REQUEST_CHANGES inmediato**. Pedir un nuevo archivo `NNN_<tabla>_<que_cambia>.sql`.
+- **Eliminación de migrations (regla distinta a edición)**: borrar un `.sql` no es automáticamente drift. Antes de elevar el riesgo:
+  1. Correr `git log -- <file>` para ver cuándo se creó. Archivos creados en los últimos commits (1–3 días, no mergeados a un release branch) probablemente nunca corrieron en prod.
+  2. Correr `git log -p --all -- sql/<schema>/<base_table>.sql` para ver si el archivo base absorbió los cambios del archivo eliminado (caso típico: una migration `015_rename_columns_*.sql` se borra porque las columnas ya están en `001_<tabla>.sql`).
+  3. El riesgo real a evaluar **no** es drift, es **reproducibilidad del schema**: ¿los archivos base que quedan en `sql/` permiten reconstruir el schema completo en un entorno fresco? Si sí, la eliminación es segura.
+  4. Solo si los archivos eliminados contienen DDL que **no** está absorbido en archivos base y **sí** fue aplicado en algún entorno → REQUEST_CHANGES.
+  5. Gaps en la secuencia numérica (001, 003, 005) no son riesgo: el runner usa orden lexicográfico de `sorted(glob("*.sql"))`, no contigüidad.
 - Header obligatorio:
   ```sql
   -- core/003_dim_driver.sql
@@ -298,7 +306,14 @@ Antes de reportar shared-state, type confusion u otros bugs estructurales en hel
 
 ### Step 6: Generate Review
 
-**Estructura del comentario en el PR**:
+**Regla de verbosidad**: el reporte debe escalar con los hallazgos, no con el número de dimensiones.
+
+- **Si no hay hallazgos accionables** (APPROVE limpio): respuesta corta (≤ 10 líneas). Una línea por dimensión confirmando que pasa, decisión final. **No inventar scores**, no rellenar secciones con texto genérico, no listar "advisory notes" especulativas.
+- **Si hay hallazgos**: usar la estructura completa abajo, pero solo incluir dimensiones con observaciones reales. Una dimensión sin issues se reporta en una línea.
+- **No reportar dimensiones N/A como secciones**: si el PR no toca tests, no incluyas la sección de Testing; mencionalo en una línea al inicio.
+- **Scores son opcionales**, no obligatorios. Si los usás, justificalos con un hallazgo concreto. Un "8/10" sin issue listado es ruido.
+
+**Estructura del comentario en el PR (cuando hay hallazgos)**:
 
 ```markdown
 ## Airflow Code Review Summary
@@ -307,17 +322,17 @@ Antes de reportar shared-state, type confusion u otros bugs estructurales en hel
 
 ---
 
-## 🏗️ Architecture & Pipeline Framework (Score: X/10)
-[Análisis: thin DAG, bootstrap, composición de Pipeline, reglas CI, manejo de errores del framework]
+## 🏗️ Architecture & Pipeline Framework
+[Solo incluir si hay observación. Si pasa limpio: "Pasa: thin DAG, bootstrap correcto, composición declarativa."]
 
-## 🧱 Steps, Queries & DWH Conventions (Score: X/10)
-[Análisis: ubicación de Steps, uso de reusables vs custom, Queries Module, naming raw/stg/core, conflict targets de upsert, anti-patterns]
+## 🧱 Steps, Queries & DWH Conventions
+[Solo incluir si hay observación.]
 
-## 💾 Connections & SQL Migrations (Score: X/10)
-[Análisis: bootstrap de DB, idempotencia de archivos sql/, drift, separación sql/ vs Alembic]
+## 💾 Connections & SQL Migrations
+[Solo incluir si hay observación.]
 
-## 🧪 Testing (Score: X/10)
-[Análisis: DagBag, estructura tests/dags y tests/scripts/python por capa, AAA, cobertura, mocking]
+## 🧪 Testing
+[Solo incluir si el PR toca código testeable.]
 
 ## 📋 Action Items
 **Must Fix**:
@@ -330,13 +345,23 @@ Antes de reportar shared-state, type confusion u otros bugs estructurales en hel
 - ...
 
 ## ✅ Decision
-**[APPROVE | REQUEST CHANGES]**
+**[APPROVE | REQUEST_CHANGES | COMMENT]**
+```
+
+**Estructura cuando APPROVE limpio**:
+
+```markdown
+## Airflow Code Review Summary
+
+**Overall Assessment**: APPROVE
+
+Cambios revisados: <breve descripción>. Sin hallazgos accionables. Las invariantes (thin DAG / idempotencia SQL / naming DWH / drift) se respetan.
 ```
 
 **Criterios de decisión**:
-- **REQUEST_CHANGES** si: edición de un `.sql` ya aplicado, lógica de negocio en el DAG, credenciales hardcodeadas, columnas inventadas no presentes en `sql/`, ausencia de DagBag test para un DAG nuevo, violación de `catchup=False` o owner = `airflow`, Alembic tocando `raw/stg/core`.
+- **REQUEST_CHANGES** si: edición de un `.sql` ya aplicado (no eliminación — ver Step 4), lógica de negocio en el DAG, credenciales hardcodeadas, columnas inventadas no presentes en `sql/`, ausencia de DagBag test para un DAG nuevo, violación de `catchup=False` o owner = `airflow`, Alembic tocando `raw/stg/core`.
 - **COMMENT** si: hay mejoras significativas opcionales pero el cambio es funcional y respeta las invariantes.
-- **APPROVE** si: todas las dimensiones cumplen, tests presentes, naming correcto, sin anti-patterns nuevos.
+- **APPROVE** si: todas las dimensiones cumplen, tests presentes (cuando aplica), naming correcto, sin anti-patterns nuevos. **No agregar "advisory notes" si no hay riesgo verificable** — eso confunde la señal del review.
 
 ---
 
