@@ -600,10 +600,10 @@ enforce_decision() {
     # Replace Overall Assessment (handles both "APPROVE" and "**APPROVE**")
     sed -i 's/\*\*Overall Assessment\*\*: \*\*APPROVE\*\*/\*\*Overall Assessment\*\*: \*\*REQUEST_CHANGES\*\*/g' claude_review.md
     sed -i 's/\*\*Overall Assessment\*\*: APPROVE/\*\*Overall Assessment\*\*: REQUEST_CHANGES/g' claude_review.md
-    # Replace Decision section header emoji
-    sed -i 's/### ✅ Decision/### ⚠️ Decision/g' claude_review.md
-    # Replace standalone **APPROVE** lines in the Decision section body
-    sed -i '/### ⚠️ Decision/,/^---$/{s/^\*\*APPROVE\*\*/\*\*REQUEST_CHANGES\*\*/;}' claude_review.md
+    # Replace Decision section header emoji (handles #, ##, ###)
+    sed -i 's/\(#[#]* \)✅ Decision/\1⚠️ Decision/g' claude_review.md
+    # Replace standalone **APPROVE** lines in the Decision section body (handles #, ##, ###)
+    sed -i '/#[#]* ⚠️ Decision/,/^---$/{s/^\*\*APPROVE\*\*/\*\*REQUEST_CHANGES\*\*/; s/^APPROVE/\*\*REQUEST_CHANGES\*\*/;}' claude_review.md
 
     # Append override notice at the end of the review
     cat >> claude_review.md <<EOF
