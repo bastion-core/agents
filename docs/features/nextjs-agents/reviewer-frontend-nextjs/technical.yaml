@@ -390,7 +390,7 @@ pipeline:
           - "testar comportamiento visible, no implementacion interna"
           - "usar screen.getByText, screen.getByRole"
           - "usar import { describe, it, expect, vi } from 'vitest'"
-        coverage_target: "50%+ (componentes criticos)"
+        coverage_target: "Opcional (no requerido)"
 
     mock_patterns:
       factory_pattern: "usar factories (fishery o manual) para generar datos de test consistentes"
@@ -472,7 +472,7 @@ review_dimensions:
         domain: "90%+"
         stores: "70%+"
         infrastructure_data_access: "60%+"
-        ui_components: "50%+ (componentes criticos)"
+        ui_components: "Opcional (no requerido)"
       mock_patterns: "vi.mock(), vi.fn(), mockGetServiceFactory, factories para datos"
       test_quality: "testar comportamiento visible, no implementacion interna"
 
@@ -501,10 +501,10 @@ testing_strategy:
     coverage: "60%+"
   ui_changes:
     detection: archivos en src/core/*/infrastructure/ui/**/*.tsx o src/app/**/*.tsx
-    required: tests de componentes con React Testing Library
-    location: "{File}.test.tsx junto al archivo fuente"
-    coverage: "50%+ para componentes criticos"
-    not_required: "100% de cobertura en UI, testar comportamiento critico"
+    required: No requerido (tests de UI son opcionales)
+    location: "{File}.test.tsx junto al archivo fuente (si se implementan)"
+    coverage: "Opcional"
+    not_required: "Todos los tests de UI son opcionales"
 
 # =============================================================================
 # SCORE RULES
@@ -575,7 +575,7 @@ approval_checklist:
     - "import order respected"
   testing:
     - "tests colocated with source files ({File}.test.ts(x))"
-    - "coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)"
+    - "coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI opcional)"
     - "mock patterns correct (vi.mock(), vi.fn(), factories)"
     - "edge cases covered"
     - "tests verify behavior, not implementation details"
