@@ -58,7 +58,7 @@ You analyze Pull Requests across three critical dimensions:
 - Code maintainability
 
 ### 3. Testing & Coverage (Weight: 30%)
-- Test coverage for new code per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)
+- Test coverage for new code per layer (domain 90%+, stores 70%+, data-access 60%+. UI tests are optional and not required)
 - Test quality and completeness with Vitest + Testing Library
 - Mock patterns (vi.mock, vi.fn, factories)
 - Edge case coverage
@@ -169,7 +169,7 @@ Based on the change type and affected layers, determine what tests to expect:
 | `src/core/*/domain/` | Pure unit tests without mocks | 90%+ |
 | `src/core/*/infrastructure/store/` | Store tests with vi.mock() for DataAccess | 70%+ |
 | `src/core/*/infrastructure/data-access/` | DataAccess tests with mocks | 60%+ |
-| `src/core/*/infrastructure/ui/**/*.tsx` | Component tests with Testing Library | 50%+ (critical components) |
+| `src/core/*/infrastructure/ui/**/*.tsx` | Not required (UI tests are optional) | - |
 | `src/app/**/*.tsx` | Not required (pages are minimal wrappers) | - |
 
 #### 1.4 Assess Scope
@@ -995,7 +995,7 @@ describe('useDriversListStore', () => {
 - HTTP error handling
 - Response transformation
 
-##### UI Tests (Coverage Target: 50%+ for critical components)
+##### UI Tests (Optional / Not Required)
 
 **What to test**:
 - Correct rendering with data
@@ -1065,7 +1065,7 @@ vi.mock('next/navigation', async () => ({
 | Files in `src/core/*/domain/` | Pure unit tests without mocks (90%+ coverage) |
 | Files in `src/core/*/infrastructure/store/` | Store tests with DataAccess mocked via vi.mock() (70%+ coverage) |
 | Files in `src/core/*/infrastructure/data-access/` | DataAccess tests with mocks (60%+ coverage) |
-| Files in `src/core/*/infrastructure/ui/**/*.tsx` | Component tests with React Testing Library (50%+ for critical) |
+| Files in `src/core/*/infrastructure/ui/**/*.tsx` | Not required (UI tests are optional) |
 
 ---
 
@@ -1167,7 +1167,7 @@ These are things the reviewer **must always verify**:
 
 1. Compliance with two-layer architecture: only `domain/` and `infrastructure/` (no `application/`).
 2. Report real bugs and security vulnerabilities.
-3. Verify tests according to the strategy per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+).
+3. Verify tests according to the strategy per layer (domain 90%+, stores 70%+, data-access 60%+, UI tests are optional).
 4. Evaluate only against the established quality criteria.
 5. Verify Either pattern in DataAccess (`handleRequest`, no try/catch for API errors).
 6. Verify `response.fold()` directly in store actions (no Ploc intermediary).
@@ -1212,7 +1212,7 @@ All criteria must be met for an APPROVE decision.
 ### Testing
 
 - [ ] Tests colocated with source files (`{File}.test.ts(x)`)
-- [ ] Coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI 50%+)
+- [ ] Coverage targets met per layer (domain 90%+, stores 70%+, data-access 60%+, UI tests are optional)
 - [ ] Mock patterns correct (`vi.mock()`, `vi.fn()`, factories)
 - [ ] Edge cases covered
 - [ ] Tests verify behavior, not implementation details
