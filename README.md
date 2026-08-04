@@ -123,7 +123,46 @@ Agente especializado en revisión de código para librerías Python, enfocado en
 - Verificación de documentación y ejemplos
 - Auditoría de estructura de paquete
 
-#### 6. Backend Python Celery Skill (`[python-development/skills] backend-py-celery`)
+#### 6. Reviewer Alembic Backend Python Agent (`[python-development/agents] reviewer-alembic-backend-py`)
+**Code Review para Jobs de Migraciones Alembic**
+
+Agente especializado en revisión de proyectos job de migraciones (estilo `db-migrator-job`). Aplica un estándar de calidad distinto por directorio.
+
+**Capacidades:**
+- Validación de integridad de la cadena de revisiones (`alembic heads`, `down_revision`)
+- Simetría `upgrade()` / `downgrade()` y reversibilidad
+- Seguridad DDL sobre tablas con datos (`server_default`, `ondelete`, enums, locks)
+- Criterios de indexación (cardinalidad, redundancia, límite por tabla)
+- Clean Architecture y tests unitarios **solo** para `src/`
+
+**Cuándo usar:**
+- Code review automatizado de PRs con migraciones de base de datos
+- Auditoría de `alembic/versions/`, `scripts/` y `src/` en un mismo repositorio
+
+**Política de testing:** los archivos de `alembic/versions/` y los scripts one-off de `scripts/` están exentos de pruebas unitarias; se validan por estructura, criterios de seguridad y el ciclo `upgrade → downgrade → upgrade`.
+
+**Skills que usa:** `backend-py-alembic`, `backend-py`, `qa-backend-py`, `github-workflow`
+
+#### 7. Backend Python Skill (`[python-development/skills] backend-py`)
+**Estándares Generales de Backend Python**
+
+Skill de referencia agnóstica de framework con las reglas de capas (Clean/Hexagonal Architecture), SOLID, inyección de dependencias, tipado, manejo de errores, configuración y criterios de performance.
+
+**Cuándo usar:**
+- Base compartida para escribir y revisar código bajo `src/`
+- Detección de violaciones de capa y dependencias invertidas
+
+#### 8. Backend Python Alembic Skill (`[python-development/skills] backend-py-alembic`)
+**Criterios de Calidad para Migraciones Alembic**
+
+Skill con los criterios de análisis y revisión de proyectos job de migraciones: cadena de revisiones, estructura del archivo de revisión, simetría upgrade/downgrade, seguridad DDL, enums, indexación y migraciones de datos.
+
+**Cuándo usar:**
+- Analizar o revisar `alembic/versions/`
+- Validar la configuración de `alembic.ini` y `alembic/env.py`
+- Verificar migraciones con `alembic heads` / `alembic check` y el ciclo de ida y vuelta
+
+#### 9. Backend Python Celery Skill (`[python-development/skills] backend-py-celery`)
 **Desarrollo de APIs y Tareas Celery**
 
 Skill ejecutable para desarrollo de rutas FastAPI y tareas programadas Celery con Clean Architecture.
@@ -143,7 +182,7 @@ Skill ejecutable para desarrollo de rutas FastAPI y tareas programadas Celery co
 
 Agentes especializados para desarrollo Flutter/Dart.
 
-#### 7. Reviewer Flutter App Agent (`[flutter-development/agents] reviewer-flutter-app`)
+#### 10. Reviewer Flutter App Agent (`[flutter-development/agents] reviewer-flutter-app`)
 **Code Review para Aplicaciones Flutter**
 
 Agente especializado en revisión de código Flutter, enfocado en widgets, state management y performance móvil.
@@ -416,9 +455,17 @@ claude-agents/
 │   │   │   ├── backend-py.md           # Agente de backend Python
 │   │   │   ├── qa-backend-py.md        # Agente de QA/testing
 │   │   │   ├── reviewer-backend-py.md  # Agente de code review
-│   │   │   └── reviewer-library-py.md  # Agente de review de librerías
+│   │   │   ├── reviewer-library-py.md  # Agente de review de librerías
+│   │   │   ├── reviewer-airflow-dags-py.md      # Agente de review de DAGs Airflow
+│   │   │   └── reviewer-alembic-backend-py.md   # Agente de review de jobs Alembic
 │   │   └── skills/
-│   │       └── backend-py-celery.md    # Skill FastAPI + Celery
+│   │       ├── backend-py.md           # Skill de estándares backend Python
+│   │       ├── backend-py-alembic.md   # Skill de criterios Alembic
+│   │       ├── backend-py-celery.md    # Skill FastAPI + Celery
+│   │       ├── backend-py-library.md   # Skill de librerías Python
+│   │       ├── migrations-creator-py.md # Skill de creación de migraciones
+│   │       ├── qa-backend-py.md        # Skill de QA backend
+│   │       └── qa-airflow-dags-py.md   # Skill de QA para DAGs Airflow
 │   └── flutter-development/             # Ecosistema Flutter
 │       ├── README.md
 │       └── agents/

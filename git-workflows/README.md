@@ -35,6 +35,27 @@ Workflow de revisión de código automatizada usando Claude AI para proyectos Py
 - [Architecture](../docs/CODE_REVIEW_AGENT_ARCHITECTURE.md)
 - [Deployment](../docs/CI_CD_GUIDE_TO_CODE_REVIEW_AGENT.md)
 
+### python/code-review-alembic-backend-py.yml
+
+Workflow de revisión de código para proyectos **job de migraciones Alembic** (estilo `db-migrator-job`), usando el agente `reviewer-alembic-backend-py`.
+
+**Características:**
+- Aplica un estándar de calidad distinto por directorio en una sola revisión:
+  - `alembic/versions/` → integridad de la cadena de revisiones y seguridad DDL, **sin pruebas unitarias**
+  - `scripts/` → seguridad y documentación mínima, **sin pruebas unitarias**
+  - `src/` → Clean Architecture y pruebas unitarias (>90% en archivos cambiados)
+- Thresholds por defecto: arquitectura 8, calidad 8, testing 8
+
+**Triggers:**
+- Pull requests en `alembic/**`, `alembic.ini`, `src/**`, `scripts/**`, `tests/**`, `main.py`, `entrypoint.sh`, `Dockerfile`, `requirements.txt`, `Pipfile`
+- Eventos: opened, synchronize, reopened
+
+**Requisitos:**
+- Secrets: `ANTHROPIC_API_KEY`, `AGENTS_GITHUB_TOKEN`
+- Permisos: write para pull-requests e issues
+
+**⚠️ Importante:** este workflow **reemplaza** a `code-review-backend-py.yml` en un repositorio de migraciones. El agente ya cubre `src/`, `scripts/` y `tests/`, así que mantener ambos activos genera dos revisiones y dos quality gates sobre el mismo PR.
+
 ## 🚀 Instalación
 
 ### Opción 1: Script de Sincronización (Recomendada)
