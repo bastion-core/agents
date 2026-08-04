@@ -44,7 +44,34 @@ Specialized code reviewer for Python library development with focus on API desig
 - Ensuring documentation quality
 - Checking package structure
 
+#### reviewer-alembic-backend-py.md
+Code reviewer for Alembic migration job projects (`db-migrator`-style repositories). Applies a different quality bar per directory: strict chain/DDL validation for `alembic/versions/`, pragmatic security-first criteria for `scripts/`, and full Clean Architecture + unit test requirements for `src/`. Uses the `backend-py-alembic`, `backend-py` and `qa-backend-py` skills.
+
+**Use cases**:
+- Automated PR reviews for database migration repositories
+- Revision chain integrity validation (single head, correct `down_revision`)
+- `upgrade()`/`downgrade()` symmetry and DDL safety on populated tables
+- Index cost/benefit analysis
+
+**Testing policy**: migration files under `alembic/versions/` and one-off scripts under `scripts/` are exempt from unit tests — they are validated by structure, safety criteria and the `upgrade → downgrade → upgrade` cycle. Unit tests are required only for `src/`.
+
 ## Available Skills
+
+### backend-py.md
+General Python backend standards, framework-agnostic: layering rules for Clean/Hexagonal Architecture, SOLID, dependency injection, typing, error handling, configuration and secrets, persistence and performance criteria.
+
+**Use cases**:
+- Shared baseline for writing and reviewing code under `src/`
+- Layer violation and dependency direction checks
+- Quality checklist for backend PRs
+
+### backend-py-alembic.md
+Quality criteria for Alembic migration job projects: revision chain integrity, revision file structure, `upgrade`/`downgrade` symmetry, DDL safety, enums, indexing rules and data migrations.
+
+**Use cases**:
+- Analyzing and reviewing `alembic/versions/`
+- Validating `alembic.ini` / `env.py` configuration
+- Verifying migrations with `alembic heads` / `check` and the round-trip cycle
 
 ### backend-py-celery.md
 Executable skill for developing FastAPI routes and Celery scheduled tasks with Clean Architecture. Combines agent capabilities with specific tools for creating API endpoints and background tasks.

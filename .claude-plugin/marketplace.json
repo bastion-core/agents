@@ -17,8 +17,8 @@
     {
       "name": "python-development",
       "source": "./plugins/python-development",
-      "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, and library development",
-      "version": "1.4.0",
+      "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
+      "version": "1.7.0",
       "tags": ["python", "backend", "clean-architecture", "fastapi", "celery", "library", "migrations", "alembic"]
     },
     {

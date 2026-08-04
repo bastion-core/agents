@@ -1,0 +1,95 @@
+name: Alembic Migration Job Code Review
+
+# Code review for Alembic migration job repositories (db-migrator style).
+#
+# This workflow REPLACES code-review-backend-py.yml in a migration job repo:
+# the reviewer-alembic-backend-py agent already covers src/, scripts/ and tests/
+# in addition to alembic/. Running both would post two reviews on the same PR.
+#
+# The script handles file filtering internally (see --file-pattern) and exits
+# early with an out-of-scope comment when no reviewable files are found.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'alembic/**'
+      - 'alembic.ini'
+      - 'src/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'main.py'
+      - 'entrypoint.sh'
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - 'Pipfile'
+
+# Prevent multiple runs for the same PR
+concurrency:
+  group: code-review-alembic-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  code-review:
+    name: AI Alembic Migration Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout agents marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: bastion-core/agents
+          ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
+          path: .agents-marketplace
+          sparse-checkout: |
+            plugins/python-development/agents/reviewer-alembic-backend-py.md
+            scripts/code-review.sh
+
+      - name: Run code review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        # Thresholds are stricter on architecture/quality because a bad migration
+        # fails mid-deploy or locks a live table. The testing threshold is safe to
+        # keep at 8: the agent scores Testing 10/10 for migration-only and
+        # script-only PRs, which are exempt from unit tests by policy.
+        run: |
+          chmod +x .agents-marketplace/scripts/code-review.sh
+          .agents-marketplace/scripts/code-review.sh \
+            --agent .agents-marketplace/plugins/python-development/agents/reviewer-alembic-backend-py.md \
+            --arch-threshold 8 \
+            --quality-threshold 8 \
+            --test-threshold 8 \
+            --file-pattern '\.py$|alembic\.ini$|entrypoint\.sh$|Dockerfile$|requirements\.txt$' \
+            --scope-label 'Alembic / Python' \
+            --max-files 50
+
+      - name: Upload Review Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-alembic-${{ github.event.pull_request.number }}
+          path: |
+            claude_review.md
+            review_context.json
+            changed_files.txt
+            diffs/
+          retention-days: 30
