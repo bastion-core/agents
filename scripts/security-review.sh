@@ -411,10 +411,17 @@ collect_security_context() {
   if [[ -d src/app/api ]]; then
     while IFS= read -r route; do
       local methods guards
+      # Both greps MUST tolerate finding nothing. A route with no guard token is
+      # not an edge case to shrug at — it is the single most important row this
+      # inventory can produce — but under `set -e` with `pipefail`, an empty grep
+      # exits 1 and takes the entire security review down with it. That is what
+      # happened on the payment webhook: it authenticates by signature, so it
+      # matches no guard helper, and the collector died on the one route it most
+      # needed to report.
       methods=$(grep -oE '^export (async )?function (GET|POST|PUT|PATCH|DELETE)' "${route}" \
-        | grep -oE '(GET|POST|PUT|PATCH|DELETE)' | tr '\n' ',' | sed 's/,$//')
+        | grep -oE '(GET|POST|PUT|PATCH|DELETE)' | tr '\n' ',' | sed 's/,$//' || true)
       guards=$(grep -oE 'handleAsAdmin|requireAdmin|currentSession|startSession|endSession|serverAuthService|handle\(' "${route}" \
-        | sort -u | tr '\n' ' ')
+        | sort -u | tr '\n' ' ' || true)
       echo "- \`${route}\` | ${methods:-none} | ${guards:-NO GUARD HELPER DETECTED}" >> security_context.txt
     done < <(find src/app/api -name 'route.ts' -o -name 'route.tsx' | sort)
   else
