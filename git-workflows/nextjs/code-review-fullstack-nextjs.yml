@@ -1,0 +1,78 @@
+name: Claude Code Review - Fullstack Next.js
+
+# Trigger on ALL PRs so the review script can post out-of-scope feedback for
+# non-TypeScript changes. The script filters files internally and exits early
+# without calling the Claude API when no .ts/.tsx files are found.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Prevent multiple runs for the same PR. The group is distinct from the security
+# review's so the two reviewers never cancel each other.
+concurrency:
+  group: code-review-fullstack-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  code-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout agents marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: bastion-core/agents
+          ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
+          path: .agents-marketplace
+          sparse-checkout: |
+            plugins/nextjs-development/agents/reviewer-fullstack-nextjs.md
+            scripts/code-review.sh
+
+      - name: Run code review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.VOLTOP_GITHUB_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          chmod +x .agents-marketplace/scripts/code-review.sh
+          .agents-marketplace/scripts/code-review.sh \
+            --agent .agents-marketplace/plugins/nextjs-development/agents/reviewer-fullstack-nextjs.md \
+            --model claude-sonnet-5 \
+            --arch-threshold 9 \
+            --quality-threshold 9 \
+            --test-threshold 9 \
+            --file-pattern '\.(ts|tsx)$' \
+            --scope-label 'Fullstack Next.js/TypeScript' \
+            --max-files 60
+
+      - name: Upload Review Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-${{ github.event.pull_request.number }}
+          path: |
+            claude_review.md
+            review_context.json
+            changed_files.txt
+            diffs/
+          retention-days: 30
