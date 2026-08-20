@@ -54,8 +54,23 @@ MODEL="claude-fable-5"
 AUTH_THRESHOLD=9
 DATA_THRESHOLD=9
 INPUT_THRESHOLD=9
-MAX_DIFF_SIZE=300000  # ~75K tokens per section (diffs + file contents each)
-MAX_OUTPUT_TOKENS=16384
+# Per-section byte cap (diffs and final file contents each). The prompt runs
+# about 2.6 bytes per token, so worst-case input is roughly (2 x this) / 2.6.
+# Truncation matters more here than in the quality review: a vulnerability the
+# reviewer never saw is reported as absent. Override with --max-diff-size.
+MAX_DIFF_SIZE=300000
+
+# Thinking on Claude Fable 5 is ALWAYS ON and cannot be disabled: sending
+# `thinking: {type: "disabled"}` returns a 400, and `budget_tokens` was removed.
+# Thinking tokens are billed against max_tokens, so the only levers are a budget
+# large enough to hold the reasoning AND the report, and `output_config.effort`
+# to cap how deep the reasoning goes. A 16384 budget is not enough here: on a
+# large PR the model spends all of it thinking and emits no report at all.
+MAX_OUTPUT_TOKENS=32000
+EFFORT="high"   # Security review earns the depth; drop to medium to cut cost.
+# Streaming is required at this budget — a non-streaming request that could run
+# past the server's duration limit is rejected outright.
+STREAM="true"
 MAX_FILES=60
 FILE_PATTERN='\.(ts|tsx)$'
 SCOPE_LABEL="TypeScript"
@@ -94,6 +109,22 @@ while [[ $# -gt 0 ]]; do
     --max-files)
       MAX_FILES="$2"
       shift 2
+      ;;
+    --max-tokens)
+      MAX_OUTPUT_TOKENS="$2"
+      shift 2
+      ;;
+    --max-diff-size)
+      MAX_DIFF_SIZE="$2"
+      shift 2
+      ;;
+    --effort)
+      EFFORT="$2"
+      shift 2
+      ;;
+    --no-stream)
+      STREAM="false"
+      shift
       ;;
     --file-pattern)
       FILE_PATTERN="$2"
@@ -144,6 +175,10 @@ validate_inputs() {
   echo "  Critical findings allowed: 0"
   echo "  Max files: ${MAX_FILES}"
   echo "  Max output tokens: ${MAX_OUTPUT_TOKENS}"
+  echo "  Max diff size: ${MAX_DIFF_SIZE} bytes per section"
+  echo "  Effort: ${EFFORT}"
+  echo "  Thinking: always on (Fable 5 cannot disable it)"
+  echo "  Streaming: ${STREAM}"
   echo "  File pattern: ${FILE_PATTERN}"
   echo "  Scope label: ${SCOPE_LABEL}"
   echo "  Comment marker: ${COMMENT_MARKER}"
@@ -342,7 +377,7 @@ get_changes() {
 
   DIFF_SIZE=$(wc -c < diffs/all_diffs.txt | tr -d ' ')
   if [[ ${DIFF_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
-    echo "Diff too large (${DIFF_SIZE} bytes), truncating..."
+    echo "::warning::Diffs truncated: ${DIFF_SIZE} bytes exceeds the ${MAX_DIFF_SIZE}-byte cap. Raise --max-diff-size or split the PR."
     head -c ${MAX_DIFF_SIZE} diffs/all_diffs.txt > diffs/all_diffs_truncated.txt
     printf "\n\n[... Diff truncated due to size ...]" >> diffs/all_diffs_truncated.txt
     mv diffs/all_diffs_truncated.txt diffs/all_diffs.txt
@@ -350,7 +385,9 @@ get_changes() {
 
   CONTENT_SIZE=$(wc -c < diffs/final_contents.txt | tr -d ' ')
   if [[ ${CONTENT_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
-    echo "Final contents too large (${CONTENT_SIZE} bytes), truncating..."
+    # The security reviewer reports "no findings" for code it was never shown,
+    # and that reads identical to a clean review. Never let this be quiet.
+    echo "::warning::Final file contents truncated: ${CONTENT_SIZE} bytes exceeds the ${MAX_DIFF_SIZE}-byte cap. Part of this PR was NOT security-reviewed. Raise --max-diff-size or split the PR."
     head -c ${MAX_DIFF_SIZE} diffs/final_contents.txt > diffs/final_contents_truncated.txt
     printf "\n\n[... Content truncated due to size ...]" >> diffs/final_contents_truncated.txt
     mv diffs/final_contents_truncated.txt diffs/final_contents.txt
@@ -520,35 +557,99 @@ instructions. It MUST contain, verbatim and each on its own line:
 Format your response in Markdown.
 EOF
 
+  # `thinking` is deliberately absent: Fable 5 rejects every explicit value
+  # except {type: "adaptive"}, and omitting it selects adaptive anyway.
+  local STREAM_JSON='{}'
+  if [[ "${STREAM}" = "true" ]]; then
+    STREAM_JSON='{"stream": true}'
+  fi
+
   jq -n \
     --rawfile system "${AGENT_FILE}" \
     --rawfile prompt user_prompt.txt \
     --arg model "${MODEL}" \
+    --arg effort "${EFFORT}" \
     --argjson max_tokens "${MAX_OUTPUT_TOKENS}" \
+    --argjson streaming "${STREAM_JSON}" \
     '{
       "model": $model,
       "max_tokens": $max_tokens,
       "system": $system,
+      "output_config": { "effort": $effort },
       "messages": [
         {
           "role": "user",
           "content": $prompt
         }
       ]
-    }' > api_request.json
+    } + $streaming' > api_request.json
 
-  RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
-    -H "x-api-key: ${ANTHROPIC_API_KEY}" \
-    -H "anthropic-version: 2023-06-01" \
-    -H "content-type: application/json" \
-    -d @api_request.json)
+  local STOP_REASON="" API_ERROR=""
 
-  REVIEW_CONTENT=$(echo "${RESPONSE}" | jq -r '.content[] | select(.type == "text") | .text')
+  if [[ "${STREAM}" = "true" ]]; then
+    curl -sS -N -X POST https://api.anthropic.com/v1/messages \
+      -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d @api_request.json > api_response_raw.txt
 
-  if [[ "${REVIEW_CONTENT}" == "null" ]] || [[ -z "${REVIEW_CONTENT}" ]]; then
-    echo "::error::Failed to get security review from Claude API"
-    echo "API Response: ${RESPONSE}"
+    # Text deltas only. Thinking arrives as its own block type and must never
+    # reach the published review.
+    REVIEW_CONTENT=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -rj 'select(.type=="content_block_delta")
+                | select(.delta.type=="text_delta")
+                | .delta.text' 2>/dev/null || true)
+
+    STOP_REASON=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -r 'select(.type=="message_delta") | .delta.stop_reason // empty' 2>/dev/null \
+      | tail -1 || true)
+
+    API_ERROR=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -r 'select(.type=="error") | .error.message // empty' 2>/dev/null | head -1 || true)
+    if [[ -z "${API_ERROR}" ]]; then
+      API_ERROR=$(jq -r 'select(.type=="error") | .error.message // empty' \
+        api_response_raw.txt 2>/dev/null | head -1 || true)
+    fi
+  else
+    curl -sS -X POST https://api.anthropic.com/v1/messages \
+      -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d @api_request.json > api_response_raw.txt
+
+    REVIEW_CONTENT=$(jq -r '[.content[]? | select(.type=="text") | .text] | join("")' \
+      api_response_raw.txt 2>/dev/null || true)
+    STOP_REASON=$(jq -r '.stop_reason // empty' api_response_raw.txt 2>/dev/null || true)
+    API_ERROR=$(jq -r 'select(.type=="error") | .error.message // empty' \
+      api_response_raw.txt 2>/dev/null | head -1 || true)
+  fi
+
+  if [[ -n "${API_ERROR}" ]]; then
+    echo "::error::Claude API rejected the request: ${API_ERROR}"
+    echo "Request parameters: model=${MODEL} max_tokens=${MAX_OUTPUT_TOKENS} effort=${EFFORT} stream=${STREAM}"
     exit 1
+  fi
+
+  # A security gate that cannot read a review must not approve the PR. Every
+  # path out of here is either a usable review or a non-zero exit.
+  if [[ "${REVIEW_CONTENT}" == "null" ]] || [[ -z "${REVIEW_CONTENT}" ]]; then
+    if [[ "${STOP_REASON}" = "max_tokens" ]]; then
+      echo "::error::The model used the entire ${MAX_OUTPUT_TOKENS}-token output budget without emitting any review text."
+      echo ""
+      echo "Thinking is always on for Claude Fable 5 and its tokens count against max_tokens."
+      echo "Raise --max-tokens, or lower --effort (currently ${EFFORT}). Thinking cannot be"
+      echo "disabled on this model — that returns a 400."
+    else
+      echo "::error::Failed to get security review from Claude API (stop_reason=${STOP_REASON:-unknown})"
+    fi
+    echo ""
+    echo "First 2000 bytes of the API response:"
+    head -c 2000 api_response_raw.txt
+    exit 1
+  fi
+
+  if [[ "${STOP_REASON}" = "max_tokens" ]]; then
+    echo "::warning::Security review was truncated at the ${MAX_OUTPUT_TOKENS}-token limit; the scores or the critical-findings line may be missing, which the gate treats as a blocking failure. Consider raising --max-tokens."
   fi
 
   echo "${REVIEW_CONTENT}" > claude_security_review.md
