@@ -1,0 +1,79 @@
+name: Claude Security Review - Fullstack Next.js
+
+# Runs alongside code-review-fullstack-nextjs.yml on the same PR. The two do not
+# interfere: security-review.sh owns its own PR-comment marker
+# ("AI Security Review by Claude"), its own check-run name ("Claude Security
+# Review") and its own metric triad, so neither reviewer reads the other's
+# comment as its own previous review nor overwrites the other's check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: security-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  security-review:
+    name: AI Security Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout agents marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: bastion-core/agents
+          ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
+          path: .agents-marketplace
+          sparse-checkout: |
+            plugins/nextjs-development/agents/reviewer-security-nextjs.md
+            scripts/security-review.sh
+
+      - name: Run security review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.VOLTOP_GITHUB_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          chmod +x .agents-marketplace/scripts/security-review.sh
+          .agents-marketplace/scripts/security-review.sh \
+            --agent .agents-marketplace/plugins/nextjs-development/agents/reviewer-security-nextjs.md \
+            --model claude-fable-5 \
+            --auth-threshold 9 \
+            --data-threshold 9 \
+            --input-threshold 9 \
+            --file-pattern '\.(ts|tsx)$' \
+            --scope-label 'Fullstack Next.js/TypeScript' \
+            --max-files 60
+
+      - name: Upload Security Review Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-review-${{ github.event.pull_request.number }}
+          path: |
+            claude_security_review.md
+            security_context.txt
+            review_context.json
+            changed_files.txt
+            diffs/
+          retention-days: 30

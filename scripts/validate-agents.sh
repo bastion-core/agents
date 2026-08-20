@@ -139,10 +139,10 @@ while IFS= read -r -d '' agent_file; do
     # Test 6: Campo 'model' existe y es válido
     model_field=$(sed -n '/^---$/,/^---$/p' "$agent_file" | grep "^model:" | sed 's/model: *//')
     if [ -n "$model_field" ]; then
-        if [[ "$model_field" =~ ^(inherit|sonnet|opus|haiku)$ ]]; then
+        if [[ "$model_field" =~ ^(inherit|sonnet|opus|haiku|fable)$ ]]; then
             print_pass "Has valid 'model' field: $model_field"
         else
-            print_fail "Invalid 'model' value: $model_field (should be: inherit, sonnet, opus, or haiku)"
+            print_fail "Invalid 'model' value: $model_field (should be: inherit, sonnet, opus, haiku, or fable)"
         fi
     else
         print_fail "Missing 'model' field in frontmatter"

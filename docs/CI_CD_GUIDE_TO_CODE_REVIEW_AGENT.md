@@ -1,5 +1,26 @@
 # Code Review Agent - Deployment Guide
 
+## Which workflow do I install?
+
+| Project | Workflow(s) | Script | Reviewer |
+|---|---|---|---|
+| Python backend (FastAPI/Celery) | `python/code-review-backend-py.yml` | `code-review.sh` | `reviewer-backend-py` |
+| Python library | `python/code-review-library-py.yml` | `code-review.sh` | `reviewer-library-py` |
+| Airflow DAGs | `python/code-review-airflow-dags-py.yml` | `code-review.sh` | `reviewer-airflow-dags-py` |
+| Flutter app | `flutter/code-review-flutter-app.yml` | `code-review.sh` | `reviewer-flutter-app` |
+| Next.js, frontend only | `nextjs/code-review-frontend-nextjs.yml` | `code-review.sh` | `reviewer-frontend-nextjs` |
+| **Next.js, fullstack** | `nextjs/code-review-fullstack-nextjs.yml` **and** `nextjs/code-review-security-nextjs.yml` | `code-review.sh` + `security-review.sh` | `reviewer-fullstack-nextjs` + `reviewer-security-nextjs` |
+
+**One `code-review.sh` workflow per repository.** Every workflow driven by that script uses
+the same PR-comment marker (`AI Code Review by Claude`) and the same check-run name
+(`Claude Code Review`). Installing two of them in one repository makes each read the other's
+comment as its own previous review and overwrite the other's check.
+
+The security workflow is the exception, and that is the whole reason `security-review.sh`
+exists as a separate script: it owns the marker `AI Security Review by Claude` and the
+check-run name `Claude Security Review`, so it can run beside a `code-review.sh` workflow on
+the same PR without either interfering with the other.
+
 ## Prerequisites
 
 1. **Anthropic API Key**: You need an API key from Anthropic
@@ -164,6 +185,15 @@ if [ $ARCH_SCORE -ge 8 ]; then
 2. **Use size limits**: Current 150KB limit prevents runaway costs
 3. **Avoid re-reviews**: Concurrency control prevents duplicate runs
 4. **Use Sonnet**: More cost-effective than Opus for most reviews
+
+> **Running both reviewers doubles the per-PR cost.** A fullstack repository with both the
+> code-review and the security workflow installed pays for two full API calls per push, each
+> sending the changed files twice (final contents plus diffs). If that matters, narrow the
+> security workflow's trigger with a `paths:` filter so it only runs when the trust boundary
+> can actually move — `src/app/api/**`, `src/core/auth/**`, `src/core/donations/**`,
+> `src/lib/**`, `prisma/**`. The trade-off is real: a `paths:` filter means a PR that touches
+> only UI files gets no security review at all, and "only UI" is exactly what a PR that leaks
+> data through a server-to-client prop looks like from the outside.
 
 ### Monitor Usage
 

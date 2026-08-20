@@ -12,28 +12,58 @@
       "source": "./plugins/general",
       "description": "Language-agnostic agents for software architecture and system design",
       "version": "1.1.0",
-      "tags": ["architecture", "design", "planning"]
+      "tags": [
+        "architecture",
+        "design",
+        "planning"
+      ]
     },
     {
       "name": "python-development",
       "source": "./plugins/python-development",
       "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
       "version": "1.7.0",
-      "tags": ["python", "backend", "clean-architecture", "fastapi", "celery", "library", "migrations", "alembic"]
+      "tags": [
+        "python",
+        "backend",
+        "clean-architecture",
+        "fastapi",
+        "celery",
+        "library",
+        "migrations",
+        "alembic"
+      ]
     },
     {
       "name": "flutter-development",
       "source": "./plugins/flutter-development",
       "description": "Flutter and Dart development agents for mobile app development and code review with Clean Architecture, BLoC+Freezed, and Result<T> error handling",
       "version": "2.0.0",
-      "tags": ["flutter", "dart", "mobile", "clean-architecture", "bloc", "freezed"]
+      "tags": [
+        "flutter",
+        "dart",
+        "mobile",
+        "clean-architecture",
+        "bloc",
+        "freezed"
+      ]
     },
     {
       "name": "nextjs-development",
       "source": "./plugins/nextjs-development",
-      "description": "Next.js frontend development agents for building and reviewing apps with Two-layer Architecture, Zustand stores, DataAccess pattern, and Either monad error handling",
-      "version": "1.0.0",
-      "tags": ["nextjs", "react", "typescript", "frontend", "zustand"]
+      "description": "Next.js development agents for two tracks: frontend-only apps with Two-layer Architecture, Zustand stores and Either monad error handling, and fullstack apps with Hexagonal Architecture, Route Handlers and Prisma (including a dedicated security reviewer)",
+      "version": "1.2.0",
+      "tags": [
+        "nextjs",
+        "react",
+        "typescript",
+        "frontend",
+        "fullstack",
+        "zustand",
+        "prisma",
+        "hexagonal-architecture",
+        "security"
+      ]
     }
   ]
 }
