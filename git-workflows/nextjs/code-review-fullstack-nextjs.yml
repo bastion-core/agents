@@ -63,7 +63,11 @@ jobs:
             --test-threshold 9 \
             --file-pattern '\.(ts|tsx)$' \
             --scope-label 'Fullstack Next.js/TypeScript' \
-            --max-files 60
+            --max-files 60 \
+            --max-diff-size 600000 \
+            --max-tokens 32000 \
+            --effort medium \
+            --stream
 
       - name: Upload Review Artifacts
         if: always()
@@ -72,6 +76,7 @@ jobs:
           name: code-review-${{ github.event.pull_request.number }}
           path: |
             claude_review.md
+            api_response_raw.txt
             review_context.json
             changed_files.txt
             diffs/

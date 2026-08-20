@@ -38,8 +38,27 @@ MODEL="claude-sonnet-4-6"
 ARCH_THRESHOLD=7
 QUALITY_THRESHOLD=7
 TEST_THRESHOLD=8
-MAX_DIFF_SIZE=300000  # ~75K tokens per section (diffs + file contents each)
+# Per-section byte cap (applied separately to the diffs and to the final file
+# contents). Measured on a real 27-file TypeScript PR, the prompt runs about
+# 2.6 bytes per token, so the worst-case input is roughly (2 x this) / 2.6.
+# At 300000 that is ~233K tokens; the 1M-context models leave plenty of room to
+# raise it, but every byte is billed on every push, so it is a cost dial as much
+# as a quality one. Override per project with --max-diff-size.
+MAX_DIFF_SIZE=300000
 MAX_OUTPUT_TOKENS=16384  # Allow thorough reasoning over large PRs
+
+# --- Thinking-model controls (all opt-in; defaults reproduce the pre-existing
+# --- request body byte for byte, so workflows that don't pass them are unaffected)
+#
+# On Sonnet 5 / Opus 5 / Fable 5, extended thinking is ON when `thinking` is
+# omitted, and thinking tokens are billed against max_tokens. A large PR can
+# therefore consume the entire output budget reasoning and never emit a single
+# character of review. Raise --max-tokens, cap depth with --effort, or (only on
+# models that accept it) pass --thinking disabled.
+EFFORT=""     # low|medium|high|xhigh|max -> output_config.effort. Empty = omit.
+THINKING=""   # adaptive|disabled -> thinking.type. Empty = omit (model default).
+STREAM="false"  # Required for large max_tokens: a non-streaming request that
+                # could run past the server's duration limit is rejected.
 MAX_FILES=50  # Maximum number of changed files allowed for review
 FILE_PATTERN='\.py$'  # Regex pattern for reviewable files (e.g., '\.py$', '\.(ts|tsx)$')
 SCOPE_LABEL="Python"  # Label for scope messages (e.g., "Python", "Next.js/TypeScript")
@@ -72,6 +91,26 @@ while [[ $# -gt 0 ]]; do
     --max-files)
       MAX_FILES="$2"
       shift 2
+      ;;
+    --max-tokens)
+      MAX_OUTPUT_TOKENS="$2"
+      shift 2
+      ;;
+    --max-diff-size)
+      MAX_DIFF_SIZE="$2"
+      shift 2
+      ;;
+    --effort)
+      EFFORT="$2"
+      shift 2
+      ;;
+    --thinking)
+      THINKING="$2"
+      shift 2
+      ;;
+    --stream)
+      STREAM="true"
+      shift
       ;;
     --file-pattern)
       FILE_PATTERN="$2"
@@ -121,6 +160,10 @@ validate_inputs() {
   echo "  Thresholds: Arch>=${ARCH_THRESHOLD}, Quality>=${QUALITY_THRESHOLD}, Test>=${TEST_THRESHOLD}"
   echo "  Max files: ${MAX_FILES}"
   echo "  Max output tokens: ${MAX_OUTPUT_TOKENS}"
+  echo "  Max diff size: ${MAX_DIFF_SIZE} bytes per section"
+  echo "  Effort: ${EFFORT:-<omitted>}"
+  echo "  Thinking: ${THINKING:-<omitted, model default>}"
+  echo "  Streaming: ${STREAM}"
   echo "  File pattern: ${FILE_PATTERN}"
   echo "  Scope label: ${SCOPE_LABEL}"
   echo "  Repository: ${REPOSITORY}"
@@ -331,7 +374,7 @@ get_changes() {
   # Truncate diffs if too large
   DIFF_SIZE=$(wc -c < diffs/all_diffs.txt | tr -d ' ')
   if [[ ${DIFF_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
-    echo "Diff too large (${DIFF_SIZE} bytes), truncating..."
+    echo "::warning::Diffs truncated: ${DIFF_SIZE} bytes exceeds the ${MAX_DIFF_SIZE}-byte cap. Raise --max-diff-size or split the PR."
     head -c ${MAX_DIFF_SIZE} diffs/all_diffs.txt > diffs/all_diffs_truncated.txt
     printf "\n\n[... Diff truncated due to size ...]" >> diffs/all_diffs_truncated.txt
     mv diffs/all_diffs_truncated.txt diffs/all_diffs.txt
@@ -340,7 +383,9 @@ get_changes() {
   # Truncate final contents if too large (use same limit)
   CONTENT_SIZE=$(wc -c < diffs/final_contents.txt | tr -d ' ')
   if [[ ${CONTENT_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
-    echo "Final contents too large (${CONTENT_SIZE} bytes), truncating..."
+    # This section is the one the prompt declares as the SOURCE OF TRUTH, so
+    # cutting it means the reviewer scores code it never saw. Say so loudly.
+    echo "::warning::Final file contents truncated: ${CONTENT_SIZE} bytes exceeds the ${MAX_DIFF_SIZE}-byte cap. The reviewer will not see the tail of this PR. Raise --max-diff-size or split the PR."
     head -c ${MAX_DIFF_SIZE} diffs/final_contents.txt > diffs/final_contents_truncated.txt
     printf "\n\n[... Content truncated due to size ...]" >> diffs/final_contents_truncated.txt
     mv diffs/final_contents_truncated.txt diffs/final_contents.txt
@@ -512,11 +557,32 @@ Format your response in Markdown.
 EOF
 
   # Create API request
+  # Optional blocks. Each stays out of the body entirely when its flag is unset,
+  # so a workflow that passes none of them sends exactly the request this script
+  # has always sent.
+  local EXTRA='{}'
+  if [[ -n "${EFFORT}" ]]; then
+    EXTRA=$(jq -n --arg e "${EFFORT}" '{output_config: {effort: $e}}')
+  fi
+
+  local THINKING_JSON='null'
+  if [[ -n "${THINKING}" ]]; then
+    THINKING_JSON=$(jq -n --arg t "${THINKING}" '{type: $t}')
+  fi
+
+  local STREAM_JSON='{}'
+  if [[ "${STREAM}" = "true" ]]; then
+    STREAM_JSON='{"stream": true}'
+  fi
+
   jq -n \
     --rawfile system "${AGENT_FILE}" \
     --rawfile prompt user_prompt.txt \
     --arg model "${MODEL}" \
     --argjson max_tokens "${MAX_OUTPUT_TOKENS}" \
+    --argjson extra "${EXTRA}" \
+    --argjson thinking "${THINKING_JSON}" \
+    --argjson streaming "${STREAM_JSON}" \
     '{
       "model": $model,
       "max_tokens": $max_tokens,
@@ -527,22 +593,85 @@ EOF
           "content": $prompt
         }
       ]
-    }' > api_request.json
+    }
+    + $extra
+    + $streaming
+    + (if $thinking == null then {} else {thinking: $thinking} end)' > api_request.json
 
   # Call Claude API
-  RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
-    -H "x-api-key: ${ANTHROPIC_API_KEY}" \
-    -H "anthropic-version: 2023-06-01" \
-    -H "content-type: application/json" \
-    -d @api_request.json)
+  local STOP_REASON="" API_ERROR=""
 
-  # Extract review content
-  REVIEW_CONTENT=$(echo "${RESPONSE}" | jq -r '.content[0].text')
+  if [[ "${STREAM}" = "true" ]]; then
+    curl -sS -N -X POST https://api.anthropic.com/v1/messages \
+      -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d @api_request.json > api_response_raw.txt
+
+    # Concatenate text deltas only. Thinking deltas arrive as their own block
+    # type and must not land in the review.
+    REVIEW_CONTENT=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -rj 'select(.type=="content_block_delta")
+                | select(.delta.type=="text_delta")
+                | .delta.text' 2>/dev/null || true)
+
+    STOP_REASON=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -r 'select(.type=="message_delta") | .delta.stop_reason // empty' 2>/dev/null \
+      | tail -1 || true)
+
+    # An error can arrive as an SSE event or, when the request is rejected
+    # before the stream opens, as a plain JSON body.
+    API_ERROR=$(grep '^data: ' api_response_raw.txt | sed 's/^data: //' \
+      | jq -r 'select(.type=="error") | .error.message // empty' 2>/dev/null | head -1 || true)
+    if [[ -z "${API_ERROR}" ]]; then
+      API_ERROR=$(jq -r 'select(.type=="error") | .error.message // empty' \
+        api_response_raw.txt 2>/dev/null | head -1 || true)
+    fi
+  else
+    curl -sS -X POST https://api.anthropic.com/v1/messages \
+      -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d @api_request.json > api_response_raw.txt
+
+    # Join every text block. Indexing .content[0] breaks the moment the model
+    # emits a thinking block first, which thinking-enabled models always do.
+    REVIEW_CONTENT=$(jq -r '[.content[]? | select(.type=="text") | .text] | join("")' \
+      api_response_raw.txt 2>/dev/null || true)
+    STOP_REASON=$(jq -r '.stop_reason // empty' api_response_raw.txt 2>/dev/null || true)
+    API_ERROR=$(jq -r 'select(.type=="error") | .error.message // empty' \
+      api_response_raw.txt 2>/dev/null | head -1 || true)
+  fi
+
+  if [[ -n "${API_ERROR}" ]]; then
+    echo "::error::Claude API rejected the request: ${API_ERROR}"
+    echo "Request parameters: model=${MODEL} max_tokens=${MAX_OUTPUT_TOKENS} effort=${EFFORT:-<omitted>} thinking=${THINKING:-<omitted>} stream=${STREAM}"
+    exit 1
+  fi
 
   if [[ "${REVIEW_CONTENT}" == "null" ]] || [[ -z "${REVIEW_CONTENT}" ]]; then
-    echo "::error::Failed to get review from Claude API"
-    echo "API Response: ${RESPONSE}"
+    if [[ "${STOP_REASON}" = "max_tokens" ]]; then
+      echo "::error::The model used the entire ${MAX_OUTPUT_TOKENS}-token output budget without emitting any review text."
+      echo ""
+      echo "On thinking-enabled models (Sonnet 5, Opus 5, Fable 5) extended thinking is ON"
+      echo "by default and its tokens count against max_tokens. On a large PR the model can"
+      echo "spend the whole budget reasoning and never reach the report."
+      echo ""
+      echo "Fix by any of:"
+      echo "  --max-tokens <n>     give thinking and the report room (32000 is a good start)"
+      echo "  --effort medium      cap how deep the model reasons"
+      echo "  --thinking disabled  only on models that accept it (Sonnet 5 does; Fable 5 returns 400)"
+    else
+      echo "::error::Failed to get review from Claude API (stop_reason=${STOP_REASON:-unknown})"
+    fi
+    echo ""
+    echo "First 2000 bytes of the API response:"
+    head -c 2000 api_response_raw.txt
     exit 1
+  fi
+
+  if [[ "${STOP_REASON}" = "max_tokens" ]]; then
+    echo "::warning::Review was truncated at the ${MAX_OUTPUT_TOKENS}-token limit; scores or sections may be missing. Consider raising --max-tokens."
   fi
 
   echo "${REVIEW_CONTENT}" > claude_review.md

@@ -63,7 +63,10 @@ jobs:
             --input-threshold 9 \
             --file-pattern '\.(ts|tsx)$' \
             --scope-label 'Fullstack Next.js/TypeScript' \
-            --max-files 60
+            --max-files 60 \
+            --max-diff-size 600000 \
+            --max-tokens 32000 \
+            --effort high
 
       - name: Upload Security Review Artifacts
         if: always()
@@ -72,6 +75,7 @@ jobs:
           name: security-review-${{ github.event.pull_request.number }}
           path: |
             claude_security_review.md
+            api_response_raw.txt
             security_context.txt
             review_context.json
             changed_files.txt
