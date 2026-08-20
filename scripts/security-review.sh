@@ -411,10 +411,18 @@ collect_security_context() {
   if [[ -d src/app/api ]]; then
     while IFS= read -r route; do
       local methods guards
+      # `|| true` en las dos, y no es decoracion: el script corre con
+      # `set -euo pipefail`, asi que un `grep` sin coincidencias devuelve 1, con
+      # `pipefail` eso tumba la tuberia entera y con `set -e` mata el script.
+      # Sin ellas, la primera ruta sin guard aborta el paso 2.5 en silencio
+      # —sin un solo mensaje— y el fallback `NO GUARD HELPER DETECTED` de la
+      # linea de abajo no llega nunca a imprimirse. Y una ruta sin guard es
+      # justo lo que este inventario existe para enseñarle al revisor: el
+      # webhook publico de una pasarela de pago no lleva ninguno, a proposito.
       methods=$(grep -oE '^export (async )?function (GET|POST|PUT|PATCH|DELETE)' "${route}" \
-        | grep -oE '(GET|POST|PUT|PATCH|DELETE)' | tr '\n' ',' | sed 's/,$//')
+        | grep -oE '(GET|POST|PUT|PATCH|DELETE)' | tr '\n' ',' | sed 's/,$//' || true)
       guards=$(grep -oE 'handleAsAdmin|requireAdmin|currentSession|startSession|endSession|serverAuthService|handle\(' "${route}" \
-        | sort -u | tr '\n' ' ')
+        | sort -u | tr '\n' ' ' || true)
       echo "- \`${route}\` | ${methods:-none} | ${guards:-NO GUARD HELPER DETECTED}" >> security_context.txt
     done < <(find src/app/api -name 'route.ts' -o -name 'route.tsx' | sort)
   else
