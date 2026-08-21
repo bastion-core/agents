@@ -13,6 +13,8 @@
 #     --quality-threshold <0-10> \
 #     --test-threshold <0-10> \
 #     --file-pattern <regex>          # e.g., '\.py$' or '\.(ts|tsx)$'
+#     --context-pattern <regex>       # optional: files shown but never scored,
+#                                     # e.g. locale catalogs the code references
 #     --scope-label <label>           # e.g., 'Python' or 'Next.js/TypeScript'
 #
 # Required environment variables:
@@ -62,6 +64,22 @@ STREAM="false"  # Required for large max_tokens: a non-streaming request that
 MAX_FILES=50  # Maximum number of changed files allowed for review
 FILE_PATTERN='\.py$'  # Regex pattern for reviewable files (e.g., '\.py$', '\.(ts|tsx)$')
 SCOPE_LABEL="Python"  # Label for scope messages (e.g., "Python", "Next.js/TypeScript")
+
+# Files the reviewer needs to READ but must not SCORE: locale message catalogs,
+# schemas, fixtures — anything the source code references by name and that the
+# file pattern deliberately leaves out.
+#
+# Without this, a reference the reviewer cannot resolve looks like a bug. A PR
+# that adds `t('limits')` to a component and the key to `es.json`/`en.json` shows
+# up as a component calling a key that "does not exist", because the JSON never
+# reached the prompt — and it stays that way review after review, since no amount
+# of new commits can put a file into a section the pattern filters out.
+#
+# Only the DIFF of these files travels, never their full contents: catalogs run
+# to hundreds of KB, they are billed on every push, and what closes the question
+# is the added line, not the whole file. Empty = off, and the prompt then looks
+# exactly like it did before this flag existed.
+CONTEXT_PATTERN=''
 
 # =============================================================================
 # Parse arguments
@@ -120,6 +138,10 @@ while [[ $# -gt 0 ]]; do
       SCOPE_LABEL="$2"
       shift 2
       ;;
+    --context-pattern)
+      CONTEXT_PATTERN="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -165,6 +187,7 @@ validate_inputs() {
   echo "  Thinking: ${THINKING:-<omitted, model default>}"
   echo "  Streaming: ${STREAM}"
   echo "  File pattern: ${FILE_PATTERN}"
+  echo "  Context pattern: ${CONTEXT_PATTERN:-<none>}"
   echo "  Scope label: ${SCOPE_LABEL}"
   echo "  Repository: ${REPOSITORY}"
   echo "  PR #${PR_NUMBER}: ${PR_TITLE}"
@@ -233,6 +256,15 @@ check_scope() {
   git diff --name-only "origin/${BASE_REF}...HEAD" \
     | grep -E "${FILE_PATTERN}" \
     | tee changed_files.txt || true
+
+  # Supporting files: read, never scored. They do NOT decide scope — a PR that
+  # only touches locale catalogs still has nothing for this reviewer to score,
+  # and must keep taking the out-of-scope path below.
+  > context_files.txt
+  if [[ -n "${CONTEXT_PATTERN}" ]]; then
+    grep -E "${CONTEXT_PATTERN}" all_changed_files.txt >> context_files.txt || true
+    echo "Supporting files: $(wc -l < context_files.txt | tr -d ' ')"
+  fi
 
   local FILE_COUNT
   FILE_COUNT=$(wc -l < changed_files.txt | tr -d ' ')
@@ -371,6 +403,24 @@ get_changes() {
     fi
   done < changed_files.txt
 
+  # Supporting files: diff only, and capped apart from the code diff so a big
+  # catalog can never push reviewable code out of the prompt.
+  > diffs/context_diffs.txt
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    echo "=== DIFF FOR: ${file} ===" >> diffs/context_diffs.txt
+    git diff "origin/${BASE_REF}...HEAD" -- "${file}" >> diffs/context_diffs.txt
+    echo "" >> diffs/context_diffs.txt
+  done < context_files.txt
+
+  CONTEXT_SIZE=$(wc -c < diffs/context_diffs.txt | tr -d ' ')
+  if [[ ${CONTEXT_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
+    echo "::warning::Supporting-file diffs truncated: ${CONTEXT_SIZE} bytes exceeds the ${MAX_DIFF_SIZE}-byte cap."
+    head -c ${MAX_DIFF_SIZE} diffs/context_diffs.txt > diffs/context_diffs_truncated.txt
+    printf "\n\n[... Supporting diff truncated due to size ...]" >> diffs/context_diffs_truncated.txt
+    mv diffs/context_diffs_truncated.txt diffs/context_diffs.txt
+  fi
+
   # Truncate diffs if too large
   DIFF_SIZE=$(wc -c < diffs/all_diffs.txt | tr -d ' ')
   if [[ ${DIFF_SIZE} -gt ${MAX_DIFF_SIZE} ]]; then
@@ -453,6 +503,33 @@ EOF
   cat diffs/all_diffs.txt >> user_prompt.txt
   echo '```' >> user_prompt.txt
   echo "" >> user_prompt.txt
+
+  # Supporting files: context, never a score.
+  if [[ -s diffs/context_diffs.txt ]]; then
+    echo "## Supporting Files (context only — NOT reviewed, NOT scored)" >> user_prompt.txt
+    echo "" >> user_prompt.txt
+    echo "These files changed in this PR but fall outside the review scope. They are here" >> user_prompt.txt
+    echo "so you can RESOLVE REFERENCES made by the reviewable code — a message key, a" >> user_prompt.txt
+    echo "schema field, a fixture — instead of reporting them as missing." >> user_prompt.txt
+    echo "" >> user_prompt.txt
+    echo "**Rules for this section:**" >> user_prompt.txt
+    echo "- A line added here is proof that the thing exists. If the code calls a key and" >> user_prompt.txt
+    echo "  you see that key added below, the reference RESOLVES — do not report it as" >> user_prompt.txt
+    echo "  missing, and close any previous action item that claimed it was." >> user_prompt.txt
+    echo "- Only the diff is shown, never the whole file. Something ABSENT here is not" >> user_prompt.txt
+    echo "  missing from the codebase — it simply predates this branch. Never infer a" >> user_prompt.txt
+    echo "  missing reference from its absence in this section." >> user_prompt.txt
+    echo "- Do NOT raise findings about these files, and do NOT let them move any score." >> user_prompt.txt
+    echo "  They are not part of the reviewed file count." >> user_prompt.txt
+    echo "" >> user_prompt.txt
+    echo "**Files:**" >> user_prompt.txt
+    cat context_files.txt >> user_prompt.txt
+    echo "" >> user_prompt.txt
+    echo '```diff' >> user_prompt.txt
+    cat diffs/context_diffs.txt >> user_prompt.txt
+    echo '```' >> user_prompt.txt
+    echo "" >> user_prompt.txt
+  fi
 
   # Previous review context LAST (scores + action items + key issues)
   if [[ "${REVIEW_COUNT}" -gt 0 ]]; then
