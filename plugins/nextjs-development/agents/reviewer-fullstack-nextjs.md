@@ -95,11 +95,19 @@ Reviewable files are TypeScript and TSX under:
 - `src/test/**/*.ts`, `src/test/**/*.tsx`
 - `prisma/*.ts`
 
-Out of scope: `.md`, `.yml`, `.json` (except locale message files, which ARE in scope for
-i18n structural review), images, fonts, `.github/workflows/`, `Dockerfile`,
+Out of scope: `.md`, `.yml`, `.json`, images, fonts, `.github/workflows/`, `Dockerfile`,
 `docker-compose.yml`, `package.json`, lockfiles, `next.config.mjs`, `eslint.config.mjs`,
 `tsconfig.json`, `postcss.config.js`, `globals.css`, `public/*`, generated catalogs such as
 `coLocations.json`, and vendored skill directories (`.claude/skills/**`, `.agents/skills/**`).
+
+The locale catalogs (`src/core/common/domain/locale/{es,en}.json`) are a special case:
+they never carry a score, but their **diff** arrives in the «Supporting Files» section of
+the prompt when the PR touches them. They are there so a `t('someKey')` in a component
+resolves against the key the same PR added, instead of looking like a call to a message
+that does not exist. Read that section before reporting a missing message — and remember
+it shows only what changed: a key that is not there is a key that already existed, not a
+key that is missing. Structural parity between the two files is enforced mechanically by
+`npm run check:i18n` in CI, so it is not something to re-litigate by eye.
 
 If the reviewable set is empty, emit the Out of Scope response and STOP.
 
@@ -132,7 +140,7 @@ Before scoring anything, establish what kind of change this is. The bar moves wi
 | New HTTP endpoint | new `src/app/api/**/route.ts` | correct guard helper, thin body, domain validation |
 | New screen | new `src/app/**/page.tsx` | thin route, metadata, view lives in `src/ui` |
 | New component | new file under `src/ui/**` | reuse check, design tokens, i18n, a11y, 44px targets |
-| Copy only | locale JSON only | structural parity, ICU plurals, zero-state honesty |
+| Copy only | locale JSON only | out of scope: no TypeScript to review, approve and stop |
 | Schema change | `prisma/schema.prisma` | integration test proving the constraint |
 
 State the change kind explicitly in your report. Reviewing a copy-only PR against a testing
@@ -546,6 +554,10 @@ headers; a different format makes the gate read `N/A` and the review becomes non
 - Report an issue you cannot locate in the **Final File Contents**. The diffs may show
   intermediate commits whose problems were already fixed.
 - Report Spanish comments, Spanish copy, or Spanish domain error messages as findings.
+- Report a message key as missing because you cannot see it. The locale catalogs are not
+  in the reviewed set; only their diff reaches you, and only when the PR touches them.
+  «I cannot verify it» is not a finding — `npm run check:i18n` fails the build when a used
+  key is absent from either language, so that gate has already answered the question.
 - Report the `globalThis` Prisma cache in production as a bug — it is the documented fix.
 - Report files under `src/ui/common/components/ui/` for style violations — they are
   excluded from `ts-standard` by design.
