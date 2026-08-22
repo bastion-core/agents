@@ -114,6 +114,22 @@ Para cada insumo, extrae y mapea la informacion a estos campos obligatorios:
 - **outputs**: Identificar datos de salida, respuestas exitosas, respuestas de error
 - **tests_scope**: Identificar escenarios de prueba: caso exitoso, errores de validacion, casos limite
 
+**Campos opcionales**: ademas de los obligatorios, extrae estos cuatro CUANDO el insumo los
+contenga. No los inventes y no preguntes por ellos: su ausencia no bloquea nada.
+
+- **status**: Si el insumo dice en que punto del ciclo esta la funcionalidad. Por defecto `planned`
+- **target_repositories**: Si el insumo nombra los repositorios donde vive la funcionalidad
+- **epic**: Si el insumo trae el problema que se resuelve, el resultado buscado, metricas de exito
+  o un ejemplo de referencia con cifras. Es lo que enmarca la funcionalidad y suele venir en los
+  documentos de contexto de negocio, no en la descripcion de la funcionalidad
+- **user_stories**: Si la funcionalidad es grande y el insumo la desglosa en historias con sus
+  propios criterios. Señales de que aplica: el insumo habla de fases o versiones, menciona varios
+  roles distintos, o los criterios de aceptacion pasan de una docena y se agrupan solos por tema
+
+**Cuando NO usar los opcionales**: una funcionalidad pequena y de una sola entrega se describe
+mejor con `description` y `acceptance_criteria`. Agregar una epica de un parrafo y tres historias
+que repiten los criterios globales no hace la spec mas completa, la hace mas larga.
+
 **Consolidacion de multiples fuentes**:
 - Si hay informacion de multiples fuentes, consolidar sin duplicar
 - Si hay contradicciones entre fuentes, preguntar al usuario cual es la correcta
@@ -134,6 +150,22 @@ Para cada insumo, extrae y mapea la informacion a estos campos obligatorios:
 | inputs | Cada entrada tiene nombre, tipo de dato Y valores permitidos | completo / incomplete |
 | outputs | Cada salida tiene nombre, tipo de dato Y descripcion | completo / incomplete |
 | tests_scope | Al menos: 1 caso exitoso + 1 error de validacion + 1 caso limite | completo / incomplete |
+
+**Los campos opcionales NO entran en esta checklist.** La validacion de completitud es la puerta
+que decide si se genera el archivo o se piden datos, y un campo opcional ausente no es un dato
+faltante: es una decision valida. Si se colaran aqui, el agente pediria una epica para cada
+funcionalidad de tres criterios.
+
+Lo que si se valida es su FORMA cuando estan presentes:
+
+| Campo opcional | Criterio si esta presente |
+|----------------|---------------------------|
+| status | Uno de: planned, in-progress, completed, cancelled |
+| target_repositories | Lista de nombres de repositorio tal como existen en el control de versiones |
+| epic | Tiene al menos id, name, problem y outcome |
+| user_stories | Cada historia tiene id, title, story, acceptance_criteria y priority |
+
+Una forma invalida SI bloquea: es un error, no una omision.
 
 **Punto de decision**:
 
@@ -177,6 +209,10 @@ En su lugar, responder con una lista estructurada de los datos faltantes usando 
 | inputs | Cada entrada con nombre, tipo de dato y valores permitidos |
 | outputs | Cada salida con nombre, tipo de dato y descripcion. Incluir respuestas exitosas y de error |
 | tests_scope | Cada escenario con nombre_clave y descripcion breve con resultado esperado |
+| status | *(opcional)* Uno de: planned, in-progress, completed, cancelled. Al crear, siempre planned |
+| target_repositories | *(opcional)* Nombres de repositorio, uno por linea |
+| epic | *(opcional)* El problema se redacta por lo que se PIERDE hoy, no por lo que falta implementar. Las metricas llevan umbral y plazo, nunca adjetivos |
+| user_stories | *(opcional)* Criterios ESPECIFICOS de cada historia, que no repitan los globales. priority: must solo si sin eso la funcionalidad no sirve |
 
 **Template de salida**:
 
@@ -186,10 +222,48 @@ feature: [nombre_en_snake_case]
 owner: product_owner
 version: "1.0"
 
+# --- OPCIONAL: incluir solo si el insumo lo aporta ---
+status: planned
+target_repositories:
+  - [nombre-del-repositorio]
+# -----------------------------------------------------
+
 description: |
   Como [rol de usuario],
   [que puede hacer el usuario]
   [que debe hacer el sistema en respuesta]
+
+# --- OPCIONAL: la epica enmarca la funcionalidad ---
+epic:
+  id: EP-XXX-NN
+  name: [nombre en lenguaje de negocio]
+  problem: |
+    [que se pierde HOY por no tener esto, en terminos concretos]
+  outcome: |
+    [que cambia para el usuario o el negocio cuando exista]
+  value_hypothesis: |
+    [la apuesta, redactada de forma que se pueda comprobar o refutar]
+  reference_example: |
+    [un caso concreto con cifras reales que recorra la funcionalidad de punta a punta]
+  success_metrics:
+    - nombre_metrica: umbral y plazo concretos
+  out_of_scope:
+    - [lo que sin decirlo se confundiria con parte de la funcionalidad]
+# ---------------------------------------------------
+
+# --- OPCIONAL: solo si se entrega por partes ---
+user_stories:
+  - id: HU-01
+    title: [titulo corto]
+    story: |
+      Como [rol],
+      quiero [accion],
+      para [beneficio].
+    acceptance_criteria:
+      - [criterio especifico de ESTA historia]
+    priority: must
+    phase: v1
+# -----------------------------------------------
 
 acceptance_criteria:
   - [criterio verificable 1]
@@ -225,6 +299,13 @@ tests_scope:
 - **inputs**: Datos que el usuario o sistema externo debe proporcionar. Cada input debe especificar nombre, tipo de dato y valores permitidos (enums, rangos, formatos). Define el contrato de entrada desde perspectiva de producto
 - **outputs**: Datos que el sistema devuelve como resultado. Cada output debe especificar nombre, tipo de dato y descripcion. Incluir respuestas exitosas y respuestas de error con sus codigos
 - **tests_scope**: Escenarios de prueba que cubren el alcance funcional. Cada escenario tiene nombre clave y descripcion breve con resultado esperado. Debe incluir al menos: un caso exitoso, un error de validacion y un caso limite. Sirve como guia para que ingenieria defina los tests tecnicos detallados
+
+**Campos opcionales** (incluir solo cuando el insumo los aporte):
+
+- **status**: Estado de la funcionalidad en su ciclo de vida. Es el mismo ciclo que usan el change.yaml y las tareas, y los tres niveles se leen juntos en el reporte de estado. Al crear, siempre `planned`
+- **target_repositories**: Repositorios donde vive la funcionalidad completa. No confundir con `affected_repos` del change.yaml, que declara el alcance de UNA entrega; este declara donde vive todo
+- **epic**: El marco de la funcionalidad — que problema resuelve, que resultado busca y como se sabra si funciono. Lleva id, name, problem y outcome como minimo, y opcionalmente value_hypothesis, reference_example, success_metrics y out_of_scope. El `out_of_scope` de la epica delimita la FUNCIONALIDAD entera; el del change.yaml delimita una entrega. El `reference_example` vale mas que tres parrafos de descripcion cuando la funcionalidad tiene aritmetica de por medio
+- **user_stories**: Historias con sus propios criterios, prioridad (must/should/could/wont) y la fase en que caen. El campo `phase` permite leer de un vistazo que entra en cada entrega y debe coincidir con los change.yaml que se deriven despues. Usar solo cuando la funcionalidad se entrega por partes
 
 **Ruta de salida (feature.yaml)**: Escribir el archivo usando la herramienta **Write** en `docs/features/[feature_name]/feature.yaml`.
 
