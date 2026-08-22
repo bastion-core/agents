@@ -1,16 +1,124 @@
 # feature.yaml — Ejemplo de referencia
 # Tema: Sistema de gestion de inventario para almacenes
 # Este ejemplo es distinto de la funcionalidad real del proyecto (AI Spec Discovery)
+#
+# ESTE EJEMPLO LOS MUESTRA TODOS, INCLUIDOS LOS OPCIONALES. No es la forma que debe
+# tener toda spec: es el catalogo completo, para que se vea como se escribe cada campo
+# cuando toca escribirlo. Los cuatro opcionales van marcados con OPCIONAL y con la
+# condicion que los justifica.
+#
+# La spec de una funcionalidad pequena y de una sola entrega es este mismo archivo SIN
+# status, target_repositories, epic ni user_stories, y sigue siendo una spec completa.
+# Agregar una epica de un parrafo y tres historias que repiten los criterios globales no
+# la hace mas completa, la hace mas larga.
 
 feature: warehouse_inventory_management
 owner: product_owner
 version: 1.0
+
+# OPCIONAL — el mismo ciclo de vida que usan el change.yaml y las tareas, para que los
+# tres niveles se lean juntos en el reporte de estado. Al crear, siempre planned.
+status: planned
+
+# OPCIONAL — donde vive la funcionalidad completa. No confundir con affected_repos del
+# change.yaml, que declara el alcance de UNA entrega.
+target_repositories:
+  - warehouse-api
+  - warehouse-web
 
 description: |
   Como administrador de almacen,
   puedo registrar entradas y salidas de productos del inventario,
   para mantener un control actualizado del stock disponible en cada bodega
   y recibir alertas cuando un producto alcance su nivel minimo de reposicion.
+
+# OPCIONAL — la epica enmarca la funcionalidad: que problema resuelve, que resultado
+# busca y como se sabra si funciono. Se justifica cuando el "por que" no cabe en la
+# description y hay alguien que va a preguntarlo dentro de seis meses.
+epic:
+  id: EP-INV-01
+  name: Control de inventario en tiempo real
+  # El problema se redacta por lo que se PIERDE hoy, no por lo que falta implementar.
+  problem: |
+    Hoy el conteo de stock se lleva en una hoja de calculo que se actualiza al cierre del
+    dia. Entre que sale la mercancia y que alguien lo anota pasan horas, asi que el sistema
+    promete inventario que ya no existe. El equipo comercial vende producto agotado, el
+    cliente se entera cuando ya pago, y nadie puede decir con certeza cuanto hay en cada
+    bodega sin ir a contarlo.
+  outcome: |
+    El stock que ve el equipo comercial es el stock real. Una salida de bodega se refleja en
+    el momento en que se registra, y cuando un producto se acerca a su minimo alguien se
+    entera antes de quedarse sin el.
+  value_hypothesis: |
+    Reducir la ventana entre el movimiento y su registro baja las ventas de producto
+    agotado, que hoy son la primera causa de cancelacion. Si la latencia baja y las
+    cancelaciones no, el problema no era el registro y hay que buscarlo en otro sitio.
+  # Un caso concreto con cifras vale mas que tres parrafos de descripcion cuando la
+  # funcionalidad tiene aritmetica de por medio.
+  reference_example: |
+    Bodega Norte, producto PROD0042, stock 50 unidades, minimo configurado en 10.
+      Entra un pedido de 30 -> stock 80.
+      Sale un despacho de 45 -> stock 35.
+      Sale otro de 28 -> stock 7, por debajo del minimo: se genera la alerta.
+      Intentan sacar 20 mas -> se rechaza, porque solo hay 7.
+  # Umbral y plazo, nunca adjetivos.
+  success_metrics:
+    - ventas_de_agotado: reduccion >= 40% a los 60 dias de la puesta en produccion
+    - latencia_de_registro: mediana por debajo de 5 minutos entre el movimiento fisico y su registro
+    - exactitud_de_inventario: diferencia < 2% entre el stock del sistema y el conteo fisico mensual
+    - alertas_atendidas: al menos el 80% de las alertas de stock bajo derivan en una reposicion antes del agotamiento
+  # Este out_of_scope delimita la FUNCIONALIDAD entera; el del change.yaml delimita UNA entrega.
+  out_of_scope:
+    - Prediccion de demanda o sugerencia de cantidades a reponer
+    - Reposicion automatica con proveedores
+    - Valoracion contable del inventario para cierre fiscal
+    - Inventario en transito entre bodegas
+
+# OPCIONAL — historias con sus propios criterios. Se justifica cuando la funcionalidad se
+# entrega por partes: aqui hay dos fases, y el campo phase deja ver de un vistazo que entra
+# en cada una. Debe coincidir con los change.yaml que se deriven despues.
+user_stories:
+  - id: HU-01
+    title: Registrar una salida de bodega
+    story: |
+      Como operario de bodega,
+      quiero registrar la salida de un producto en el momento en que ocurre,
+      para que el stock que ve el equipo comercial sea el real.
+    # Criterios ESPECIFICOS de esta historia; no repiten los globales.
+    acceptance_criteria:
+      - El operario puede registrar una salida indicando producto, bodega y cantidad
+      - El sistema descuenta la cantidad del stock disponible al confirmar
+      - El sistema rechaza una salida mayor al stock disponible y dice cuanto hay
+      - La salida queda registrada con su autor y su marca de tiempo
+    priority: must
+    phase: v1
+
+  - id: HU-02
+    title: Enterarse de que un producto se esta acabando
+    story: |
+      Como supervisor de bodega,
+      quiero que me avisen cuando un producto baja de su nivel minimo,
+      para reponerlo antes de que se agote y no despues.
+    acceptance_criteria:
+      - El sistema genera una alerta cuando una salida deja el stock por debajo del minimo
+      - La alerta indica producto, bodega, stock actual y minimo configurado
+      - El supervisor puede configurar el nivel minimo por producto
+      - Un producto que vuelve a subir por encima del minimo deja de estar en alerta
+    priority: must
+    phase: v1
+
+  - id: HU-03
+    title: Corregir el inventario cuando el conteo fisico no cuadra
+    story: |
+      Como supervisor de bodega,
+      quiero registrar un ajuste manual con su motivo,
+      para que una diferencia de conteo quede corregida y explicada, no solo corregida.
+    acceptance_criteria:
+      - Solo un rol supervisor o superior puede registrar un ajuste manual
+      - El ajuste exige motivo escrito y no se acepta sin el
+      - El ajuste aparece en el historial diferenciado de una entrada o una salida normal
+    priority: should
+    phase: v2
 
 acceptance_criteria:
   - El administrador puede registrar una entrada de productos indicando cantidad, producto y bodega destino
@@ -41,7 +149,7 @@ inputs:
 outputs:
   - movimiento_registrado: objeto con id, producto_id, bodega_id, tipo, cantidad, stock_resultante, timestamp
   - alerta_stock_bajo: notificacion con producto_id, bodega_id, stock_actual, stock_minimo
-  - error_stock_insuficiente: codigo 422, mensaje "Stock insuficiente. Disponible: {cantidad}"
+  - error_stock_insuficiente: 'codigo 422, mensaje "Stock insuficiente. Disponible: {cantidad}"'
   - error_producto_no_encontrado: codigo 404, mensaje "Producto no encontrado en el catalogo"
   - error_bodega_no_encontrada: codigo 404, mensaje "Bodega no encontrada"
   - error_limite_excedido: codigo 422, mensaje "Maximo 50 productos por movimiento"
