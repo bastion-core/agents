@@ -103,6 +103,17 @@ Leer y analizar todos los insumos para extraer datos relevantes por campo obliga
 - **outputs**: Datos de salida, respuestas exitosas y de error
 - **tests_scope**: Escenarios de prueba: caso exitoso, errores, casos limite
 
+**Campos opcionales** — extraer solo si el insumo los trae. No inventarlos ni preguntar por ellos:
+
+- **status**: En que punto del ciclo esta. Por defecto `planned`
+- **target_repositories**: Repositorios donde vive la funcionalidad
+- **epic**: Problema, resultado buscado, metricas o ejemplo de referencia con cifras. Suele venir en los documentos de contexto de negocio, no en la descripcion de la funcionalidad
+- **user_stories**: Solo si el insumo desglosa la funcionalidad en historias. Señales de que aplica: habla de fases o versiones, menciona varios roles, o los criterios pasan de una docena y se agrupan solos por tema
+
+Una funcionalidad pequena y de una sola entrega se describe mejor con `description` y
+`acceptance_criteria`. Una epica de un parrafo y tres historias que repiten los criterios
+globales no hacen la spec mas completa, la hacen mas larga.
+
 Si hay multiples fuentes, consolidar sin duplicar. Si hay contradicciones, preguntar al usuario.
 
 ### Fase 2: Validacion de Completitud
@@ -116,6 +127,19 @@ Si hay multiples fuentes, consolidar sin duplicar. Si hay contradicciones, pregu
 | inputs | Cada entrada tiene nombre, tipo Y valores permitidos |
 | outputs | Cada salida tiene nombre, tipo Y descripcion. Incluir exito y error |
 | tests_scope | Minimo: 1 caso exitoso + 1 error de validacion + 1 caso limite |
+
+**Los campos opcionales NO entran en esta tabla.** Esta es la puerta que decide si se genera el
+archivo o se piden datos, y un opcional ausente no es un dato faltante sino una decision valida.
+Si se colaran aqui, el agente pediria una epica para cada funcionalidad de tres criterios.
+
+Su FORMA si se valida cuando estan presentes, y una forma invalida SI bloquea:
+
+| Campo opcional | Criterio si esta presente |
+|----------------|---------------------------|
+| status | Uno de: planned, in-progress, completed, cancelled |
+| target_repositories | Nombres de repositorio tal como existen en el control de versiones |
+| epic | Tiene al menos id, name, problem y outcome |
+| user_stories | Cada historia tiene id, title, story, acceptance_criteria y priority |
 
 - Si TODOS completos → Continuar a Fase 3
 - Si ALGUNO faltante → Ejecutar MissingDataRequest
@@ -149,6 +173,10 @@ Cada pregunta debe ser especifica y accionable. Tras recibir respuestas, volver 
 | inputs | Nombre + tipo de dato + valores permitidos |
 | outputs | Nombre + tipo + descripcion. Incluir exito Y error |
 | tests_scope | Nombre clave + descripcion con resultado esperado |
+| status | *(opcional)* planned, in-progress, completed o cancelled. Al crear, siempre planned |
+| target_repositories | *(opcional)* Nombres de repositorio. No confundir con affected_repos del change.yaml, que es el alcance de UNA entrega |
+| epic | *(opcional)* El problema se redacta por lo que se PIERDE hoy, no por lo que falta implementar. Metricas con umbral y plazo, nunca adjetivos |
+| user_stories | *(opcional)* Criterios ESPECIFICOS de cada historia, que no repitan los globales. El campo phase debe coincidir con los change.yaml que se deriven |
 
 ### Escritura a Disco
 
@@ -167,10 +195,48 @@ feature: [nombre_en_snake_case]
 owner: product_owner
 version: "1.0"
 
+# --- OPCIONAL: incluir solo si el insumo lo aporta ---
+status: planned
+target_repositories:
+  - [nombre-del-repositorio]
+# -----------------------------------------------------
+
 description: |
   Como [rol de usuario],
   [que puede hacer el usuario]
   [que debe hacer el sistema en respuesta]
+
+# --- OPCIONAL: la epica enmarca la funcionalidad ---
+epic:
+  id: EP-XXX-NN
+  name: [nombre en lenguaje de negocio]
+  problem: |
+    [que se pierde HOY por no tener esto, en terminos concretos]
+  outcome: |
+    [que cambia para el usuario o el negocio cuando exista]
+  value_hypothesis: |
+    [la apuesta, redactada de forma que se pueda comprobar o refutar]
+  reference_example: |
+    [un caso concreto con cifras reales que recorra la funcionalidad de punta a punta]
+  success_metrics:
+    - nombre_metrica: umbral y plazo concretos
+  out_of_scope:
+    - [lo que sin decirlo se confundiria con parte de la funcionalidad]
+# ---------------------------------------------------
+
+# --- OPCIONAL: solo si se entrega por partes ---
+user_stories:
+  - id: HU-01
+    title: [titulo corto]
+    story: |
+      Como [rol],
+      quiero [accion],
+      para [beneficio].
+    acceptance_criteria:
+      - [criterio especifico de ESTA historia]
+    priority: must
+    phase: v1
+# -----------------------------------------------
 
 acceptance_criteria:
   - [criterio verificable 1]

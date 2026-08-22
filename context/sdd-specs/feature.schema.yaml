@@ -2,6 +2,13 @@
 # Definicion formal de cada campo del archivo feature.yaml (especificacion de producto SDD).
 # Este archivo describe el formato esperado para que el subagent product genere specs validas.
 # Todos los campos son OBLIGATORIOS salvo que se indique lo contrario.
+#
+# NOTA SOBRE CAMPOS OPCIONALES. El validador rechaza cualquier campo que este archivo no
+# declare, asi que un campo util que falte aqui no es una omision inocua: obliga a
+# elegir entre borrar contenido de producto o dejar la validacion en rojo. Los cuatro
+# campos opcionales de mas abajo —status, target_repositories, epic y user_stories— se
+# agregaron por eso. Una feature pequena no los necesita; una que atraviesa varios
+# repositorios o que se entrega por fases no cabe sin ellos.
 
 schema:
   feature:
@@ -36,6 +43,33 @@ schema:
       - Incrementar minor (1.1) para ajustes, major (2.0) para cambios significativos
     ejemplo: "1.0"
 
+  status:
+    tipo: enum
+    obligatorio: false
+    descripcion: Estado actual de la funcionalidad dentro de su ciclo de vida.
+    valores_permitidos:
+      - planned
+      - in-progress
+      - completed
+      - cancelled
+    reglas:
+      - Al crear un feature.yaml nuevo, siempre iniciar en planned
+      - Transiciones validas: planned -> in-progress -> completed | cancelled
+      - Es el mismo ciclo de vida que usan change.yaml y las tareas; los tres niveles se leen juntos en el reporte de estado
+    ejemplo: planned
+
+  target_repositories:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Repositorios que implementan esta funcionalidad.
+    reglas:
+      - Usar el nombre del repositorio tal como aparece en el sistema de control de versiones
+      - Declararlo aqui cuando la funcionalidad nace atada a uno o varios repositorios conocidos
+      - No sustituye a affected_repos del change.yaml, que declara el alcance de UNA entrega; este declara donde vive la funcionalidad completa
+    ejemplo:
+      - warehouse-api
+      - warehouse-web
+
   description:
     tipo: string (multilinea)
     obligatorio: true
@@ -51,6 +85,121 @@ schema:
       Como administrador de flota,
       puedo enviar notificaciones push a conductores individuales o grupos,
       para comunicar actualizaciones operativas en tiempo real.
+
+  epic:
+    tipo: objeto
+    obligatorio: false
+    descripcion: Marco de la funcionalidad — que problema resuelve, que resultado busca y como se sabra si funciono.
+    campos:
+      id:
+        tipo: string
+        obligatorio: true
+        descripcion: Identificador de la epica, formato EP-XXX-NN
+      name:
+        tipo: string
+        obligatorio: true
+        descripcion: Nombre de la epica en lenguaje de negocio
+      problem:
+        tipo: string (multilinea)
+        obligatorio: true
+        descripcion: Que se pierde hoy por no tener esta funcionalidad, en terminos concretos
+      outcome:
+        tipo: string (multilinea)
+        obligatorio: true
+        descripcion: Que cambia para el usuario o para el negocio cuando exista
+      value_hypothesis:
+        tipo: string (multilinea)
+        obligatorio: false
+        descripcion: La apuesta que se esta haciendo, redactada de forma que se pueda comprobar o refutar
+      reference_example:
+        tipo: string (multilinea)
+        obligatorio: false
+        descripcion: Un caso concreto y con cifras reales que recorra la funcionalidad de punta a punta
+      success_metrics:
+        tipo: lista de objetos (clave-valor)
+        obligatorio: false
+        descripcion: Como se medira si la apuesta salio bien, con umbral y plazo
+      out_of_scope:
+        tipo: lista de strings
+        obligatorio: false
+        descripcion: Lo que NO entra y que sin decirlo se confundiria con parte de la funcionalidad
+    reglas:
+      - Usar lenguaje de negocio; el problema se describe por lo que se pierde, no por lo que falta implementar
+      - Las metricas llevan umbral y plazo, no adjetivos
+      - reference_example es opcional pero vale mas que tres parrafos de descripcion cuando la funcionalidad tiene aritmetica de por medio
+      - out_of_scope aqui delimita la FUNCIONALIDAD completa; el out_of_scope del change.yaml delimita UNA entrega
+    ejemplo:
+      id: EP-INV-01
+      name: Control de inventario en tiempo real
+      problem: |
+        Hoy el conteo de stock se lleva en una hoja de calculo que se actualiza al cierre
+        del dia. Entre que sale la mercancia y que alguien lo anota pasan horas, asi que
+        el sistema promete inventario que ya no existe y se venden productos agotados.
+      outcome: |
+        El stock que ve el equipo comercial es el stock real, y una salida de bodega se
+        refleja en el mismo momento en que se registra.
+      value_hypothesis: |
+        Reducir la ventana entre el movimiento y su registro baja las ventas de producto
+        agotado, que hoy son la primera causa de cancelacion.
+      success_metrics:
+        - ventas_de_agotado: reduccion >= 40% a los 60 dias
+        - latencia_de_registro: mediana por debajo de 5 minutos
+      out_of_scope:
+        - Prediccion de demanda
+        - Reposicion automatica con proveedores
+
+  user_stories:
+    tipo: lista de objetos
+    obligatorio: false
+    descripcion: Historias de usuario con sus criterios de aceptacion, para funcionalidades que se entregan por partes.
+    campos_por_item:
+      id:
+        tipo: string
+        obligatorio: true
+        descripcion: Identificador de la historia, formato HU-NN
+      title:
+        tipo: string
+        obligatorio: true
+        descripcion: Titulo corto de la historia
+      story:
+        tipo: string (multilinea)
+        obligatorio: true
+        descripcion: Como [rol], quiero [accion], para [beneficio]
+      acceptance_criteria:
+        tipo: lista de strings
+        obligatorio: true
+        descripcion: Criterios verificables especificos de esta historia
+      priority:
+        tipo: enum
+        obligatorio: true
+        descripcion: Prioridad de la historia
+        valores_permitidos:
+          - must
+          - should
+          - could
+          - wont
+      phase:
+        tipo: string
+        obligatorio: false
+        descripcion: Version o entrega en la que cae esta historia (ej. v1, v2)
+    reglas:
+      - Usar cuando la funcionalidad es grande y se entrega por fases; una funcionalidad pequena se describe bien solo con acceptance_criteria
+      - Los criterios de una historia son ESPECIFICOS de ella y no repiten los criterios globales
+      - El campo phase permite leer de un vistazo que entra en cada entrega, y debe coincidir con los change.yaml que se deriven
+      - Marcar must solo lo que sin ello la funcionalidad no sirve
+    ejemplo:
+      - id: HU-01
+        title: Registrar una salida de bodega
+        story: |
+          Como operario de bodega,
+          quiero registrar la salida de un producto en el momento en que ocurre,
+          para que el stock que ve el equipo comercial sea el real.
+        acceptance_criteria:
+          - El operario puede registrar una salida indicando producto, bodega y cantidad
+          - El sistema descuenta la cantidad del stock disponible al confirmar
+          - El sistema rechaza una salida mayor al stock disponible
+        priority: must
+        phase: v1
 
   acceptance_criteria:
     tipo: lista de strings
@@ -130,3 +279,7 @@ schema:
 #   - Usar lenguaje de negocio, nunca jerga tecnica
 #   - Los valores deben ser concretos y medibles
 #   - No inventar datos que no hayan sido proporcionados por el usuario
+#   - Los campos opcionales (status, target_repositories, epic, user_stories) se incluyen
+#     cuando aportan; omitirlos es valido y no degrada la spec. Lo que NO es valido es
+#     recortar contenido de producto para que quepa en el esquema: si hace falta un campo
+#     que no existe, se agrega aqui.
