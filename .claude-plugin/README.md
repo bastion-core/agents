@@ -7,7 +7,7 @@ This is a plugin marketplace for Claude Code containing specialized agents and s
 Add this marketplace to your Claude Code:
 
 ```bash
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 ```
 
 ## Available Plugins
@@ -17,7 +17,7 @@ Language-agnostic agents for software architecture and system design.
 
 **Install:**
 ```bash
-/plugin install general@agents
+/plugin install general@seven-samurai-agents
 ```
 
 **Contains:**
@@ -30,7 +30,7 @@ Python backend development agents and skills with Clean Architecture, FastAPI, a
 
 **Install:**
 ```bash
-/plugin install python-development@agents
+/plugin install python-development@seven-samurai-agents
 ```
 
 **Contains:**
@@ -47,7 +47,7 @@ Flutter and Dart development agents for mobile app development and code review w
 
 **Install:**
 ```bash
-/plugin install flutter-development@agents
+/plugin install flutter-development@seven-samurai-agents
 ```
 
 **Contains:**
@@ -62,7 +62,7 @@ Next.js frontend development agents for building and reviewing apps with Two-lay
 
 **Install:**
 ```bash
-/plugin install nextjs-development@agents
+/plugin install nextjs-development@seven-samurai-agents
 ```
 
 **Contains:**
@@ -96,7 +96,7 @@ List all available plugins from this marketplace:
 Show details of a specific plugin:
 
 ```bash
-/plugin show python-development@agents
+/plugin show python-development@seven-samurai-agents
 ```
 
 ## Updates
@@ -104,7 +104,7 @@ Show details of a specific plugin:
 Check for plugin updates:
 
 ```bash
-/plugin update python-development@agents
+/plugin update python-development@seven-samurai-agents
 ```
 
 Update all plugins from this marketplace:

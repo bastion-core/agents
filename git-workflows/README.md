@@ -94,7 +94,7 @@ cp git-workflows/*.yml .github/workflows/
 Si trabajas en un equipo, puedes clonar este repo como submódulo:
 
 ```bash
-git submodule add https://github.com/Grinest/agents.git .claude-workflows
+git submodule add https://github.com/bastion-core/agents.git .claude-workflows
 ln -s .claude-workflows/git-workflows git-workflows
 ```
 
@@ -276,4 +276,4 @@ Los workflows en este directorio están disponibles bajo la misma licencia que e
 
 ---
 
-**Nota**: Este directorio es parte del proyecto [claude-agents](https://github.com/Grinest/agents) y está diseñado para facilitar la adopción de agentes de Claude en tus proyectos.
+**Nota**: Este directorio es parte del proyecto [claude-agents](https://github.com/bastion-core/agents) y está diseñado para facilitar la adopción de agentes de Claude en tus proyectos.

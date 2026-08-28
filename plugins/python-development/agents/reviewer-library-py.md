@@ -994,7 +994,7 @@ setup(
     description='Brief description of what your library does',
     author='Your Name',
     author_email='your.email@company.com',
-    url='https://github.com/Grinest/your-library-name',
+    url='https://github.com/bastion-core/your-library-name',
     packages=find_packages(exclude=['tests', 'tests.*', 'docs', 'examples']),
     install_requires=[
         'sqlalchemy>=1.4.0,<3.0.0',
@@ -1087,12 +1087,12 @@ This library implements Clean Architecture with the following structure:
 
 ### Using pipenv (company standard):
 ```bash
-pipenv install git+https://$GITHUB_USER:$GITHUB_TOKEN@github.com/Grinest/your-library-name.git@v1.0.0
+pipenv install git+https://$GITHUB_USER:$GITHUB_TOKEN@github.com/bastion-core/your-library-name.git@v1.0.0
 ```
 
 ### Using pip:
 ```bash
-pip install git+https://$GITHUB_USER:$GITHUB_TOKEN@github.com/Grinest/your-library-name.git@v1.0.0
+pip install git+https://$GITHUB_USER:$GITHUB_TOKEN@github.com/bastion-core/your-library-name.git@v1.0.0
 ```
 
 ## Quick Start

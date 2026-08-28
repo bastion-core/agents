@@ -3,8 +3,8 @@
   "version": "1.2.0",
   "description": "Next.js development agents for two tracks: frontend-only apps with Two-layer Architecture, Zustand stores and Either monad error handling, and fullstack apps with Hexagonal Architecture, Route Handlers and Prisma (including a dedicated security reviewer)",
   "author": {
-    "name": "Grinest",
-    "url": "https://github.com/Grinest"
+    "name": "bastion-core",
+    "url": "https://github.com/bastion-core"
   },
   "license": "MIT"
 }

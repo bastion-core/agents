@@ -1,10 +1,10 @@
 {
   "name": "general",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Language-agnostic agents for software architecture analysis (feature.yaml to technical.yaml pipeline), system design, and product specification",
   "author": {
-    "name": "Grinest",
-    "url": "https://github.com/Grinest"
+    "name": "bastion-core",
+    "url": "https://github.com/bastion-core"
   },
   "license": "MIT"
 }
