@@ -1,10 +1,7 @@
 ---
 name: backend-py-library
 description: Develops internal Python libraries with Hexagonal Architecture, creating repositories, entities, DTOs, interactors, and mappers using SQLAlchemy and Pydantic.
-model: inherit
-color: cyan
-argument-hint: [description-of-feature-to-implement]
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
 ---
 
 # Backend Python Library - Development Agent

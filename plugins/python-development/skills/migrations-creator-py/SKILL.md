@@ -1,10 +1,7 @@
 ---
 name: migrations-creator-py
 description: Database migrations creator skill for Alembic-based projects with a shared library architecture (two-repo pattern). Handles full lifecycle from migration creation to library versioning and release.
-model: inherit
-color: yellow
-argument-hint: [description-of-migration-changes]
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
 ---
 
 # Database Migrations Creator

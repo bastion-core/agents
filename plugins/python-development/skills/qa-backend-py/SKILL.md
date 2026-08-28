@@ -1,8 +1,6 @@
 ---
 name: qa-backend-py
 description: Procedimientos de QA para Python backend, incluyendo unit tests, integración y cobertura >90%.
-model: sonnet
-color: green
 ---
 # QA Backend Python Skill
 

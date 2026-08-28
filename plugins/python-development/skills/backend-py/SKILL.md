@@ -1,8 +1,6 @@
 ---
 name: backend-py
 description: General Python backend standards for Clean/Hexagonal Architecture projects — layering, SOLID, dependency injection, typing, error handling, configuration, security and performance criteria, framework-agnostic.
-model: inherit
-color: green
 ---
 
 # Backend Python Standards Skill

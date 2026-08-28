@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'plugins/**'
+      - '.claude-plugin/**'
       - 'scripts/validate-agents.sh'
       - 'git-workflows/**'
       - '.github/workflows/validate-agents.yml'
@@ -12,8 +13,10 @@ on:
     branches: [ main, develop ]
     paths:
       - 'plugins/**'
+      - '.claude-plugin/**'
       - 'scripts/validate-agents.sh'
       - 'git-workflows/**'
+      - '.github/workflows/validate-agents.yml'
 
 jobs:
   validate:
@@ -58,7 +61,7 @@ jobs:
 
       - name: Lint agent markdown files
         run: |
-          markdownlint 'plugins/**/agents/*.md' 'plugins/**/skills/*.md' --config .markdownlint.json || true
+          markdownlint 'plugins/**/agents/*.md' 'plugins/**/skills/*/SKILL.md' --config .markdownlint.json || true
         continue-on-error: true
 
   check-yaml:
@@ -80,58 +83,75 @@ jobs:
       - name: Validate YAML frontmatter
         run: |
           python3 << 'EOF'
-          import yaml
+          import glob
           import os
           import sys
+
+          import yaml
 
           plugins_dir = 'plugins'
           failed = False
 
-          # Walk through all subdirectories
-          for root, dirs, files in os.walk(plugins_dir):
-              # Only validate files in agents/ or skills/ subdirectories
-              if '/agents' not in root and '/skills' not in root:
+          # Agents are agents/<name>.md; skills are skills/<name>/SKILL.md.
+          # Anything else under a skill directory is a support file (templates,
+          # examples) and carries no frontmatter.
+          targets = [(p, 'agent') for p in glob.glob(f'{plugins_dir}/*/agents/*.md')]
+          targets += [(p, 'skill') for p in glob.glob(f'{plugins_dir}/*/skills/*/SKILL.md')]
+
+          for filepath, kind in sorted(targets):
+              filename = os.path.basename(filepath)
+
+              # Skip README files
+              if filename == 'README.md':
                   continue
 
-              for filename in files:
-                  if not filename.endswith('.md'):
-                      continue
+              rel_path = os.path.relpath(filepath, plugins_dir)
 
-                  # Skip README files
-                  if filename == 'README.md':
-                      continue
+              with open(filepath, 'r') as f:
+                  content = f.read()
 
-                  filepath = os.path.join(root, filename)
-                  rel_path = os.path.relpath(filepath, plugins_dir)
+              # Extract frontmatter
+              if not content.startswith('---\n'):
+                  print(f"❌ {rel_path}: Missing frontmatter start")
+                  failed = True
+                  continue
 
-                  with open(filepath, 'r') as f:
-                      content = f.read()
+              try:
+                  end = content.index('\n---\n', 4)
+                  frontmatter = content[4:end]
+                  data = yaml.safe_load(frontmatter)
 
-                  # Extract frontmatter
-                  if not content.startswith('---\n'):
-                      print(f"❌ {rel_path}: Missing frontmatter start")
-                      failed = True
-                      continue
+                  # Validate required fields
+                  file_has_errors = False
+                  required = ['name', 'description']
+                  if kind == 'agent':
+                      required += ['model', 'color']
+                  for field in required:
+                      if field not in data:
+                          print(f"❌ {rel_path}: Missing required field '{field}'")
+                          failed = True
+                          file_has_errors = True
 
-                  try:
-                      end = content.index('\n---\n', 4)
-                      frontmatter = content[4:end]
-                      data = yaml.safe_load(frontmatter)
-
-                      # Validate required fields
-                      file_has_errors = False
-                      required = ['name', 'description', 'model', 'color']
-                      for field in required:
-                          if field not in data:
-                              print(f"❌ {rel_path}: Missing required field '{field}'")
+                  if kind == 'skill':
+                      # model, color and argument-hint are agent-only fields
+                      for field in ['model', 'color', 'argument-hint']:
+                          if field in data:
+                              print(f"❌ {rel_path}: Skill must not define '{field}'")
                               failed = True
                               file_has_errors = True
 
-                      if not file_has_errors:
-                          print(f"✅ {rel_path}: Valid YAML frontmatter")
-                  except Exception as e:
-                      print(f"❌ {rel_path}: Invalid YAML - {str(e)}")
-                      failed = True
+                      # The frontmatter name must match the skill directory
+                      skill_dir = os.path.basename(os.path.dirname(filepath))
+                      if data.get('name') != skill_dir:
+                          print(f"❌ {rel_path}: name '{data.get('name')}' does not match directory '{skill_dir}'")
+                          failed = True
+                          file_has_errors = True
+
+                  if not file_has_errors:
+                      print(f"✅ {rel_path}: Valid YAML frontmatter")
+              except Exception as e:
+                  print(f"❌ {rel_path}: Invalid YAML - {str(e)}")
+                  failed = True
 
           sys.exit(1 if failed else 0)
           EOF
@@ -162,3 +182,9 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See details above for more information." >> $GITHUB_STEP_SUMMARY
+
+          # Without this the job stays green even when the jobs it summarises are red.
+          if [ "${{ needs.validate.result }}" != "success" ] || \
+             [ "${{ needs.check-yaml.result }}" != "success" ]; then
+            exit 1
+          fi

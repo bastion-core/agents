@@ -378,13 +378,15 @@ Los miembros del equipo solo necesitan clonar el proyecto - los plugins se insta
 Si prefieres no usar el sistema de plugins, puedes copiar manualmente:
 
 ```bash
-# Crear directorio de agentes
-mkdir -p .claude/agents
+# Crear directorios de agentes y skills
+mkdir -p .claude/agents .claude/skills
 
-# Copiar agentes deseados
+# Copiar agentes deseados (archivo .md suelto)
 cp claude-agents/plugins/general/agents/architect.md .claude/agents/
 cp claude-agents/plugins/python-development/agents/backend-py.md .claude/agents/
-cp claude-agents/plugins/python-development/skills/backend-py-celery.md .claude/agents/
+
+# Copiar skills deseados (directorio completo con su SKILL.md)
+cp -R claude-agents/plugins/python-development/skills/backend-py-celery .claude/skills/
 ```
 
 > ⚠️ **Nota**: La instalación manual no tiene versionamiento ni auto-updates. Se recomienda usar el método de plugins.
@@ -458,14 +460,14 @@ claude-agents/
 │   │   │   ├── reviewer-library-py.md  # Agente de review de librerías
 │   │   │   ├── reviewer-airflow-dags-py.md      # Agente de review de DAGs Airflow
 │   │   │   └── reviewer-alembic-backend-py.md   # Agente de review de jobs Alembic
-│   │   └── skills/
-│   │       ├── backend-py.md           # Skill de estándares backend Python
-│   │       ├── backend-py-alembic.md   # Skill de criterios Alembic
-│   │       ├── backend-py-celery.md    # Skill FastAPI + Celery
-│   │       ├── backend-py-library.md   # Skill de librerías Python
-│   │       ├── migrations-creator-py.md # Skill de creación de migraciones
-│   │       ├── qa-backend-py.md        # Skill de QA backend
-│   │       └── qa-airflow-dags-py.md   # Skill de QA para DAGs Airflow
+│   │   └── skills/                     # Un directorio por skill, cada uno con SKILL.md
+│   │       ├── backend-py/             # Skill de estándares backend Python
+│   │       ├── backend-py-alembic/     # Skill de criterios Alembic
+│   │       ├── backend-py-celery/      # Skill FastAPI + Celery
+│   │       ├── backend-py-library/     # Skill de librerías Python
+│   │       ├── migrations-creator-py/  # Skill de creación de migraciones
+│   │       ├── qa-backend-py/          # Skill de QA backend
+│   │       └── qa-airflow-dags-py/     # Skill de QA para DAGs Airflow
 │   └── flutter-development/             # Ecosistema Flutter
 │       ├── README.md
 │       └── agents/
@@ -497,7 +499,7 @@ El proyecto usa una arquitectura de plugins que organiza agentes y skills por do
 
 Cada plugin contiene:
 - **`agents/`**: Archivos .md con instrucciones y personalidad de agentes
-- **`skills/`**: Archivos .md con capacidades ejecutables (herramientas + funciones)
+- **`skills/`**: Un directorio por skill (`skills/<nombre>/SKILL.md`) con capacidades ejecutables
 - **`README.md`**: Documentación específica del plugin
 
 ## Configuración para Equipos y Empresas
@@ -653,7 +655,7 @@ Ver [documentación de plugins](./plugins/README.md) para más detalles sobre co
 ### Agregar un Nuevo Agente
 
 1. Fork este repositorio
-2. Crea un nuevo archivo en `plugins/[plugin-name]/agents/` o `plugins/[plugin-name]/skills/`
+2. Crea un nuevo agente en `plugins/[plugin-name]/agents/<nombre>.md`, o un nuevo skill en `plugins/[plugin-name]/skills/<nombre>/SKILL.md`
 3. Agrega el agente/skill a `plugin.json` del plugin
 4. Prueba el agente localmente
 5. Actualiza el README del plugin

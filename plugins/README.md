@@ -7,7 +7,7 @@ This directory contains all claude-agents organized in a plugin-based architectu
 The plugin system separates agents into two categories:
 
 - **Agents**: Instruction sets and personality configurations for specialized tasks (stored as `.md` files in `agents/` subdirectories)
-- **Skills**: Executable capabilities with tools and functions (stored as `.md` files in `skills/` subdirectories)
+- **Skills**: Executable capabilities with tools and functions (stored as `skills/<skill-name>/SKILL.md` directories)
 
 ## Directory Structure
 
@@ -25,7 +25,8 @@ plugins/
 │   │   ├── reviewer-backend-py.md
 │   │   └── reviewer-library-py.md
 │   └── skills/
-│       └── backend-py-celery.md
+│       └── backend-py-celery/
+│           └── SKILL.md
 └── flutter-development/        # Flutter/Dart ecosystem
     ├── README.md
     └── agents/
@@ -44,7 +45,7 @@ Each plugin follows these conventions:
 ### 2. Required Files
 - `README.md`: Plugin documentation with agent descriptions and usage
 - `agents/`: Directory containing agent `.md` files
-- `skills/`: Directory containing skill `.md` files (if applicable)
+- `skills/`: Directory containing one subdirectory per skill, each with a `SKILL.md` (if applicable)
 
 ### 3. Agent Files
 - Use kebab-case: `backend-py.md`, `reviewer-flutter-app.md`
@@ -53,10 +54,14 @@ Each plugin follows these conventions:
 - Stored in `agents/` subdirectory
 
 ### 4. Skill Files
-- Use kebab-case: `backend-py-celery.md`
-- File name should match skill name
-- Must contain valid skill YAML frontmatter
-- Stored in `skills/` subdirectory
+- Each skill is a directory: `skills/backend-py-celery/SKILL.md`
+- Claude Code only discovers skills in this layout. A flat `skills/<name>.md`
+  is copied when the plugin is installed but never loaded.
+- Directory name in kebab-case, and must match the `name` in the frontmatter
+- Frontmatter carries `name`, `description` and optionally `allowed-tools`.
+  `model`, `color` and `argument-hint` are agent-only fields and must not appear
+- Any supporting files the skill reads (templates, examples) must live inside the
+  skill directory, e.g. `skills/github-workflow/references/`, so they ship with the plugin
 
 ## Adding New Plugins
 
@@ -65,7 +70,7 @@ To create a new plugin:
 1. **Create directory structure**:
    ```bash
    mkdir -p plugins/your-plugin-name/agents
-   mkdir -p plugins/your-plugin-name/skills  # If needed
+   mkdir -p plugins/your-plugin-name/skills/your-skill-name  # If needed
    ```
 
 2. **Create README.md**:
@@ -100,7 +105,7 @@ Ecosystem-specific plugins (e.g., `python-development`, `flutter-development`) c
 
 The sync scripts automatically discover all plugins by:
 1. Scanning `plugins/` directory
-2. Finding all `.md` files in `agents/` and `skills/` subdirectories
+2. Finding `agents/*.md` files and `skills/*/SKILL.md` files
 3. Excluding `README.md` files
 4. Presenting agents with plugin context: `[plugin-name/type] agent-name`
 

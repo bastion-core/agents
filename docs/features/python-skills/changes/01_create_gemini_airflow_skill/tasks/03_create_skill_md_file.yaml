@@ -10,10 +10,10 @@ scope: |
 files_to_create:
   - gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md
 patterns:
-  - "Formato de `SKILL.md` debe ser similar a `plugins/general/skills/github-workflow.md`."
+  - "Formato de `SKILL.md` debe ser similar a `plugins/general/skills/github-workflow/SKILL.md`."
 acceptance:
   - "El archivo `gemini/spec-generator/.gemini/skills/airflow-dags-py/SKILL.md` existe."
   - "El archivo contiene una descripción de la skill y referencias a los archivos en `references/`."
 context_files:
-  - plugins/general/skills/github-workflow.md
+  - plugins/general/skills/github-workflow/SKILL.md
   - docs/features/python-skills/changes/01_create_gemini_airflow_skill/technical.yaml

@@ -1,7 +1,7 @@
 {
   "name": "python-development",
-  "version": "1.7.0",
-  "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, and Alembic migration jobs",
+  "version": "1.8.0",
+  "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
   "author": {
     "name": "Grinest",
     "url": "https://github.com/Grinest"
