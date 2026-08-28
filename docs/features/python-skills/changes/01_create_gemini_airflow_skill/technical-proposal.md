@@ -31,7 +31,7 @@ Se creará una nueva skill de Gemini llamada `airflow-dags-py`. Esta skill inclu
 graph TD
     subgraph "Inputs"
         A["`context/airflow-python-dags/*.md`"]
-        B["`plugins/general/skills/github-workflow.md` (Template)"]
+        B["`plugins/general/skills/github-workflow/SKILL.md` (Template)"]
     end
 
     subgraph "Process"

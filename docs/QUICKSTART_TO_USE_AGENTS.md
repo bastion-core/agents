@@ -98,10 +98,12 @@ git clone https://github.com/Grinest/agents.git
 cd claude-agents
 
 # Copiar agentes manualmente
-mkdir -p .claude/agents
+mkdir -p .claude/agents .claude/skills
 cp plugins/general/agents/architect.md .claude/agents/
 cp plugins/python-development/agents/backend-py.md .claude/agents/
-cp plugins/python-development/skills/backend-py-celery.md .claude/agents/
+
+# Los skills se copian como directorio completo, no como archivo suelto
+cp -R plugins/python-development/skills/backend-py-celery .claude/skills/
 ```
 
 > ⚠️ **Nota**: La instalación manual no tiene versionamiento ni auto-updates.
@@ -217,7 +219,8 @@ Agentes para desarrollo de aplicaciones Flutter/Dart.
         │   │   ├── qa-backend-py.md
         │   │   └── reviewer-backend-py.md
         │   └── skills/
-        │       └── backend-py-celery.md
+        │       └── backend-py-celery/
+        │           └── SKILL.md
         └── flutter-development/
             └── agents/
                 └── reviewer-flutter-app.md
