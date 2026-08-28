@@ -1,6 +1,9 @@
 {
   "name": "seven-samurai-agents",
-  "description": "Collection of specialized Claude Code agents and skills for development workflows",
+  "metadata": {
+    "description": "Collection of specialized Claude Code agents and skills for development workflows",
+    "version": "1.1.0"
+  },
   "owner": {
     "name": "Grinest",
     "url": "https://github.com/Grinest"
@@ -10,8 +13,8 @@
     {
       "name": "general",
       "source": "./plugins/general",
-      "description": "Language-agnostic agents for software architecture and system design",
-      "version": "1.1.0",
+      "description": "Language-agnostic agents for software architecture analysis (feature.yaml to technical.yaml pipeline), system design, and product specification",
+      "version": "1.7.0",
       "tags": [
         "architecture",
         "design",
@@ -22,7 +25,7 @@
       "name": "python-development",
       "source": "./plugins/python-development",
       "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "tags": [
         "python",
         "backend",
@@ -38,7 +41,7 @@
       "name": "flutter-development",
       "source": "./plugins/flutter-development",
       "description": "Flutter and Dart development agents for mobile app development and code review with Clean Architecture, BLoC+Freezed, and Result<T> error handling",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "tags": [
         "flutter",
         "dart",
