@@ -226,8 +226,8 @@ Model:   claude-sonnet-4-6
 ./scripts/sync-agents.sh
 
 # New way (2026)
-/plugin marketplace add Grinest/agents
-/plugin install python-development@agents
+/plugin marketplace add bastion-core/agents
+/plugin install python-development@seven-samurai-agents
 ```
 
 **See**: [MIGRATION.md](../MIGRATION.md) for complete migration guide.
@@ -241,12 +241,12 @@ As of 2026, agent installation uses Claude Code's native plugin system:
 ### Installation
 ```bash
 # Add marketplace
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 
 # Install plugins
-/plugin install general@agents
-/plugin install python-development@agents
-/plugin install flutter-development@agents
+/plugin install general@seven-samurai-agents
+/plugin install python-development@seven-samurai-agents
+/plugin install flutter-development@seven-samurai-agents
 ```
 
 ### Benefits over bash scripts

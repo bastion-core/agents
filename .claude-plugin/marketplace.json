@@ -5,10 +5,10 @@
     "version": "1.2.0"
   },
   "owner": {
-    "name": "Grinest",
-    "url": "https://github.com/Grinest"
+    "name": "bastion-core",
+    "url": "https://github.com/bastion-core"
   },
-  "homepage": "https://github.com/Grinest/agents",
+  "homepage": "https://github.com/bastion-core/agents",
   "plugins": [
     {
       "name": "general",
