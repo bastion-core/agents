@@ -1,8 +1,6 @@
 ---
 name: backend-py-alembic
 description: Quality criteria to analyze and review Python Alembic migration jobs — revision chain integrity, upgrade/downgrade symmetry, DDL safety, indexing and data migrations under alembic/versions.
-model: inherit
-color: yellow
 ---
 
 # Alembic Migration Job Standards Skill

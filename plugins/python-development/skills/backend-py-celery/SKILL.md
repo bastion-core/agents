@@ -1,10 +1,7 @@
 ---
 name: backend-py-celery
 description: Backend Python Celery Development Agent specializing in FastAPI routes and Celery scheduled tasks with Clean Architecture, dependency injection, and centralized repository libraries.
-model: inherit
-color: green
-argument-hint: [description-of-what-you-need]
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Agent
 ---
 
 # Backend Python Celery - Development Agent

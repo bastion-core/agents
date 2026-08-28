@@ -1,8 +1,6 @@
 ---
 name: github-workflow
 description: Estándares y templates para el flujo de trabajo en GitHub, incluyendo mensajes de commit, Pull Requests y Releases en inglés.
-model: inherit
-color: blue
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -110,6 +108,6 @@ Para generar una nota de lanzamiento, usa el siguiente formato en **INGLÉS**:
 
 Cuando necesites realizar una operación de Git/GitHub:
 1. Activa este skill.
-2. Lee los archivos de referencia en `gemini/spec-generator/.gemini/skills/github-workflow/references/` para ver ejemplos detallados si es necesario.
+2. Lee los archivos de referencia en `references/` para ver ejemplos detallados si es necesario.
 3. Propón el mensaje de commit o contenido del PR/Release siempre en **INGLÉS**.
 4. Valida que el formato cumple con el estándar antes de proceder.

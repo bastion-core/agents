@@ -1,8 +1,6 @@
 ---
 name: qa-airflow-dags-py
 description: Estándares de testing para proyectos sobre el scaffold airflow-dags-scaffold. Exige pruebas unitarias para todo el código en scripts/ (Pipeline framework, Steps, queries, utils, config) y pruebas de integración para todo el código en dags/ (callables internos del DAG y bootstrap). Define el patrón de mirror del árbol de fuentes, naming AAA, mocking del DatabaseManager y cobertura mínima.
-model: sonnet
-color: blue
 ---
 # QA Airflow DAGs Skill
 
