@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'plugins/**'
+      - '.claude-plugin/**'
       - 'scripts/validate-agents.sh'
       - 'git-workflows/**'
       - '.github/workflows/validate-agents.yml'
@@ -12,8 +13,10 @@ on:
     branches: [ main, develop ]
     paths:
       - 'plugins/**'
+      - '.claude-plugin/**'
       - 'scripts/validate-agents.sh'
       - 'git-workflows/**'
+      - '.github/workflows/validate-agents.yml'
 
 jobs:
   validate:
@@ -179,3 +182,9 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See details above for more information." >> $GITHUB_STEP_SUMMARY
+
+          # Without this the job stays green even when the jobs it summarises are red.
+          if [ "${{ needs.validate.result }}" != "success" ] || \
+             [ "${{ needs.check-yaml.result }}" != "success" ]; then
+            exit 1
+          fi
