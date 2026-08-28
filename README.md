@@ -260,7 +260,7 @@ cp git-workflows/*.yml .github/workflows/
 
 ```bash
 # Clonar en directorio home
-git clone https://github.com/Grinest/agents.git ~/.claude-agents
+git clone https://github.com/bastion-core/agents.git ~/.claude-agents
 
 # Crear alias
 echo 'alias sync-workflows="~/.claude-agents/scripts/sync-workflows.sh"' >> ~/.bashrc
@@ -341,12 +341,16 @@ Para que todo el equipo tenga los mismos plugins automáticamente, agrega a `.cl
 
 ```json
 {
-  "plugin_marketplaces": ["Grinest/agents"],
-  "plugins": [
-    "general@seven-samurai-agents",
-    "python-development@seven-samurai-agents",
-    "flutter-development@seven-samurai-agents"
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "bastion-core/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "general@seven-samurai-agents": true,
+    "python-development@seven-samurai-agents": true,
+    "flutter-development@seven-samurai-agents": true
+  }
 }
 ```
 
@@ -525,12 +529,16 @@ mkdir plugins/company-standards
 ```json
 // .claude/settings.json
 {
-  "plugin_marketplaces": ["tu-empresa/claude-agents"],
-  "plugins": [
-    "general@seven-samurai-agents",
-    "python-development@seven-samurai-agents",
-    "company-standards@seven-samurai-agents"
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "tu-empresa/claude-agents" }
+    }
+  },
+  "enabledPlugins": {
+    "general@seven-samurai-agents": true,
+    "python-development@seven-samurai-agents": true,
+    "company-standards@seven-samurai-agents": true
+  }
 }
 ```
 
@@ -549,14 +557,18 @@ Combina este marketplace público con plugins privados de tu empresa:
 ```json
 // .claude/settings.json
 {
-  "plugin_marketplaces": [
-    "Grinest/agents",        // Público
-    "tu-empresa/private-agents"         // Privado
-  ],
-  "plugins": [
-    "python-development@seven-samurai-agents",  // Del público
-    "company-standards@private-agents"   // Del privado
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "bastion-core/agents" }
+    },  // Público
+    "private-agents": {
+      "source": { "source": "github", "repo": "tu-empresa/private-agents" }
+    }  // Privado
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true,  // Del público
+    "company-standards@private-agents": true  // Del privado
+  }
 }
 ```
 
@@ -686,7 +698,7 @@ Si encuentras problemas:
 
 ```bash
 # 1. Agregar marketplace y instalar plugins
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 /plugin install general@seven-samurai-agents python-development@seven-samurai-agents
 
 # 2. Usar el agente de arquitectura
@@ -703,7 +715,7 @@ Si encuentras problemas:
 
 ```bash
 # 1. Crear fork privado para la empresa
-# GitHub: Fork Grinest/agents a empresa/claude-agents
+# GitHub: Fork bastion-core/agents a empresa/claude-agents
 
 # 2. Personalizar plugins
 git clone git@github.com:empresa/claude-agents.git
@@ -713,8 +725,14 @@ cd claude-agents
 # 3. Configurar en proyectos de la empresa
 # En cada proyecto: .claude/settings.json
 {
-  "plugin_marketplaces": ["empresa/claude-agents"],
-  "plugins": ["python-development@seven-samurai-agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "empresa/claude-agents" }
+    }
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true
+  }
 }
 
 # 4. Los agentes personalizados están disponibles automáticamente
@@ -725,14 +743,26 @@ cd claude-agents
 ```bash
 # Cliente A - Configuración en .claude/settings.json del proyecto
 {
-  "plugin_marketplaces": ["cliente-a/agents"],
-  "plugins": ["python-development@seven-samurai-agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "cliente-a/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true
+  }
 }
 
 # Cliente B - Configuración en .claude/settings.json del proyecto
 {
-  "plugin_marketplaces": ["cliente-b/agents"],
-  "plugins": ["javascript-development@seven-samurai-agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "cliente-b/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "javascript-development@seven-samurai-agents": true
+  }
 }
 
 # Cambiar entre proyectos automáticamente
@@ -756,16 +786,14 @@ Los plugins se pueden actualizar fácilmente:
 /plugin show python-development@seven-samurai-agents
 ```
 
-### Auto-updates (Opcional)
+### Mantener el Marketplace al Día
 
-Configura auto-updates para mantener plugins actualizados automáticamente:
+Claude Code no actualiza los plugins de forma automática. Refresca el
+marketplace y luego los plugins instalados:
 
-```json
-// .claude/settings.json
-{
-  "plugin_auto_update": true,
-  "plugin_marketplaces": ["Grinest/agents"]
-}
+```bash
+/plugin marketplace update seven-samurai-agents
+/plugin update python-development@seven-samurai-agents
 ```
 
 ## Requisitos

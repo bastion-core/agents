@@ -8,12 +8,12 @@ Guía rápida para comenzar a usar agentes de Claude y workflows de GitHub Actio
 
 ```bash
 # 1. Agregar el marketplace
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 
 # 2. Instalar plugins que necesites
-/plugin install general@agents                # Arquitectura
-/plugin install python-development@agents     # Python backend
-/plugin install flutter-development@agents    # Flutter
+/plugin install general@seven-samurai-agents                # Arquitectura
+/plugin install python-development@seven-samurai-agents     # Python backend
+/plugin install flutter-development@seven-samurai-agents    # Flutter
 
 # 3. Verificar instalación
 /plugin list
@@ -46,15 +46,15 @@ El sistema de plugins es el método oficial de Claude Code 2026:
 
 ```bash
 # Paso 1: Agregar marketplace
-/plugin marketplace add Grinest/agents
+/plugin marketplace add bastion-core/agents
 
 # Paso 2: Ver plugins disponibles
 /plugin marketplace browse claude-agents
 
 # Paso 3: Instalar plugins
-/plugin install general@agents
-/plugin install python-development@agents
-/plugin install flutter-development@agents
+/plugin install general@seven-samurai-agents
+/plugin install python-development@seven-samurai-agents
+/plugin install flutter-development@seven-samurai-agents
 ```
 
 **Ventajas**:
@@ -72,12 +72,16 @@ Para que todo el equipo tenga los mismos plugins automáticamente:
 # Crear configuración en tu proyecto
 cat > .claude/settings.json << 'EOF'
 {
-  "plugin_marketplaces": ["Grinest/agents"],
-  "plugins": [
-    "general@agents",
-    "python-development@agents",
-    "flutter-development@agents"
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "bastion-core/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "general@seven-samurai-agents": true,
+    "python-development@seven-samurai-agents": true,
+    "flutter-development@seven-samurai-agents": true
+  }
 }
 EOF
 
@@ -94,7 +98,7 @@ Si por alguna razón no puedes usar el sistema de plugins:
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/Grinest/agents.git
+git clone https://github.com/bastion-core/agents.git
 cd claude-agents
 
 # Copiar agentes manualmente
@@ -119,7 +123,7 @@ cp -R plugins/python-development/skills/backend-py-celery .claude/skills/
 /plugin list
 
 # Ver detalles de un plugin
-/plugin show python-development@agents
+/plugin show python-development@seven-samurai-agents
 
 # Listar agentes disponibles
 /agents list
@@ -170,7 +174,7 @@ Agentes agnósticos de lenguaje para arquitectura y diseño.
 |--------|-------------|
 | **architect** | Especialista en arquitectura de software y system design |
 
-**Instalar**: `/plugin install general@agents`
+**Instalar**: `/plugin install general@seven-samurai-agents`
 
 ---
 
@@ -186,7 +190,7 @@ Agentes y skills para desarrollo backend Python con Clean Architecture.
 | **reviewer-library-py** | Agente | Code review para librerías Python |
 | **backend-py-celery** | Skill | Desarrollo de FastAPI routes y Celery tasks |
 
-**Instalar**: `/plugin install python-development@agents`
+**Instalar**: `/plugin install python-development@seven-samurai-agents`
 
 ---
 
@@ -198,7 +202,7 @@ Agentes para desarrollo de aplicaciones Flutter/Dart.
 |--------|-------------|
 | **reviewer-flutter-app** | Code review automatizado para apps Flutter |
 
-**Instalar**: `/plugin install flutter-development@agents`
+**Instalar**: `/plugin install flutter-development@seven-samurai-agents`
 
 ---
 
@@ -246,9 +250,9 @@ tu-proyecto/
 /plugin list
 
 # Deberías ver:
-# ✓ general@agents (v1.0.0)
-# ✓ python-development@agents (v1.0.0)
-# ✓ flutter-development@agents (v1.0.0)
+# ✓ general@seven-samurai-agents (v1.0.0)
+# ✓ python-development@seven-samurai-agents (v1.0.0)
+# ✓ flutter-development@seven-samurai-agents (v1.0.0)
 
 # 2. Verificar agentes disponibles
 /agents list
@@ -321,13 +325,13 @@ gh pr create --title "Test Workflow" --body "Testing code review"
 
 ```bash
 # Actualizar un plugin específico
-/plugin update python-development@agents
+/plugin update python-development@seven-samurai-agents
 
 # Actualizar todos los plugins de un marketplace
 /plugin update --marketplace claude-agents
 
 # Ver versiones disponibles
-/plugin show python-development@agents
+/plugin show python-development@seven-samurai-agents
 ```
 
 ### Actualizar Workflows
@@ -351,11 +355,15 @@ Commitea la configuración al repositorio para que todos tengan los mismos plugi
 ```json
 // .claude/settings.json
 {
-  "plugin_marketplaces": ["Grinest/agents"],
-  "plugins": [
-    "general@agents",
-    "python-development@agents"
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "bastion-core/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "general@seven-samurai-agents": true,
+    "python-development@seven-samurai-agents": true
+  }
 }
 ```
 
@@ -373,7 +381,7 @@ Para empresas con agentes personalizados:
 
 ```bash
 # 1. Fork este repositorio a tu organización
-# GitHub: Fork Grinest/agents → empresa/claude-agents
+# GitHub: Fork bastion-core/agents → empresa/claude-agents
 
 # 2. Personaliza plugins
 # Agrega tus agentes en plugins/company-standards/
@@ -390,14 +398,18 @@ Combina marketplace público con privado:
 ```json
 // .claude/settings.json
 {
-  "plugin_marketplaces": [
-    "Grinest/agents",    // Público
-    "empresa/private-agents"         // Privado
-  ],
-  "plugins": [
-    "python-development@agents",  // Público
-    "company-standards@private-agents"   // Privado
-  ]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "bastion-core/agents" }
+    },  // Público
+    "private-agents": {
+      "source": { "source": "github", "repo": "empresa/private-agents" }
+    }  // Privado
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true,  // Público
+    "company-standards@private-agents": true  // Privado
+  }
 }
 ```
 
@@ -417,8 +429,8 @@ Combina marketplace público con privado:
 /plugin list
 
 # Reinstalar plugin
-/plugin uninstall python-development@agents
-/plugin install python-development@agents
+/plugin uninstall python-development@seven-samurai-agents
+/plugin install python-development@seven-samurai-agents
 ```
 
 #### Error al agregar marketplace
@@ -467,9 +479,9 @@ Combina marketplace público con privado:
 
 ```bash
 # Instalar plugins necesarios
-/plugin marketplace add Grinest/agents
-/plugin install general@agents
-/plugin install python-development@agents
+/plugin marketplace add bastion-core/agents
+/plugin install general@seven-samurai-agents
+/plugin install python-development@seven-samurai-agents
 
 # Instalar workflow de code review
 ./scripts/sync-workflows.sh  # Selecciona: code-review-backend-py
@@ -493,8 +505,14 @@ cd empresa/claude-agents
 # Configurar en proyectos
 # .claude/settings.json:
 {
-  "plugin_marketplaces": ["empresa/claude-agents"],
-  "plugins": ["python-development@agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "empresa/claude-agents" }
+    }
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true
+  }
 }
 ```
 
@@ -506,8 +524,14 @@ cd ~/projects/cliente-a
 
 # .claude/settings.json
 {
-  "plugin_marketplaces": ["cliente-a/agents"],
-  "plugins": ["python-development@agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "cliente-a/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "python-development@seven-samurai-agents": true
+  }
 }
 
 # Proyecto Cliente B
@@ -515,8 +539,14 @@ cd ~/projects/cliente-b
 
 # .claude/settings.json
 {
-  "plugin_marketplaces": ["cliente-b/agents"],
-  "plugins": ["javascript-development@agents"]
+  "extraKnownMarketplaces": {
+    "seven-samurai-agents": {
+      "source": { "source": "github", "repo": "cliente-b/agents" }
+    }
+  },
+  "enabledPlugins": {
+    "javascript-development@agents": true
+  }
 }
 
 # Los plugins se cargan automáticamente según el proyecto actual
@@ -575,8 +605,8 @@ cd ~/projects/cliente-b
 
 1. **Documentación**: Revisa la [documentación completa](../README.md)
 2. **Migración**: Si vienes de scripts bash, lee [MIGRATION.md](../MIGRATION.md)
-3. **Issues**: Busca en [issues existentes](https://github.com/Grinest/agents/issues)
-4. **Nuevo issue**: Crea un [nuevo issue](https://github.com/Grinest/agents/issues/new) con:
+3. **Issues**: Busca en [issues existentes](https://github.com/bastion-core/agents/issues)
+4. **Nuevo issue**: Crea un [nuevo issue](https://github.com/bastion-core/agents/issues/new) con:
    - Descripción del problema
    - Pasos para reproducir
    - Output de `/plugin list` y `/plugin show plugin-name`
@@ -589,8 +619,8 @@ cd ~/projects/cliente-b
 
 ```bash
 # En Claude Code, ejecuta:
-/plugin marketplace add Grinest/agents
-/plugin install python-development@agents
+/plugin marketplace add bastion-core/agents
+/plugin install python-development@seven-samurai-agents
 
 # ¡Listo! Ahora tienes agentes especializados disponibles
 ```
