@@ -2,7 +2,7 @@
   "name": "seven-samurai-agents",
   "metadata": {
     "description": "Collection of specialized Claude Code agents and skills for development workflows",
-    "version": "1.2.0"
+    "version": "1.2.1"
   },
   "owner": {
     "name": "bastion-core",
@@ -14,7 +14,7 @@
       "name": "general",
       "source": "./plugins/general",
       "description": "Language-agnostic agents for software architecture analysis (feature.yaml to technical.yaml pipeline), system design, and product specification",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "tags": [
         "architecture",
         "design",

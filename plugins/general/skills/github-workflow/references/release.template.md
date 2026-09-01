@@ -14,3 +14,5 @@
 
 - Bug fix C description:
   - Bullet 1
+
+<!-- Do not include AI attribution footers (e.g. "🤖 Generated with Claude Code"). -->
