@@ -42,8 +42,16 @@ El mensaje debe seguir el formato:
 *Opcional.* Información adicional o metadatos.
 - **BREAKING CHANGE**: Descripción de cambios que rompen la compatibilidad.
 - **Issue Reference**: Referencia a tickets o issues (ej: `Closes #123`).
+- **Contenido permitido**: únicamente `BREAKING CHANGE` e `Issue Reference`.
+- **PROHIBIDO**: trailers de atribución del asistente o de la sesión, tales como
+  `Co-Authored-By: Claude ... <noreply@anthropic.com>`,
+  `🤖 Generated with [Claude Code](https://claude.com/claude-code)`,
+  `Generated with Claude` y cualquier variante que mencione Claude, Claude Code,
+  Anthropic o identificadores de sesión.
 
 ## Reglas Generales
 1. Un commit debe representar una sola intención (cambio atómico).
 2. Evitar mensajes genéricos como "fix bug" o "update".
 3. Mantener consistencia en el idioma definido para el equipo.
+4. El commit no debe contener referencias a la autoría del asistente ni a la
+   sesión (ver REGLA DE AUTORÍA MANDATORIA en SKILL.md).

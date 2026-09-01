@@ -11,6 +11,26 @@ Este skill proporciona el conocimiento experto para seguir los estándares de Gi
 ## REGLA DE IDIOMA MANDATORIA
 - **IDIOMA**: Todos los textos generados para GitHub (**nombres de rama, commits, Pull Requests y Releases**) deben redactarse exclusivamente en **INGLÉS**, independientemente del idioma en el que se esté comunicando el usuario o el idioma de las especificaciones locales.
 
+## REGLA DE AUTORÍA MANDATORIA
+
+- **PROHIBIDO** incluir cualquier referencia a la autoría del asistente o a la
+  sesión de trabajo en textos destinados a GitHub (commits, PRs, releases,
+  nombres de rama, comentarios de PR/issue).
+- Textos explícitamente prohibidos (y cualquier variante):
+  - `Co-Authored-By: Claude ...` / `Co-authored-by: ... <noreply@anthropic.com>`
+  - `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+  - `Generated with Claude`, `Made with Claude`, `Assisted by Claude`
+  - Menciones a Anthropic, Claude Code, IDs de sesión, IDs de tarea o enlaces
+    a transcripciones.
+- **Único autor**: el usuario que ejecuta el comando. No se añaden trailers
+  `Co-Authored-By` de ningún tipo salvo que correspondan a personas reales del
+  equipo y el usuario lo pida explícitamente.
+- **Verificación obligatoria antes de ejecutar**: revisar el texto final y
+  eliminar estas líneas antes de `git commit`, `gh pr create`, `gh pr edit` o
+  la publicación de un release.
+- **Corrección**: si un commit o PR ya se creó con estas firmas, corregirlo con
+  `git commit --amend` o `gh pr edit` antes de continuar.
+
 ---
 
 ## 1. ESTÁNDAR DE COMMITS
@@ -137,3 +157,5 @@ Cuando necesites realizar una operación de Git/GitHub:
 2. Lee los archivos de referencia en `references/` para ver ejemplos detallados si es necesario.
 3. Propón el nombre de rama, el mensaje de commit o el contenido del PR/Release siempre en **INGLÉS**.
 4. Valida que el formato cumple con el estándar antes de proceder.
+5. Verifica que el texto no contiene firmas de atribución del asistente
+   (ver REGLA DE AUTORÍA MANDATORIA) antes de ejecutar el comando.

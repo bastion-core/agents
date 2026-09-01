@@ -34,3 +34,5 @@
 - [ ] Bug fix.
 - [ ] New feature.
 - [ ] Improvement.
+
+<!-- Do not include AI attribution footers (e.g. "🤖 Generated with Claude Code"). -->

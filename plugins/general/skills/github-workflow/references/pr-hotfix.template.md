@@ -22,3 +22,5 @@
 <!-- Describe important points for the QA team that you consider relevant and be able to have a better review by them. -->
 
 <!-- PUT HERE THE SCREENSHOTS FROM THE UNIT TESTS COVERAGE PERCENTAGE AND/OR FUNCTIONAL TESTS. -->
+
+<!-- Do not include AI attribution footers (e.g. "🤖 Generated with Claude Code"). -->
