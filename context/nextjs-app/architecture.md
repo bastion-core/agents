@@ -32,7 +32,7 @@ Component -> Store -> DataAccess -> API
 - **Contains**:
   - `entities/` -- Types and entities (pure TypeScript types)
   - `dtos/` -- Data Transfer Objects (request/response shapes)
-  - `enums/` -- String enumerations for domain values
+  - `enums/` -- Domain values as `as const` objects with their derived types
   - `states/` -- State interfaces for stores (discriminated unions)
   - `consts/` -- Domain constants
 - **Allowed imports**:
@@ -235,7 +235,7 @@ Tests do not verify that `useState` was called or that render executed N times. 
 | Smell | Fix |
 |-------|-----|
 | `any` type | Use `unknown` and type guards |
-| Magic strings | Use constants or enums |
+| Magic strings | Use the domain `as const` object (see Domain values) |
 | Hardcoded text in UI | Use `useTranslations()` |
 | Direct API calls in components | Use store -> DataAccess flow |
 | Business logic in components | Extract to hooks or helpers |
@@ -279,7 +279,11 @@ Tests do not verify that `useState` was called or that render executed N times. 
 - **Strict mode** is mandatory and always enabled.
 - The `any` type is not used. `unknown` is used when the type is not known, then narrowed with type guards.
 - **Discriminated unions** are used for states with a `kind` field as discriminator.
-- **String enums** are used for domain values (e.g., `DriverStatus`).
+- **Domain values** live in one named place with the type derived from it. A value that is
+  a contract with the server (status, type, role) is an `as const` object plus its derived
+  type, so the JSON the API returns fits with no cast while writing it in code still forces
+  importing the name. Presentation order or option lists are `as const` arrays built from
+  that object. A value that only exists in the UI stays a local literal.
 - **Generics** are used for reusable utilities (e.g., `Either<E, A>`, `handleRequest<T>`).
 
 ### Domain Layer Purity

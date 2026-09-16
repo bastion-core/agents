@@ -202,7 +202,11 @@ pipeline:
         - no_any_type: "no usar 'any', preferir 'unknown' con type guards"
         - discriminated_unions: "estados con campo 'kind' como discriminador"
         - proper_generics: "genericos para utilidades reutilizables (Either<E,A>, handleRequest<T>)"
-        - string_enums: "enums para valores de dominio"
+        - domain_values: >
+            los valores que son contrato con el servidor (estado, tipo, rol) viven en un
+            objeto as const con el tipo derivado de el, no como literales sueltos; un enum
+            de TypeScript en codigo que ya lo usaba no se marca como violacion, y un valor
+            que solo existe en la interfaz se queda como literal local
         - type_inference: "inferir tipos de Zod schemas con z.infer<typeof schema>"
       either_pattern:
         - data_access_never_throw: "DataAccess retorna Either<ServiceError, ServiceSuccess<T>>, nunca lanza excepciones"

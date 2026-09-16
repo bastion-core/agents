@@ -84,7 +84,20 @@ Read the relevant context files before implementing features.
 - **strict mode**: Mandatory. Always enabled.
 - **no any**: NEVER use `any`. Use `unknown` when the type is not known, then narrow with type guards.
 - **Discriminated unions**: Use for states with a `kind` field as discriminator.
-- **String enums**: Use for domain values (e.g., `DriverStatus`).
+- **Domain values**: One named place per value, with the type derived from it. Pick the
+  shape by where the value lives:
+  - Contract with the server (scope type, request status, plan type, service names):
+    `as const` object plus derived type. The front receives JSON, where these arrive as
+    plain strings; an `as const` object is structural, so the raw value fits with no cast
+    at every boundary, and writing it in code still forces importing the name. A
+    TypeScript `enum` is nominal and forces declaring a derived type on top for the same
+    result.
+  - Presentation order or option lists: `as const` array whose members come from the
+    domain object, so the strings are not duplicated.
+  - Value that only exists in the UI (an "all" filter): local literal. Giving it a global
+    name suggests a domain concept that does not exist.
+  - Existing TypeScript enums are not migrated for the sake of it; they change when the
+    module is touched for another reason.
 - **Generics**: Use for reusable utilities (e.g., `Either<E, A>`, `handleRequest<T>`).
 
 ### Formatting (Prettier)
@@ -257,17 +270,27 @@ export type CreateDriverDto = {
 }
 ```
 
-### Enums (`domain/enums/`)
+### Domain values (`domain/enums/`)
 
-String enums for domain values.
+Values that are a contract with the server: one `as const` object with the type derived
+from it. The object is named after the concept, with no `Enum` suffix, and the derived
+type carries the same name. When the value exists in the backend library, the key names
+are copied from there so the mirror is visible.
 
 ```typescript
 // DriverStatus.ts
-export enum DriverStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  SUSPENDED = 'SUSPENDED',
-}
+export const DriverStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED',
+} as const
+
+export type DriverStatus = (typeof DriverStatus)[keyof typeof DriverStatus]
+
+// Reading it back from the API needs no cast
+const fromApi: DriverStatus = response.status
+// Writing it in code forces importing the name
+if (driver.status === DriverStatus.ACTIVE) { ... }
 ```
 
 ### Constants (`domain/consts/`)
@@ -765,7 +788,7 @@ const MapView = dynamic(
 | Smell | Fix |
 |-------|-----|
 | `any` type | Use `unknown` and type guards |
-| Magic strings | Use constants or enums |
+| Magic strings | Use the domain `as const` object (see Domain values) |
 | Hardcoded text in UI | Use `useTranslations()` |
 | Direct API calls in components | Use store -> DataAccess flow |
 | Business logic in components | Extract to hooks or helpers |

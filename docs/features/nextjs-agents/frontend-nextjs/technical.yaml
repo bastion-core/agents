@@ -298,7 +298,53 @@ coding_standards:
       Usar discriminated unions para estados:
       type State = LoadingState | LoadedState | ErrorState
       Cada variante tiene un campo 'kind' como discriminador
-    enums: "Usar string enums para valores de dominio (DriverStatus, etc.)"
+    domain_values:
+      description: >
+        Un valor de dominio se escribe en UN solo sitio con nombre y el tipo se deriva
+        de ahi. Que forma usar depende de donde vive el valor.
+      rules:
+        - case: "Valores que son contrato con el servidor (tipo de alcance, estado de la solicitud, tipo de plan, nombres de servicio)"
+          use: "Objeto as const con tipo derivado"
+          why: >
+            El front recibe JSON, donde estos valores llegan como cadena suelta. Un objeto
+            as const es estructural, asi que el dato crudo encaja sin convertir en cada
+            frontera, y a la vez obliga a importar el nombre para escribirlo en el codigo.
+            Un enum de TypeScript es nominal y obliga a declarar ademas un tipo derivado
+            para lo mismo.
+          example: |
+            export const DriverStatus = {
+              ACTIVE: 'ACTIVE',
+              INACTIVE: 'INACTIVE',
+              SUSPENDED: 'SUSPENDED',
+            } as const
+
+            export type DriverStatus = (typeof DriverStatus)[keyof typeof DriverStatus]
+
+            // el dato del API encaja sin cast
+            const fromApi: DriverStatus = response.status
+            // y escribirlo en codigo obliga a importar el nombre
+            if (driver.status === DriverStatus.ACTIVE) { ... }
+
+        - case: "Listas de orden o de opciones de la interfaz"
+          use: "Arreglo as const"
+          why: >
+            No son un valor nuevo sino un orden de presentacion. El arreglo deriva sus
+            miembros del objeto de dominio y no duplica las cadenas.
+
+        - case: "Valor que solo existe en la interfaz (el filtro 'todas')"
+          use: "Literal local"
+          why: >
+            No cruza ninguna frontera ni lo conoce el servidor. Darle un nombre global
+            sugiere un concepto de dominio que no existe.
+
+      naming: >
+        El nombre del objeto es el del concepto, sin sufijo Enum, y el tipo derivado lleva
+        el mismo nombre. Si el valor existe en la libreria del backend, los nombres de las
+        claves se copian de alli para que el espejo sea visible.
+
+      when_enum_is_still_fine: >
+        Los enums de TypeScript que ya existen en el repositorio no se migran por migrar.
+        Se cambian cuando se toca el modulo por otra razon.
     generics: "Usar genericos para utilidades reutilizables (Either<E,A>, handleRequest<T>)"
 
   formatting:
@@ -1037,7 +1083,7 @@ anti_patterns:
 
   code_smells:
     - "any type: Usar unknown y type guards"
-    - "Magic strings: Usar constantes o enums"
+    - "Magic strings: Usar el objeto as const del dominio (ver coding_standards.typescript.domain_values)"
     - "Hardcoded text: Usar useTranslations()"
     - "Direct API calls in components: Usar store -> DataAccess"
     - "Business logic in components: Extraer a hooks o helpers"

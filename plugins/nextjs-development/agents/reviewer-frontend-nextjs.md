@@ -324,7 +324,7 @@ Flag these as architectural issues:
 | **no_any_type** | Do not use `any`. Prefer `unknown` with type guards. |
 | **discriminated_unions** | States must use a `kind` field as discriminator. |
 | **proper_generics** | Use generics for reusable utilities (`Either<E,A>`, `handleRequest<T>`). |
-| **string_enums** | Use enums for domain values (status, type, role). |
+| **domain_values** | Values that are a contract with the server (status, type, role) live in one `as const` object with the type derived from it, not as loose literals. A TypeScript `enum` is accepted in code that already used one; do not flag it. A UI-only value (an "all" filter) stays a local literal. |
 | **type_inference** | Infer types from Zod schemas with `z.infer<typeof schema>`. |
 
 ```typescript
@@ -853,7 +853,7 @@ import Image from 'next/image'
 | Smell | Threshold / Rule | Fix |
 |---|---|---|
 | **any_type** | Any use of `any` | Use `unknown` with type guards |
-| **magic_strings** | String literals used as identifiers | Use constants or enums |
+| **magic_strings** | String literals used as identifiers | Use the domain `as const` object |
 | **hardcoded_text** | User-visible text not translated | Use `useTranslations()` |
 | **direct_api_in_components** | Component calling API directly | Use store -> DataAccess chain |
 | **business_logic_in_components** | Logic in components | Extract to hooks or helpers |
