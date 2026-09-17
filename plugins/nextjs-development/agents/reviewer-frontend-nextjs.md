@@ -474,6 +474,11 @@ const state = { kind: 'loading' }  // VIOLATION: magic string
 | **i18n_compliance** | Visible text ALWAYS via `useTranslations()`. Never hardcoded strings. |
 | **store_selectors** | Store state consumed via specific selectors: `useStore((s) => ({ field: s.field }))`. Do NOT destructure the entire store. |
 | **tailwind_classes** | Styles via Tailwind CSS. Use `cn()` for conditional classes (not template literals). |
+| **theme_tokens** | Colors ALWAYS from semantic tokens: `bg-background`, `bg-surface-1..3`, `bg-popover`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-success\|warning\|danger\|info`, `text-category-1..5`, `text-figure`, `text-on-brand`, `bg-overlay`. NEVER a palette class (`bg-white`, `text-gray-500`, `text-green-600`, `border-neutral-200`), a hex literal, or a hand written `dark:` variant: every token already carries both palettes. |
+| **state_tints** | Hover and selected use the tint utilities `tint-hover`, `tint-selected` and `tint-on-brand`. NEVER another surface token (`hover:bg-muted`, `hover:bg-surface-*`, `hover:bg-accent`) nor `bg-foreground/*`: a state is measured against the surface it sits on, and a flat token moves the wrong way over half of them. |
+| **status_badges** | Status pills use `<Badge variant="success\|warning\|danger\|info\|neutral">`. No screen defines its own pill with `rounded-full` plus a color. |
+| **meaning_fill** | A meaning color is a text color. Solid `bg-success\|warning\|info` only for a small mark with no text (status dot, progress indicator). Anything large or carrying text uses border + `-soft` fill + text. Only `destructive` is calibrated as a solid fill in both palettes. |
+| **shared_button_variants** | Buttons resolve their color in the shared variant, not in the screen: `<Button>` for the primary action, `variant="approve"`/`"reject"` for the verdict of a review, `variant="destructive"` for something that truly deletes. |
 | **page_as_wrapper** | App Router pages are minimal wrappers that import Screen components. |
 | **no_business_logic_in_pages** | Business logic outside of `src/app/` pages. Pages only compose components. |
 
