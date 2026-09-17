@@ -67,7 +67,17 @@ schema:
   assigned_subagent:
     tipo: string
     obligatorio: false
+    max_length: 150
     descripcion: Sub-agente responsable de ejecutar la tarea (formato plugin:agent).
+    reglas:
+      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py)
+      - Maximo 150 caracteres (persistido en columna varchar(150)/varchar(200) segun destino de sync)
+      - Nunca escribir prosa, justificaciones o razonamiento en este campo
+      - Si no existe un sub-agente dedicado en el catalogo para el stack de la tarea, omitir el campo
+        (dejarlo sin definir) en lugar de explicar el motivo aqui
+      - La justificacion de por que no hay sub-agente asignado, o que sub-agente usar como referencia
+        manual mas cercana, va como un item de `patterns` (ej. "Sin agente dedicado para React+Vite+TS;
+        usar nextjs-development:frontend-nextjs como referencia con ajuste manual")
     ejemplo: "python-development:backend-py"
 
   scope:
