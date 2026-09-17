@@ -338,6 +338,17 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}_
 | `depends_on` | Lista de task IDs (campo task) que deben completarse antes |
 | `assigned_subagent` | Sub-agente responsable de ejecutar la tarea |
 
+**Reglas de `assigned_subagent`:**
+
+- Debe ser un slug corto en formato `plugin:agent` (ej. `python-development:backend-py`), maximo 150 caracteres.
+- Nunca escribir prosa ni justificaciones en este campo — se persiste en una columna varchar con limite estricto.
+- Si el catalogo no tiene un sub-agente dedicado para el stack de la tarea, **omitir el campo** (no incluirlo en el YAML) en lugar de explicar el motivo ahi.
+- La justificacion de por que no hay sub-agente asignado (o que sub-agente usar como referencia manual mas cercana) va como un item de `patterns`, ej.:
+  ```yaml
+  patterns:
+    - "Sin agente dedicado en el catalogo para React+Vite+TS; usar nextjs-development:frontend-nextjs como referencia con ajuste manual"
+  ```
+
 #### 4. Criterios de nivel (level)
 
 | Nivel | Criterio |
