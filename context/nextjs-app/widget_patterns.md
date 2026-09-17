@@ -221,8 +221,55 @@ import { cn } from '@/lib/utils'
 Style guidelines:
 - `cn()` is used for conditional classes
 - Tailwind classes are preferred over custom CSS
-- Dark mode uses the `dark:` prefix
+- Colors come from the semantic tokens described below, never from a palette class
 - Responsive design uses breakpoints: `sm:`, `md:`, `lg:`, `xl:`
+
+### Theming (semantic tokens)
+
+Colors live as semantic tokens in `src/app/globals.css` (`:root` and `.dark`) and are mapped in
+`tailwind.config.ts`. A screen picks the meaning, never the color.
+
+| Use | Class |
+|---|---|
+| Page background | `bg-background` |
+| Card over the page | `bg-surface-1` (same value as `bg-card`) |
+| Card inside a card | `bg-surface-2` |
+| Table head, highlighted row | `bg-surface-3` |
+| Menus, dialogs, popovers | `bg-popover` |
+| Primary text | `text-foreground` |
+| Descriptions, units, secondary cells | `text-muted-foreground` |
+| Borders and table rules | `border-border` |
+| Meaning carried by text or an icon | `text-success`, `text-warning`, `text-danger`, `text-info` |
+| Status pill | `<Badge variant="success">` and its four siblings |
+| Which one it is, not how it is going | `text-category-1` to `text-category-5`, `bg-category-N-soft` |
+| Figure that summarises a block | `text-figure` |
+| Text or icon over a fixed brand fill | `text-on-brand` |
+| Scrim and whatever is drawn on it | `bg-overlay`, `text-overlay-foreground` |
+
+Inside a dialog or a popover the scale is measured from the surface you are already on, not from
+the page: the panel is `bg-popover` and counts as level one, a nested block takes `bg-surface-2`
+and a quote inside it `bg-surface-3`.
+
+Never write `bg-white`, `bg-black`, `bg-gray-*`, `text-neutral-*`, `text-green-*`, `border-gray-*`,
+a hex literal, or a hand written `dark:` variant. Each token already carries both palettes, so a
+`dark:` compensation is the defect this standard removes.
+
+**Hover and selected states use the tint utilities**, never another surface token:
+`hover:tint-hover` for a row or a card, `tint-selected` for selected, open, active or dragged over,
+and `hover:tint-on-brand` over a fixed brand fill. A state is measured against the surface it sits
+on, and a flat token cannot know which one that is: `hover:bg-muted` darkens over a card and
+lightens over a table head. The utilities paint through `background-image`, so an element that
+carries its own fill keeps it and stays opaque. The tint switches instead of fading, on purpose.
+
+**A meaning color is a text color.** It works as a solid fill only for a small mark with no text,
+such as a status dot or the indicator of a progress bar. Anything large or carrying text uses
+border plus soft fill plus text, the way `<Button variant="approve">` does with
+`border border-success bg-success-soft text-success`. Only `destructive` is calibrated as a solid
+fill in both palettes.
+
+If a tone is missing, declare a token in `globals.css` and map it in `tailwind.config.ts`; never
+write the color in the component. If a screen looks wrong once the standard is applied, the
+standard is wrong: report it instead of adding a local exception.
 
 ### Data Tables (TanStack React Table)
 
