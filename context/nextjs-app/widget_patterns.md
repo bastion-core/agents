@@ -95,6 +95,25 @@ import {
   ERROR_KIND,
 } from '@core/drivers/domain/states/DriversState'
 
+### How a component is declared
+
+A component is declared as a function, `export default function` for the one a file is named
+after and `export function` for a secondary one in the same file. Props are destructured in the
+signature and typed with an `interface`.
+
+`React.FC` is not used. It adds nothing that the annotated props do not already give, it makes
+generic components awkward to type, and it drags in an implicit `children` that most components
+do not accept. It is spelled out here because it keeps coming back: the six components that still
+carry it were not written at the same time, and two of them are recent.
+
+```tsx
+// GOOD
+export default function DriverCard({ id, onAction }: DriverCardProps) {
+
+// BAD
+export const DriverCard: React.FC<DriverCardProps> = ({ id, onAction }) => {
+```
+
 interface DriverCardProps {
   id: string
   onAction: (data: Driver) => void
