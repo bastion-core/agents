@@ -97,9 +97,10 @@ import {
 
 ### How a component is declared
 
-A component is declared as a function, `export default function` for the one a file is named
-after and `export function` for a secondary one in the same file. Props are destructured in the
-signature and typed with an `interface`.
+A component is declared as a function, with its props destructured in the signature and typed
+with an `interface`. Whether it is exported by default or by name is left to the file: the control
+tower uses both for the component a file is named after, 217 against 128, so neither is the
+convention and changing one into the other only churns the imports of whoever uses it.
 
 `React.FC` is not used. It adds nothing that the annotated props do not already give, it makes
 generic components awkward to type, and it drags in an implicit `children` that most components
@@ -107,7 +108,7 @@ do not accept. It is spelled out here because it keeps coming back: the six comp
 carry it were not written at the same time, and two of them are recent.
 
 ```tsx
-// GOOD
+// GOOD, and `export function` is equally fine
 export default function DriverCard({ id, onAction }: DriverCardProps) {
 
 // BAD

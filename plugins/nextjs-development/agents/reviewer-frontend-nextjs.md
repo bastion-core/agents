@@ -471,7 +471,7 @@ const state = { kind: 'loading' }  // VIOLATION: magic string
 |---|---|
 | **use_client_directive** | `'use client'` ONLY when the component uses hooks, events, or state. Server Components by default. |
 | **props_interface** | Props defined with `interface` (not type alias). |
-| **component_declaration** | Components declared as functions: `export default function` for the one the file is named after, `export function` for a secondary one, with props destructured in the signature. **NEVER `React.FC`**: it adds nothing over annotated props, makes generic components awkward to type, and drags in an implicit `children` most components do not accept. |
+| **component_declaration** | Components declared as functions, with props destructured in the signature. **NEVER `React.FC`**: it adds nothing over annotated props, makes generic components awkward to type, and drags in an implicit `children` most components do not accept. Do NOT flag the export form: default and named are both common for the component a file is named after, and neither is the convention. |
 | **i18n_compliance** | Visible text ALWAYS via `useTranslations()`. Never hardcoded strings. |
 | **store_selectors** | Store state consumed via specific selectors: `useStore((s) => ({ field: s.field }))`. Do NOT destructure the entire store. |
 | **tailwind_classes** | Styles via Tailwind CSS. Use `cn()` for conditional classes (not template literals). |
