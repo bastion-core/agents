@@ -486,7 +486,12 @@ response.fold(
 
 > **Full documentation**: See `context/nextjs-app/widget_patterns.md`
 >
-> `'use client'` only when needed. Props with interface. Text via useTranslations().
+> Declared as a function: `export default function` for the component the file is named after,
+> `export function` for a secondary one. Props destructured in the signature and typed with an
+> interface. **NEVER `React.FC`**: it adds nothing over annotated props, it makes generics awkward
+> and it drags in an implicit `children` most components do not accept.
+>
+> `'use client'` only when needed. Text via useTranslations().
 > Store state via specific selectors. Verify state.kind before accessing data.
 
 ## Custom Hook Pattern
