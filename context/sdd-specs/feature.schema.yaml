@@ -5,10 +5,10 @@
 #
 # NOTA SOBRE CAMPOS OPCIONALES. El validador rechaza cualquier campo que este archivo no
 # declare, asi que un campo util que falte aqui no es una omision inocua: obliga a
-# elegir entre borrar contenido de producto o dejar la validacion en rojo. Los cuatro
-# campos opcionales de mas abajo —status, target_repositories, epic y user_stories— se
-# agregaron por eso. Una feature pequena no los necesita; una que atraviesa varios
-# repositorios o que se entrega por fases no cabe sin ellos.
+# elegir entre borrar contenido de producto o dejar la validacion en rojo. Los cinco
+# campos opcionales de mas abajo —title, status, target_repositories, epic y
+# user_stories— se agregaron por eso. Una feature pequena no los necesita; una que
+# atraviesa varios repositorios o que se entrega por fases no cabe sin ellos.
 
 schema:
   feature:
@@ -20,6 +20,17 @@ schema:
       - Debe ser corto, descriptivo y unico dentro del proyecto
       - No incluir prefijos de modulo ni sufijos tecnicos
     ejemplo: push_notifications
+
+  title:
+    tipo: string
+    obligatorio: false
+    descripcion: Nombre corto de la funcionalidad en lenguaje de negocio.
+    reglas:
+      - Usar lenguaje de negocio, NUNCA jerga tecnica ni snake_case
+      - Debe ser comprensible para cualquier stakeholder no tecnico
+      - Maximo 100 caracteres
+      - Convive con feature (identificador tecnico), no lo reemplaza
+    ejemplo: Notificaciones push a conductores
 
   owner:
     tipo: string
@@ -279,7 +290,7 @@ schema:
 #   - Usar lenguaje de negocio, nunca jerga tecnica
 #   - Los valores deben ser concretos y medibles
 #   - No inventar datos que no hayan sido proporcionados por el usuario
-#   - Los campos opcionales (status, target_repositories, epic, user_stories) se incluyen
+#   - Los campos opcionales (title, status, target_repositories, epic, user_stories) se incluyen
 #     cuando aportan; omitirlos es valido y no degrada la spec. Lo que NO es valido es
 #     recortar contenido de producto para que quepa en el esquema: si hace falta un campo
 #     que no existe, se agrega aqui.
