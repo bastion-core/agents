@@ -642,7 +642,7 @@ Organizar las tareas en componentes para identificar dependencias cruzadas y per
 
 #### 3. Formato de archivo de tarea
 
-Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}_{action}_{component}.yaml`. El contenido debe seguir **ESTRICTAMENTE** el esquema definido en (usar `read_file` para leer el archivo):
+Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-{action}-{component}.yaml`. El contenido debe seguir **ESTRICTAMENTE** el esquema definido en (usar `read_file` para leer el archivo):
 
 **`context/sdd-specs/task.schema.yaml`**
 
@@ -658,7 +658,7 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}_
 
 | Campo | Descripcion |
 |-------|-------------|
-| `task` | Identificador unico en snake_case |
+| `task` | Identificador unico en snake_case, maximo 47 caracteres |
 | `level` | Complejidad: L1, L2, L3, L4 o L5 |
 | `parent` | Referencia al technical.yaml padre |
 | `status` | Siempre `PENDING` al crearse |
@@ -687,6 +687,14 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}_
     - "Sin agente dedicado en el catalogo para React+Vite+TS; usar nextjs-development:frontend-nextjs como referencia con ajuste manual"
   ```
 
+**Reglas de nombre de archivo y de `task`:**
+
+- El archivo se nombra `{NN}-{action}-{component}.yaml` (kebab-case, separador `-`). `{NN}` es un contador de **dos digitos** (`01`, `02`, ... `99`); nunca tres digitos (`001`).
+- El nombre del archivo, sin la extension `.yaml`, debe tener **maximo 50 caracteres** (contador y guion incluidos).
+- El campo `task` es el mismo nombre en snake_case (`{action}_{component}`) y debe tener **maximo 47 caracteres**, de modo que `NN-` + el nombre en kebab-case nunca supere los 50. El limite duro de la plataforma es 50 caracteres en `task` (se persiste como `task_code`, columna varchar(50)): si se supera, la sincronizacion del registry falla.
+- Acortar el nombre eliminando palabras redundantes (ej. `synced`, `existing`, `acceptance`) en lugar de truncarlo a mitad de palabra.
+- Un change no debe tener mas de **99 tareas**. Si el alcance lo exigiera, dividirlo en otra version de cambios (otro `change_id`) en lugar de usar un contador de tres digitos.
+
 #### 4. Criterios de nivel (level)
 
 | Nivel | Criterio |
@@ -706,7 +714,7 @@ Crear las tareas en el directorio `{directorio_del_technical.yaml}/tasks/` usand
 #### 6. Ejemplo de tarea generada (CORRECTO)
 
 ```yaml
-# tasks/01_create_endpoint.yaml
+# tasks/01-create-endpoint.yaml
 task: create_trip_endpoint
 level: L3
 parent: technical.yaml
@@ -757,7 +765,7 @@ Aplicar las siguientes reglas para determinar que tarea debe ejecutarse antes qu
 
 1. **Construir grafo de dependencias** — Para cada tarea, identificar de que otras tareas depende segun las reglas anteriores
 2. **Asignar `depends_on`** — Agregar solo dependencias directas (no transitivas) usando el campo `task` como identificador
-3. **Ordenar por topologia** — Numerar las tareas (`{NN}_`) segun orden topologico: tareas sin dependencias primero (numeros bajos), tareas dependientes despues
+3. **Ordenar por topologia** — Numerar las tareas (`{NN}-`) segun orden topologico: tareas sin dependencias primero (numeros bajos), tareas dependientes despues
 4. **Detectar ciclos** — Verificar que no existan dependencias circulares. Si se detecta un ciclo, reportar el conflicto y sugerir como resolverlo
 5. **Identificar paralelismo** — Tareas del mismo nivel sin dependencias entre si pueden ejecutarse en paralelo
 
