@@ -7,10 +7,17 @@ schema:
   task:
     tipo: string
     obligatorio: true
+    max_length: 47
     descripcion: Identificador unico de la tarea en snake_case.
     reglas:
       - Usar snake_case (ej. create_user_endpoint, implement_auth_service)
       - Debe ser corto, descriptivo y unico dentro de la funcionalidad
+      - Maximo 47 caracteres. El limite duro de la plataforma es 50 (se persiste como task_code en una
+        columna varchar(50); si se supera, la sincronizacion del registry falla), y 47 deja espacio para
+        el prefijo `NN-` del nombre de archivo
+      - Coincide con el nombre del archivo en kebab-case, sin el contador. El archivo se nombra
+        `{NN}-{action}-{component}.yaml` con NN de dos digitos (01-99) y, sin la extension, maximo 50 caracteres
+      - Un change no debe superar 99 tareas; si lo hiciera, crear otra version de cambios
     ejemplo: create_notifications_table
 
   id:
