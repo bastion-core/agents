@@ -2,7 +2,7 @@
   "name": "seven-samurai-agents",
   "metadata": {
     "description": "Collection of specialized Claude Code agents and skills for development workflows",
-    "version": "1.2.1"
+    "version": "1.3.0"
   },
   "owner": {
     "name": "bastion-core",
@@ -14,7 +14,7 @@
       "name": "general",
       "source": "./plugins/general",
       "description": "Language-agnostic agents for software architecture analysis (feature.yaml to technical.yaml pipeline), system design, and product specification",
-      "version": "1.8.1",
+      "version": "1.9.0",
       "tags": [
         "architecture",
         "design",
@@ -25,7 +25,7 @@
       "name": "python-development",
       "source": "./plugins/python-development",
       "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
-      "version": "1.8.0",
+      "version": "1.9.0",
       "tags": [
         "python",
         "backend",
@@ -41,7 +41,7 @@
       "name": "flutter-development",
       "source": "./plugins/flutter-development",
       "description": "Flutter and Dart development agents for mobile app development and code review with Clean Architecture, BLoC+Freezed, and Result<T> error handling",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "tags": [
         "flutter",
         "dart",
@@ -55,7 +55,7 @@
       "name": "nextjs-development",
       "source": "./plugins/nextjs-development",
       "description": "Next.js development agents for two tracks: frontend-only apps with Two-layer Architecture, Zustand stores and Either monad error handling, and fullstack apps with Hexagonal Architecture, Route Handlers and Prisma (including a dedicated security reviewer)",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "tags": [
         "nextjs",
         "react",
