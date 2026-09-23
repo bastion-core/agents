@@ -9,6 +9,8 @@ title: Importacion masiva de movimientos de inventario via archivo CSV
 
 status: planned
 
+type: improvement
+
 scope:
   description: |
     Permitir al administrador de almacen importar movimientos de inventario

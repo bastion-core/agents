@@ -51,6 +51,20 @@ schema:
       - Transiciones validas: planned → in-progress → completed | cancelled
     ejemplo: planned
 
+  type:
+    tipo: enum
+    obligatorio: true
+    descripcion: Tipo de cambio, mismo vocabulario que items.type en la plataforma.
+    valores_permitidos:
+      - story
+      - improvement
+      - bugfix
+    reglas:
+      - Usar story para una historia de usuario nueva
+      - Usar improvement para una mejora sobre comportamiento existente
+      - Usar bugfix para una correccion de un defecto
+    ejemplo: story
+
   scope:
     tipo: objeto
     obligatorio: true

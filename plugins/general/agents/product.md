@@ -334,6 +334,7 @@ Leer y analizar los insumos del usuario para extraer datos relevantes por campo:
 - **change_id**: Identificador del cambio en kebab-case
 - **feature**: Nombre de la feature padre (del feature.yaml leido)
 - **title**: Titulo descriptivo del cambio
+- **type**: Tipo de cambio (story | improvement | bugfix)
 - **scope**: Descripcion del cambio, elementos in_scope y out_of_scope
 - **acceptance_criteria**: Criterios verificables especificos del cambio
 - **affected_repos**: Repositorios impactados
@@ -349,6 +350,7 @@ Si hay datos opcionales (dependencies, risks), extraerlos tambien.
 | feature | Coincide con el feature.yaml padre |
 | title | Titulo descriptivo en lenguaje de negocio, max 100 caracteres |
 | status | Debe ser "planned" para cambios nuevos |
+| type | Uno de story, improvement o bugfix |
 | scope.description | Describe el cambio respecto a la funcionalidad existente |
 | scope.in_scope | Al menos 2 elementos concretos |
 | scope.out_of_scope | Al menos 1 elemento |
@@ -373,6 +375,8 @@ change_id: [v1-nombre-del-cambio]
 feature: [nombre_feature_padre]
 title: [Titulo descriptivo del cambio]
 status: planned
+
+type: [story | improvement | bugfix]
 
 scope:
   description: |
