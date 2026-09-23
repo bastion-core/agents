@@ -1,6 +1,6 @@
 {
   "name": "python-development",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Python backend development agents and skills with Clean Architecture, FastAPI, Celery, library development, and Alembic migration jobs",
   "author": {
     "name": "bastion-core",

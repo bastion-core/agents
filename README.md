@@ -426,6 +426,18 @@ Los skills se invocan explícitamente con el prefijo `/`:
 /backend-py-celery --help
 ```
 
+### Uso Eficiente de Tokens
+
+Cada paso de un agente vuelve a procesar toda su conversación, así que el coste crece con **número de pasos × tamaño del contexto**, no con el código que escribe. Medido en una sesión real de 37 agentes, el 97 % del consumo fue relectura de contexto: sobre todo archivos vistos enteros (71 % de lo que devolvía la terminal) y diffs completos en las revisiones (20 %).
+
+Todos los agentes incluyen una sección **Working Efficiently** con las reglas de lectura. Para quien los orquesta:
+
+- **Una tarea por invocación.** Un agente que encadena varias tareas arrastra el contexto de todas: en la medición, uno con seis tareas consumió el 18 % del total. Lanza un agente por tarea y pásale sólo lo que necesita.
+- **Prompts con la sección relevante**, no con documentos enteros: la tarea, las rutas y las decisiones ya tomadas, en vez de "lee el change y todo el handoff".
+- **Una sola revisión por cambio.** Revisión por commit o revisión final del PR, no las dos, salvo que haya habido correcciones.
+- **Verificación proporcional al riesgo.** Pruebas por mutación y ejecuciones repetidas de la suite completa en cambios de dinero, seguridad o concurrencia; en copys, textos o documentación basta con los tests tocados y la suite una vez.
+- **Archivos grandes encarecen todo.** Un archivo de miles de líneas que tocan varias tareas se paga en cada una; dividirlo es una optimización de coste además de mantenimiento.
+
 ### Listar Agentes y Skills Instalados
 
 ```bash

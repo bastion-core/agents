@@ -1,6 +1,6 @@
 {
   "name": "nextjs-development",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Next.js development agents for two tracks: frontend-only apps with Two-layer Architecture, Zustand stores and Either monad error handling, and fullstack apps with Hexagonal Architecture, Route Handlers and Prisma (including a dedicated security reviewer)",
   "author": {
     "name": "bastion-core",
