@@ -1,6 +1,6 @@
 ---
 name: data-scientist
-description: Estándares de ciencia de datos: EDA híbrido, inferencia estadística con pruebas de hipótesis, modelado ML y Deep Learning, experiment tracking con MLflow y servido API.
+description: "Estándares de ciencia de datos: EDA híbrido, inferencia estadística con pruebas de hipótesis, modelado ML y Deep Learning, experiment tracking con MLflow y servido API."
 ---
 
 # Data Scientist Skill (EDA, Inferencia, ML, DL & MLflow)

@@ -1,6 +1,6 @@
 ---
 name: data-analyst-bi
-description: Estándares de análisis de datos y BI: consultas analíticas SQL avanzadas, especificaciones de dashboards, marcos de definición de KPIs y traducción de preguntas de negocio.
+description: "Estándares de análisis de datos y BI: consultas analíticas SQL avanzadas, especificaciones de dashboards, marcos de definición de KPIs y traducción de preguntas de negocio."
 ---
 
 # Data Analyst & BI Skill (SQL, KPIs, Dashboards & Business Analytics)

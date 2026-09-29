@@ -1,6 +1,6 @@
 ---
 name: analytics-engineer
-description: Estándares de Analytics Engineering con dbt: capa semántica (Semantic Layer), definición de métricas formales, modelado dimensional de marts y gobernanza de exposures.
+description: "Estándares de Analytics Engineering con dbt: capa semántica (Semantic Layer), definición de métricas formales, modelado dimensional de marts y gobernanza de exposures."
 ---
 
 # Analytics Engineer Skill (dbt Semantic Layer, Marts, Metrics & Exposures)

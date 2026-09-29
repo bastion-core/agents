@@ -1,6 +1,6 @@
 ---
 name: data-engineer-airflow
-description: Estándares de ingeniería de datos para Airflow + pandas + dbt: ingesta en bordes, carga idempotente y transformaciones dbt (staging, intermediate, marts).
+description: "Estándares de ingeniería de datos para Airflow + pandas + dbt: ingesta en bordes, carga idempotente y transformaciones dbt (staging, intermediate, marts)."
 ---
 
 # Data Engineer Skill (Airflow + pandas + dbt)

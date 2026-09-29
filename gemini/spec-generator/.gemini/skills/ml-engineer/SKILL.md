@@ -1,6 +1,6 @@
 ---
 name: ml-engineer
-description: Estándares de ML Engineering y MLOps: promoción en Model Registry, CI/CD para modelos, monitoreo continuo de drift (PSI), pipelines de reentrenamiento y feature stores.
+description: "Estándares de ML Engineering y MLOps: promoción en Model Registry, CI/CD para modelos, monitoreo continuo de drift (PSI), pipelines de reentrenamiento y feature stores."
 ---
 
 # ML Engineer & MLOps Skill (Registry Promotion, CI/CD, Drift, Retraining & Feature Store)

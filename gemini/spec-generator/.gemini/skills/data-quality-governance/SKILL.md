@@ -1,6 +1,6 @@
 ---
 name: data-quality-governance
-description: Estándares de calidad y gobernanza de datos: contratos de datos, suites de Great Expectations o Soda, linaje de datos, clasificación/enmascaramiento PII y SLAs de frescura.
+description: "Estándares de calidad y gobernanza de datos: contratos de datos, suites de Great Expectations o Soda, linaje de datos, clasificación/enmascaramiento PII y SLAs de frescura."
 ---
 
 # Data Quality & Governance Skill (Contracts, Soda/GX, Lineage, PII & Freshness)
