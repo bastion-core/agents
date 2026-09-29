@@ -86,11 +86,17 @@ cd /path/to/project-repo && claude
 |----------|-----------|---------|
 | **product** | arroba + product [descripcion] | Genera feature.yaml (spec de producto) o change.yaml (cambio incremental) |
 | **architect** | arroba + architect [instrucciones] | Genera technical.yaml (spec tecnica) a partir de feature.yaml o change.yaml |
+| **data-architect** | arroba + data-architect [instrucciones] | Diseña y audita modelos PostgreSQL, optimización de tuplas y memoria, indexación y DDL sin downtime |
+| **qa-data-architect** | arroba + qa-data-architect [instrucciones] | Audita migraciones PostgreSQL: riesgo de bloqueos (locks), índices FK faltantes, padding de tuplas, UTC y RLS |
 
 ### Desarrollo y Review por Stack
 
 | Subagent | Stack | Funcion |
 |----------|-------|---------|
+| **data-engineer** | Python/Airflow/dbt | Ciclo completo de ingeniería y modelado de datos: ingesta en bordes (pandas), orquestación Airflow, dbt Semantic Layer, marts y exposures |
+| **qa-data-engineer** | Python/Airflow/dbt | Audita DAGs de Airflow: idempotencia, backfill safety, reintentos/SLAs, antipatrón de pandas fuera de DWH y tests dbt |
+| **data-scientist** | Python/ML/Stats/BI | Ciclo completo de ciencia y ML: EDA híbrido, inferencia estadística, ML/Deep Learning, Model Registry, CI/CD, drift (PSI), retraining y servido API |
+| **qa-data-scientist** | Python/ML/Stats/BI | Audita pipelines ML: data leakage, splits temporales, rigor estadístico (p-hacking), tamaños del efecto y MLflow |
 | **backend-py** | Python/FastAPI | Desarrollo backend con Hexagonal Architecture |
 | **qa-backend-py** | Python/FastAPI | Testing y QA para backend Python |
 | **frontend-nextjs** | Next.js | Desarrollo frontend con Two-layer Architecture |

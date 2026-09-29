@@ -465,25 +465,42 @@ claude-agents/
 │   ├── README.md                         # Documentación del sistema de plugins
 │   ├── general/                          # Agentes agnósticos de lenguaje
 │   │   ├── README.md
-│   │   └── agents/
-│   │       └── architect.md             # Agente de arquitectura
+│   │   ├── agents/
+│   │   │   ├── architect.md             # Agente de arquitectura
+│   │   │   ├── data-architect.md        # Agente de arquitectura de datos PostgreSQL
+│   │   │   ├── product.md               # Agente de especificación de producto
+│   │   │   └── qa-data-architect.md     # Agente de QA de arquitectura de datos
+│   │   └── skills/
+│   │       ├── data-architecture-postgre/ # Skill de PostgreSQL seguro y optimizado
+│   │       ├── data-quality-governance/ # Skill de contratos de datos, Soda/GX y PII
+│   │       └── github-workflow/         # Skill de flujo de GitHub
 │   ├── python-development/              # Ecosistema Python
 │   │   ├── README.md
 │   │   ├── agents/
+│   │   │   ├── analytics-engineer.md   # Agente de modelado dbt, métricas y marts
 │   │   │   ├── backend-py.md           # Agente de backend Python
+│   │   │   ├── data-engineer-airflow.md # Agente de ingeniería de datos para Airflow
+│   │   │   ├── data-scientist.md       # Agente de ciencia de datos y BI
+│   │   │   ├── ml-engineer.md          # Agente de MLOps, registry y serving
 │   │   │   ├── qa-backend-py.md        # Agente de QA/testing
+│   │   │   ├── qa-data-engineer.md     # Agente de QA para pipelines y Airflow
+│   │   │   ├── qa-data-scientist.md    # Agente de QA para machine learning
 │   │   │   ├── reviewer-backend-py.md  # Agente de code review
 │   │   │   ├── reviewer-library-py.md  # Agente de review de librerías
 │   │   │   ├── reviewer-airflow-dags-py.md      # Agente de review de DAGs Airflow
 │   │   │   └── reviewer-alembic-backend-py.md   # Agente de review de jobs Alembic
 │   │   └── skills/                     # Un directorio por skill, cada uno con SKILL.md
+│   │       ├── analytics-engineer/     # Skill de dbt Semantic Layer, métricas y marts
 │   │       ├── backend-py/             # Skill de estándares backend Python
 │   │       ├── backend-py-alembic/     # Skill de criterios Alembic
 │   │       ├── backend-py-celery/      # Skill FastAPI + Celery
 │   │       ├── backend-py-library/     # Skill de librerías Python
+│   │       ├── data-analyst-bi/        # Skill de SQL analítico, KPIs y dashboards
+│   │       ├── data-engineer-airflow/  # Skill de ingeniería de datos para Airflow
+│   │       ├── data-scientist/         # Skill de ciencia de datos y ML
 │   │       ├── migrations-creator-py/  # Skill de creación de migraciones
-│   │       ├── qa-backend-py/          # Skill de QA backend
-│   │       └── qa-airflow-dags-py/     # Skill de QA para DAGs Airflow
+│   │       ├── ml-engineer/            # Skill de MLOps, Model Registry y drift
+│   │       └── qa-backend-py/          # Skill de QA backend
 │   └── flutter-development/             # Ecosistema Flutter
 │       ├── README.md
 │       └── agents/
