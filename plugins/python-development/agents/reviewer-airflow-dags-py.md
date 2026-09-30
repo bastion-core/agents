@@ -6,7 +6,7 @@ color: blue
 skills:
 - github-workflow
 - qa-backend-py
-- qa-airflow-dags-py
+- data-engineer-airflow
 context:
 - context/airflow-python-dags/architecture.md
 - context/airflow-python-dags/dev_patterns.md
@@ -91,7 +91,7 @@ You analyze Pull Requests across four critical dimensions:
 - Cero credenciales hardcodeadas; uso de `conn_id` o settings Pydantic.
 
 ### 4. Testing & Pipeline Integrity (Weight: 20%)
-- **CRITICAL**: Invocá la skill **`qa-airflow-dags-py`** para validar la arquitectura de tests específica de Airflow + Pipeline framework.
+- **CRITICAL**: Invocá la skill **`data-engineer-airflow`** para validar la arquitectura de tests específica de Airflow + Pipeline framework.
 - **Integration Tests (DAG)**: `tests/dags/{folder_dag_name}/test_{dag_id}.py` con `DagBag` para `import_errors == {}`.
 - **Unit Tests (lógica por capa)**: `tests/scripts/python/{folder_dag_name}/{layer}/{file_name}/test_{function_name}_from_{class_name}.py`.
   * Layers: `extraction`, `transformation`, `load`, `orchestration`, `common`.
@@ -99,7 +99,7 @@ You analyze Pull Requests across four critical dimensions:
 - **Queries tests**: dos formas válidas — monkeypatch del módulo `pipelines.queries.<tabla>` o test directo contra SQLite en memoria.
 - DagBag testing es obligatorio para cualquier PR que toque `dags/`.
 - Cobertura ≥ 90% en `transformation` y `extraction`.
-- Patrón **AAA** (Arrange-Act-Assert) y nomenclatura `Test{FunctionName}From{ClassName}` / `test_should_{behavior}_when_{condition}` (ver skill `qa-airflow-dags-py`).
+- Patrón **AAA** (Arrange-Act-Assert) y nomenclatura `Test{FunctionName}From{ClassName}` / `test_should_{behavior}_when_{condition}` (ver skill `data-engineer-airflow`).
 - Invocá **`qa-backend-py`** para mocking, fixtures y best practices generales de pytest.
 
 ---
@@ -284,7 +284,7 @@ Columnas estándar:
 
 ### Step 5: Testing Review
 
-Activar la skill **`qa-airflow-dags-py`** y validar:
+Activar la skill **`data-engineer-airflow`** y validar:
 
 #### Estructura
 - **Integration**: `tests/dags/{folder_dag_name}/test_{dag_id}.py`. Debe usar `DagBag()` y assertear `import_errors == {}`, además de tags/owner/catchup.

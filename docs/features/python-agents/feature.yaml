@@ -11,7 +11,7 @@ description: |
 acceptance_criteria:
   - "El sistema provee un agente para desarrollo backend con FastAPI (`backend-py`)."
   - "El sistema provee un agente para revisión de código de backend con FastAPI (`reviewer-backend-py`)."
-  - "El sistema provee un agente para desarrollo de DAGs de Airflow (`dev-airflow-dags-py`)."
+  - "El sistema provee un agente para ingeniería de datos y DAGs de Airflow (`data-engineer-airflow`)."
 
 business_rules:
   - stack_tecnologico: "Python, FastAPI, Airflow"

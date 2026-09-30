@@ -1,3 +1,8 @@
+---
+name: qa-backend-py
+description: "Procedimientos de QA para Python backend, incluyendo unit tests, integración y cobertura >90%."
+---
+
 # QA Backend Python Skill
 
 Estándares y procedimientos para asegurar la calidad en aplicaciones backend Python, enfocados en pruebas unitarias, de integración e ingeniería del caos. El objetivo es certificar entregas con **cobertura de código >90%**.
