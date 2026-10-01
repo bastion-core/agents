@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Validador de especificaciones SDD (feature, change, technical y tasks).
-# Delega en scripts/validate_specs.py. Requiere python3 y PyYAML (pip install pyyaml).
+# Delega en scripts/validate_specs.py. Requiere python3 y PyYAML (python3 -m pip install --user pyyaml).
+# Codigos de salida: 0 ok, 1 specs invalidas, 2 error de entorno o uso.
 #
 # Uso: ./scripts/validate-specs.sh <directorio-o-archivos...>
 #      ./scripts/validate-specs.sh            (sin argumentos: context/sdd-specs y docs/features)
@@ -15,7 +16,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 if ! python3 -c "import yaml" >/dev/null 2>&1; then
-    echo "Falta PyYAML: pip install pyyaml" >&2
+    echo "Falta PyYAML. Instalalo con: python3 -m pip install --user pyyaml" >&2
     exit 2
 fi
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validador de especificaciones SDD (feature, change, technical y tasks).
 
-Carga el schema de cada tipo desde context/sdd-specs/*.schema.yaml y valida las specs
+Carga el schema de cada tipo (ver "Resolucion de schemas") y valida las specs
 contra el: campos obligatorios, tipos, max_length y enums (valores_permitidos), ademas de
 las reglas propias de las tasks (nombre de archivo y longitud del campo `task`).
 
@@ -9,10 +9,19 @@ Los estados (`status`) son una lista cerrada por tipo; ver
 context/sdd-specs/status-vocabulary.md. Solo depende de PyYAML.
 
 Uso:
-    python3 scripts/validate_specs.py [--schemas-dir DIR] RUTA [RUTA ...]
+    python3 validate_specs.py [--schemas DIR] RUTA [RUTA ...]
 
-Codigo de salida: 0 sin errores (los avisos no fallan), 1 con algun ERROR, 2 por uso
-incorrecto.
+Resolucion de schemas (el primero que exista; funciona desde cualquier cwd):
+    1. --schemas DIR (alias: --schemas-dir)
+    2. variable de entorno SDD_SCHEMAS_DIR
+    3. schemas/ empaquetado junto al script (<script>/schemas o <script>/../schemas)
+    4. context/sdd-specs/ subiendo desde el directorio del script y luego desde el cwd
+       (modo repo)
+
+Codigos de salida:
+    0  sin errores (los avisos no fallan)
+    1  specs invalidas (hay algun ERROR)
+    2  error de entorno o uso: falta PyYAML, schemas no encontrados o argumentos invalidos
 """
 
 from __future__ import annotations
@@ -29,7 +38,11 @@ from typing import Any
 try:
     import yaml
 except ImportError:  # pragma: no cover
-    sys.stderr.write("Falta PyYAML: pip install pyyaml\n")
+    sys.stderr.write(
+        "ERROR DE ENTORNO: falta PyYAML, necesario para ejecutar el validador de specs SDD.\n"
+        "Instalalo con: python3 -m pip install --user pyyaml\n"
+        "(salida 2 = error de entorno; salida 1 = specs invalidas)\n"
+    )
     sys.exit(2)
 
 ERROR = "ERROR"
@@ -51,7 +64,41 @@ LEGACY_TASK_FILE_RE = re.compile(r"^\d{2}_[a-z0-9]+(?:_[a-z0-9]+)*$")
 SNAKE_RE = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 
 VOCAB_DOC = "context/sdd-specs/status-vocabulary.md"
-DEFAULT_SCHEMAS_DIR = Path(__file__).resolve().parent.parent / "context" / "sdd-specs"
+SCHEMAS_ENV = "SDD_SCHEMAS_DIR"
+REPO_SCHEMAS_REL = Path("context") / "sdd-specs"
+
+
+def _has_schemas(directory: Path) -> bool:
+    return all((directory / f"{t}.schema.yaml").is_file() for t in SPEC_TYPES)
+
+
+def _walk_up(start: Path) -> list[Path]:
+    start = start.resolve()
+    return [start, *start.parents]
+
+
+def resolve_schemas_dir(explicit: Path | str | None = None) -> Path:
+    """Devuelve el directorio de schemas segun el orden documentado en el modulo.
+
+    Una ruta explicita (--schemas o SDD_SCHEMAS_DIR) se respeta tal cual: si no contiene los
+    schemas se falla en lugar de caer silenciosamente a otra fuente.
+    """
+    if explicit:
+        return Path(explicit).expanduser()
+    env = os.environ.get(SCHEMAS_ENV)
+    if env:
+        return Path(env).expanduser()
+    script_dir = Path(__file__).resolve().parent
+    candidates = [script_dir / "schemas", script_dir.parent / "schemas"]
+    candidates += [d / REPO_SCHEMAS_REL for d in _walk_up(script_dir)]
+    candidates += [d / REPO_SCHEMAS_REL for d in _walk_up(Path.cwd())]
+    for candidate in candidates:
+        if _has_schemas(candidate):
+            return candidate
+    tried = ", ".join(str(c) for c in candidates[:2] + [Path("<...>") / REPO_SCHEMAS_REL])
+    raise FileNotFoundError(
+        f"no se encontraron los schemas ({tried}). Usa --schemas DIR o la variable {SCHEMAS_ENV}"
+    )
 
 
 @dataclass(frozen=True)
@@ -421,8 +468,8 @@ def _task_names(directory: Path) -> set[str]:
     return names
 
 
-def validate_paths(paths: list[str], schemas_dir: Path = DEFAULT_SCHEMAS_DIR) -> tuple[list[Finding], int]:
-    schemas = load_schemas(schemas_dir)
+def validate_paths(paths: list[str], schemas_dir: Path | None = None) -> tuple[list[Finding], int]:
+    schemas = load_schemas(resolve_schemas_dir(schemas_dir))
     findings: list[Finding] = []
     validated = 0
     sibling_cache: dict[Path, set[str]] = {}
@@ -442,14 +489,20 @@ def validate_paths(paths: list[str], schemas_dir: Path = DEFAULT_SCHEMAS_DIR) ->
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Valida specs SDD contra context/sdd-specs/*.schema.yaml")
+    parser = argparse.ArgumentParser(
+        description="Valida specs SDD contra los schemas *.schema.yaml",
+        epilog="Salida: 0 ok, 1 specs invalidas, 2 error de entorno/uso (PyYAML, schemas, argumentos).",
+    )
     parser.add_argument("paths", nargs="+", help="directorios o archivos a validar")
-    parser.add_argument("--schemas-dir", type=Path, default=DEFAULT_SCHEMAS_DIR)
+    parser.add_argument(
+        "--schemas", "--schemas-dir", dest="schemas", type=Path, default=None,
+        help=f"directorio con los *.schema.yaml (por defecto: ${SCHEMAS_ENV}, schemas/ empaquetado o context/sdd-specs/)",
+    )
     parser.add_argument("--quiet", action="store_true", help="no imprimir los avisos")
     args = parser.parse_args(argv)
 
     try:
-        findings, validated = validate_paths(args.paths, args.schemas_dir)
+        findings, validated = validate_paths(args.paths, args.schemas)
     except (FileNotFoundError, KeyError) as exc:
         sys.stderr.write(f"No se pudieron cargar los schemas: {exc}\n")
         return 2
