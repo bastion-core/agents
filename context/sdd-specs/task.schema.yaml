@@ -12,9 +12,10 @@ schema:
     reglas:
       - Usar snake_case (ej. create_user_endpoint, implement_auth_service)
       - Debe ser corto, descriptivo y unico dentro de la funcionalidad
-      - Maximo 47 caracteres. El limite duro de la plataforma es 50 (se persiste como task_code en una
-        columna varchar(50); si se supera, la sincronizacion del registry falla), y 47 deja espacio para
-        el prefijo `NN-` del nombre de archivo
+      - Maximo 47 caracteres como guia estricta (deja espacio para el prefijo `NN-` del nombre de archivo).
+        El limite duro de la plataforma es 100 (se persiste como task_code; sdd-flow-ai v28 lo amplia a
+        100 y si se supera la sincronizacion del registry falla). El validador marca AVISO entre 48 y 100
+        caracteres y ERROR por encima de 100
       - Coincide con el nombre del archivo en kebab-case, sin el contador. El archivo se nombra
         `{NN}-{action}-{component}.yaml` con NN de dos digitos (01-99) y, sin la extension, maximo 50 caracteres
       - Un change no debe superar 99 tareas; si lo hiciera, crear otra version de cambios
@@ -49,12 +50,26 @@ schema:
   status:
     tipo: string (enum)
     obligatorio: true
-    descripcion: Estado actual de la tarea.
+    descripcion: Estado actual de la tarea (lista cerrada, en MAYUSCULAS con guion bajo).
     valores_permitidos:
       - PENDING
       - IN_PROGRESS
       - COMPLETED
       - BLOCKED
+    reglas:
+      - Lista cerrada de exactamente 4 valores. Cualquier otro valor (DONE, TODO, PLANNED, CANCELLED,
+        IN-PROGRESS, Completed, minusculas) es invalido; no inventes estados ni cambies el casing
+      - Las tasks usan MAYUSCULAS; feature.yaml y change.yaml usan minuscula con guion (planned,
+        in-progress). Comparten el concepto de ciclo de vida, no los valores
+      - Al crear una task, siempre iniciar en PENDING. IN_PROGRESS, BLOCKED y COMPLETED solo los fija
+        quien ejecuta la tarea, nunca el agente que la genera
+      - "Transiciones validas: PENDING -> IN_PROGRESS | BLOCKED; IN_PROGRESS -> COMPLETED | BLOCKED |
+        PENDING; BLOCKED -> PENDING | IN_PROGRESS; COMPLETED es terminal"
+      - BLOCKED significa que la tarea no puede avanzar por una dependencia externa a ella. El motivo se
+        documenta en `scope` o en las notas de la task; no existe un campo adicional para ello
+      - Una task depende de otras del mismo change con `depends_on`; eso no la hace BLOCKED
+      - No existe CANCELLED para tasks
+      - Vocabulario completo, transiciones y ejemplos invalidos en context/sdd-specs/status-vocabulary.md
     ejemplo: PENDING
 
   phase:

@@ -66,7 +66,9 @@ schema:
     reglas:
       - Al crear un feature.yaml nuevo, siempre iniciar en planned
       - Transiciones validas: planned -> in-progress -> completed | cancelled
-      - Es el mismo ciclo de vida que usan change.yaml y las tareas; los tres niveles se leen juntos en el reporte de estado
+      - Lista cerrada. Cualquier otro valor (PLANNED, in_progress, Completed, DONE) es invalido; no inventes estados ni cambies el casing
+      - Comparte el concepto de ciclo de vida con change.yaml y las tareas, y usa los mismos valores que change.yaml; las tareas usan otro vocabulario en MAYUSCULAS (PENDING, IN_PROGRESS, COMPLETED, BLOCKED)
+      - Vocabulario completo en context/sdd-specs/status-vocabulary.md
     ejemplo: planned
 
   target_repositories:

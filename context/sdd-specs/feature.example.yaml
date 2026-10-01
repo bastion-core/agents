@@ -16,8 +16,9 @@ feature: warehouse_inventory_management
 owner: product_owner
 version: 1.0
 
-# OPCIONAL — el mismo ciclo de vida que usan el change.yaml y las tareas, para que los
-# tres niveles se lean juntos en el reporte de estado. Al crear, siempre planned.
+# OPCIONAL — mismos valores que el change.yaml (planned, in-progress, completed, cancelled).
+# Las tareas comparten el concepto de ciclo de vida pero usan otro vocabulario en MAYUSCULAS
+# (ver status-vocabulary.md). Al crear, siempre planned.
 status: planned
 
 # OPCIONAL — donde vive la funcionalidad completa. No confundir con affected_repos del
