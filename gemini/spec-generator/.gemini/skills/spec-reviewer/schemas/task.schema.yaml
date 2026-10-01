@@ -1,0 +1,191 @@
+# Schema: task.yaml
+# Definicion formal de cada campo del archivo de tarea (task.yaml) en la metodologia SDD.
+# Este archivo describe el formato esperado para que el subagent architect genere tareas validas
+# y para que los sub-agentes de desarrollo las ejecuten sin ambiguedad.
+
+schema:
+  task:
+    tipo: string
+    obligatorio: true
+    max_length: 47
+    descripcion: Identificador unico de la tarea en snake_case.
+    reglas:
+      - Usar snake_case (ej. create_user_endpoint, implement_auth_service)
+      - Debe ser corto, descriptivo y unico dentro de la funcionalidad
+      - Maximo 47 caracteres como guia estricta (deja espacio para el prefijo `NN-` del nombre de archivo).
+        El limite duro de la plataforma es 100 (se persiste como task_code; sdd-flow-ai v28 lo amplia a
+        100 y si se supera la sincronizacion del registry falla). El validador marca AVISO entre 48 y 100
+        caracteres y ERROR por encima de 100
+      - Coincide con el nombre del archivo en kebab-case, sin el contador. El archivo se nombra
+        `{NN}-{action}-{component}.yaml` con NN de dos digitos (01-99) y, sin la extension, maximo 50 caracteres
+      - Un change no debe superar 99 tareas; si lo hiciera, crear otra version de cambios
+    ejemplo: create_notifications_table
+
+  id:
+    tipo: string
+    obligatorio: false
+    descripcion: Identificador alfanumerico de la tarea (opcional).
+    reglas:
+      - Formato TASK-NNN o similar
+    ejemplo: TASK-001
+
+  level:
+    tipo: string (enum)
+    obligatorio: true
+    descripcion: Nivel de complejidad y alcance de la tarea.
+    valores_permitidos:
+      - L1: Tarea simple, un solo archivo, sin dependencias externas
+      - L2: Tarea moderada, 2-3 archivos, dependencias internas
+      - L3: Tarea compleja, multiples archivos, integracion entre capas
+      - L4: Tarea critica, cambios cross-cutting, impacto en multiples dominios
+      - L5: Tarea de alto riesgo, cambios de infraestructura o arquitectura base
+    ejemplo: L2
+
+  parent:
+    tipo: string
+    obligatorio: true
+    descripcion: Referencia al archivo technical.yaml que define esta funcionalidad.
+    ejemplo: technical.yaml
+
+  status:
+    tipo: string (enum)
+    obligatorio: true
+    descripcion: Estado actual de la tarea (lista cerrada, en MAYUSCULAS con guion bajo).
+    valores_permitidos:
+      - PENDING
+      - IN_PROGRESS
+      - COMPLETED
+      - BLOCKED
+    reglas:
+      - Lista cerrada de exactamente 4 valores. Cualquier otro valor (DONE, TODO, PLANNED, CANCELLED,
+        IN-PROGRESS, Completed, minusculas) es invalido; no inventes estados ni cambies el casing
+      - Las tasks usan MAYUSCULAS; feature.yaml y change.yaml usan minuscula con guion (planned,
+        in-progress). Comparten el concepto de ciclo de vida, no los valores
+      - Al crear una task, siempre iniciar en PENDING. IN_PROGRESS, BLOCKED y COMPLETED solo los fija
+        quien ejecuta la tarea, nunca el agente que la genera
+      - "Transiciones validas: PENDING -> IN_PROGRESS | BLOCKED; IN_PROGRESS -> COMPLETED | BLOCKED |
+        PENDING; BLOCKED -> PENDING | IN_PROGRESS; COMPLETED es terminal"
+      - BLOCKED significa que la tarea no puede avanzar por una dependencia externa a ella. El motivo se
+        documenta en `scope` o en las notas de la task; no existe un campo adicional para ello
+      - Una task depende de otras del mismo change con `depends_on`; eso no la hace BLOCKED
+      - No existe CANCELLED para tasks
+      - Vocabulario completo, transiciones y ejemplos invalidos en context/sdd-specs/status-vocabulary.md
+    ejemplo: PENDING
+
+  phase:
+    tipo: string
+    obligatorio: false
+    descripcion: Fase del desarrollo a la que pertenece la tarea.
+    ejemplo: "1 - Foundation"
+
+  depends_on:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Lista de identificadores de tareas (campo task) que deben completarse antes.
+    ejemplo:
+      - create_domain_models
+      - create_migrations
+
+  assigned_subagent:
+    tipo: string
+    obligatorio: false
+    max_length: 150
+    descripcion: Sub-agente responsable de ejecutar la tarea (formato plugin:agent).
+    reglas:
+      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py)
+      - Maximo 150 caracteres (persistido en columna varchar(150)/varchar(200) segun destino de sync)
+      - Nunca escribir prosa, justificaciones o razonamiento en este campo
+      - Si no existe un sub-agente dedicado en el catalogo para el stack de la tarea, omitir el campo
+        (dejarlo sin definir) en lugar de explicar el motivo aqui
+      - La justificacion de por que no hay sub-agente asignado, o que sub-agente usar como referencia
+        manual mas cercana, va como un item de `patterns` (ej. "Sin agente dedicado para React+Vite+TS;
+        usar nextjs-development:frontend-nextjs como referencia con ajuste manual")
+    ejemplo: "python-development:backend-py"
+
+  scope:
+    tipo: string (multilinea)
+    obligatorio: true
+    descripcion: Descripcion detallada del alcance tecnico de la tarea.
+    reglas:
+      - Explicar claramente QUE se debe hacer
+      - Mencionar componentes involucrados
+      - No incluir codigo de implementacion
+    ejemplo: |
+      Implementar la tabla de notificaciones en PostgreSQL usando SQLAlchemy.
+      La tabla debe incluir campos para id, destinatario_id, titulo, cuerpo y timestamp.
+      Asegurar que existan los indices correctos para busqueda por destinatario.
+
+  files_to_create:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Lista de rutas de archivos que esta tarea debe crear.
+    ejemplo:
+      - app/infrastructure/repositories/sql_notification_repository.py
+      - tests/unit/test_repository.py
+
+  files_to_modify:
+    tipo: lista de objetos
+    obligatorio: false
+    descripcion: Lista de archivos existentes que la funcionalidad requiere modificar.
+    campos:
+      path:
+        tipo: string
+        descripcion: Ruta relativa del archivo
+      change:
+        tipo: string
+        descripcion: Descripcion del cambio requerido
+    ejemplo:
+      - path: app/api/v1/router.py
+        change: Agregar el nuevo router de notificaciones
+
+  patterns:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Patrones arquitectonicos y convenciones de codigo a seguir.
+    ejemplo:
+      - Repository pattern con SQLAlchemy
+      - Dependency Injection para el motor de DB
+      - Typing estricto con Pydantic v2
+
+  acceptance:
+    tipo: lista de strings
+    obligatorio: true
+    descripcion: Criterios de aceptacion verificables que deben cumplirse.
+    reglas:
+      - Minimo 2 criterios
+      - Deben ser verificables mediante tests o inspeccion
+    ejemplo:
+      - La migracion se ejecuta sin errores
+      - Los tests unitarios del repositorio pasan con 100% de cobertura
+      - Se valida la integridad referencial con la tabla de usuarios
+
+  context_files:
+    tipo: lista de strings
+    obligatorio: true
+    descripcion: Archivos de referencia necesarios para ejecutar la tarea.
+    ejemplo:
+      - technical.yaml
+      - docs/architecture.md
+
+  estimated_effort:
+    tipo: string
+    obligatorio: false
+    descripcion: Estimacion de esfuerzo (ej. small, medium, large).
+    ejemplo: medium
+
+  stack:
+    tipo: string
+    obligatorio: false
+    descripcion: Stack tecnologico asociado a la tarea.
+    ejemplo: python_fastapi
+
+  source_file:
+    tipo: string
+    obligatorio: false
+    descripcion: Archivo fuente de donde proviene la definicion (si aplica).
+    ejemplo: feature.yaml
+
+# Reglas generales:
+#   - Todo el contenido descriptivo debe estar en ESPANOL
+#   - Las claves (keys) deben estar en INGLES
+#   - Las rutas de archivos deben ser relativas a la raiz del proyecto
