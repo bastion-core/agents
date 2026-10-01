@@ -33,6 +33,29 @@ Validates the structure and format of agent files in the repository.
 
 ---
 
+### validate-specs.sh
+
+Validates SDD specs (`feature.yaml`, `change.yaml`, `technical.yaml` and `tasks/*.yaml`) against the schemas in `context/sdd-specs/`. It delegates to `validate_specs.py` and only needs Python 3 and PyYAML (`pip install pyyaml`).
+
+**Usage**:
+```bash
+./scripts/validate-specs.sh <directory-or-files...>
+./scripts/validate-specs.sh context/sdd-specs docs/features
+python3 -m unittest discover -s scripts/tests -v   # validator tests
+```
+
+**What it validates**:
+- Required fields, types, `max_length` and enums (`valores_permitidos`, including the `L1: description` format)
+- `status` as a closed list per spec type with exact casing: tasks use `PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`; feature and change use `planned`, `in-progress`, `completed`, `cancelled`; technical has no status (see `context/sdd-specs/status-vocabulary.md`)
+- Task file name pattern `NN-action-component.yaml` (2-digit NN, at most 50 characters without extension)
+- Task `task` length: OK up to 47, warning from 48 to 100, error above 100
+
+**Output and exit code**: every finding shows the file, field, value and allowed values, as `ERROR` or `AVISO`. The exit code is non-zero if there is any `ERROR`; warnings do not fail. Legacy docs under `docs/features` (free `phase`, `NN_snake_case.yaml` names, older structure) only produce warnings, but enum violations and task limits remain errors.
+
+**Used in CI/CD**: the `validate-specs` job in `.github/workflows/validate-agents.yml` runs the tests and the validator over `context/sdd-specs` and `docs/features`.
+
+---
+
 ### sync-workflows.sh
 
 Synchronizes GitHub Actions workflows from this repository to your projects.
