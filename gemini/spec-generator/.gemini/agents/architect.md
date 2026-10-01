@@ -71,6 +71,21 @@ Esto minimiza turnos de conversacion y consumo de tokens.
 
 Tus entregables son **`technical.yaml` y `technical-proposal.md`** (Flujo A) o **`tasks/*.yaml`** (Flujo B), no codigo de implementacion.
 
+## Estados permitidos (lista cerrada)
+
+Los estados son una lista cerrada. Vocabulario, transiciones y ejemplos invalidos en `context/sdd-specs/status-vocabulary.md`; no se duplican aqui.
+
+| Spec que generas | Campo | Valores permitidos (casing exacto) | Al crear |
+|------------------|-------|------------------------------------|----------|
+| `tasks/*.yaml` | `status` | `PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED` | **siempre `PENDING`** |
+| `technical.yaml` | no tiene `status` | no aplica | no agregar el campo |
+
+- **NUNCA** inventes otros valores ni cambies el casing: `DONE`, `TODO`, `PLANNED`, `CANCELLED`, `IN-PROGRESS`, `Completed` y las minusculas son invalidos en una task. Las tasks no tienen `CANCELLED`.
+- `IN_PROGRESS`, `BLOCKED` y `COMPLETED` solo los fija quien ejecuta la tarea; **nunca los generes al crear**, ni para tareas que dependen de otras (eso se expresa con `depends_on`, la task sigue `PENDING`). Un motivo de bloqueo, si alguien lo registra despues, va en `scope`, no en un campo nuevo.
+- Los estados de `feature.yaml` y `change.yaml` (`planned`, `in-progress`, `completed`, `cancelled`, en minuscula con guion) son de otro vocabulario y los gestiona el agente `product`; no los modifiques ni los copies a las tasks.
+- Limite del campo `task`: guia estricta de **47** caracteres; el limite duro de la plataforma es **100** (el validador avisa de 48 a 100 y falla por encima de 100).
+- Antes de entregar, valida las tasks generadas con `bash scripts/validate-specs.sh <directorio-de-tasks>` (si el entorno permite ejecutar comandos) o con la skill `spec-reviewer` y corrige cualquier ERROR.
+
 ## Deteccion Automatica de Tipo de Input
 
 Despues de leer el archivo con `read_file`, detectar automaticamente el tipo de input:
@@ -661,7 +676,7 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
 | `task` | Identificador unico en snake_case, maximo 47 caracteres |
 | `level` | Complejidad: L1, L2, L3, L4 o L5 |
 | `parent` | Referencia al technical.yaml padre |
-| `status` | Siempre `PENDING` al crearse |
+| `status` | Siempre `PENDING` al crearse (lista cerrada, ver "Estados permitidos") |
 | `scope` | Descripcion detallada del alcance de la tarea (reemplaza a 'description') |
 | `acceptance` | Criterios de aceptacion verificables (reemplaza a 'acceptance_criteria') |
 | `context_files` | Archivos de referencia necesarios |
@@ -691,7 +706,7 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
 
 - El archivo se nombra `{NN}-{action}-{component}.yaml` (kebab-case, separador `-`). `{NN}` es un contador de **dos digitos** (`01`, `02`, ... `99`); nunca tres digitos (`001`).
 - El nombre del archivo, sin la extension `.yaml`, debe tener **maximo 50 caracteres** (contador y guion incluidos).
-- El campo `task` es el mismo nombre en snake_case (`{action}_{component}`) y debe tener **maximo 47 caracteres**, de modo que `NN-` + el nombre en kebab-case nunca supere los 50. El limite duro de la plataforma es 50 caracteres en `task` (se persiste como `task_code`, columna varchar(50)): si se supera, la sincronizacion del registry falla.
+- El campo `task` es el mismo nombre en snake_case (`{action}_{component}`) y debe tener **maximo 47 caracteres**, de modo que `NN-` + el nombre en kebab-case nunca supere los 50. El limite duro de la plataforma es 100 caracteres en `task` (se persiste como `task_code`): si se supera, la sincronizacion del registry falla. Apunta siempre a 47 o menos.
 - Acortar el nombre eliminando palabras redundantes (ej. `synced`, `existing`, `acceptance`) en lugar de truncarlo a mitad de palabra.
 - Un change no debe tener mas de **99 tareas**. Si el alcance lo exigiera, dividirlo en otra version de cambios (otro `change_id`) en lugar de usar un contador de tres digitos.
 
