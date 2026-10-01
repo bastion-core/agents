@@ -26,3 +26,6 @@ sandbox/
 # Backup files
 *.bak
 *.backup
+# Python
+__pycache__/
+*.pyc

@@ -29,6 +29,7 @@ schema:
   title:
     tipo: string
     obligatorio: true
+    max_length: 100
     descripcion: Titulo descriptivo del cambio en lenguaje de negocio.
     reglas:
       - Debe describir el cambio de forma clara y concisa

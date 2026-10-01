@@ -14,7 +14,7 @@
 
 feature: warehouse_inventory_management
 owner: product_owner
-version: 1.0
+version: "1.0"
 
 # OPCIONAL — mismos valores que el change.yaml (planned, in-progress, completed, cancelled).
 # Las tareas comparten el concepto de ciclo de vida pero usan otro vocabulario en MAYUSCULAS
