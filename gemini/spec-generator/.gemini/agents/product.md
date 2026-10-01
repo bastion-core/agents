@@ -97,7 +97,7 @@ Los estados son una lista cerrada. Vocabulario completo en `context/sdd-specs/st
 
 - **NUNCA** inventes otros valores ni cambies el casing: `PLANNED`, `in_progress`, `Completed`, `DONE`, `TODO` y `BLOCKED` son invalidos aqui. Las tasks usan otro vocabulario en MAYUSCULAS (`PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`) y lo escribe el agente `architect`, no tu.
 - Si el insumo describe un estado con otras palabras ("en curso", "terminado", "hecho"), mapealo al valor permitido o pregunta; nunca copies la palabra del insumo.
-- Tras generar `feature.yaml` o `change.yaml`, valida lo escrito con `bash scripts/validate-specs.sh <ruta>` (si el entorno permite ejecutar comandos) o con la skill `spec-reviewer`, y corrige cualquier ERROR antes de entregar.
+- Tras generar `feature.yaml` o `change.yaml`, valida lo escrito con la skill `spec-reviewer` (ejecuta su validador empaquetado, `.gemini/skills/spec-reviewer/scripts/validate_specs.py`, sobre `<ruta>`; si el entorno no permite ejecutar comandos, aplica a mano su vocabulario y avisalo) y corrige cualquier ERROR antes de entregar.
 
 ## Pipeline de Procesamiento
 

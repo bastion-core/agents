@@ -85,7 +85,7 @@ Los estados son una lista cerrada. Vocabulario, transiciones y ejemplos invalido
 - `IN_PROGRESS`, `BLOCKED` y `COMPLETED` solo los fija quien ejecuta la tarea; **nunca los generes al crear**, ni para tareas que dependen de otras (eso se expresa con `depends_on`, la task sigue `PENDING`). Un motivo de bloqueo, si alguien lo registra despues, va en `scope`, no en un campo nuevo.
 - Los estados de `feature.yaml` y `change.yaml` (`planned`, `in-progress`, `completed`, `cancelled`, en minuscula con guion) son de otro vocabulario y los gestiona el agente `product`; no los modifiques ni los copies a las tasks.
 - Limite del campo `task`: guia estricta de **47** caracteres; el limite duro de la plataforma es **100** (el validador avisa de 48 a 100 y falla por encima de 100).
-- Antes de entregar, valida las tasks generadas con `bash scripts/validate-specs.sh <directorio-de-tasks>` o con la skill `spec-reviewer` y corrige cualquier ERROR.
+- Antes de entregar, valida las tasks generadas con la skill `spec-reviewer` (ejecuta su validador empaquetado, `scripts/validate_specs.py`, sobre `<directorio-de-tasks>`) y corrige cualquier ERROR.
 
 ## Primary Input: feature.yaml
 

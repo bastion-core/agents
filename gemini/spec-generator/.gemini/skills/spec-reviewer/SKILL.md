@@ -5,11 +5,11 @@ description: "Revisa specs SDD (feature, change, technical, tasks) con el valida
 
 # Spec Reviewer Skill
 
-Revisa especificaciones SDD (`feature.yaml`, `change.yaml`, `technical.yaml` y `tasks/*.yaml`) antes de que se sincronicen con el registry de la plataforma. Combina el validador automatico del repo con una revision manual de lo que un script no puede comprobar.
+Revisa especificaciones SDD (`feature.yaml`, `change.yaml`, `technical.yaml` y `tasks/*.yaml`) antes de que se sincronicen con el registry de la plataforma. Combina el validador automatico empaquetado con esta skill con una revision manual de lo que un script no puede comprobar.
 
 ## Regla estricta: estados como lista cerrada
 
-**RECHAZAR cualquier estado (`status`) que no este en `context/sdd-specs/status-vocabulary.md`**, sin excepciones y sin "interpretar" la intencion. Al rechazar, reportar siempre el archivo, el valor encontrado y los valores permitidos para ese tipo de spec.
+**RECHAZAR cualquier estado (`status`) que no este en el vocabulario cerrado (`references/status-vocabulary.md` de esta skill; en el repo de agentes, `context/sdd-specs/status-vocabulary.md`)**, sin excepciones y sin "interpretar" la intencion. Al rechazar, reportar siempre el archivo, el valor encontrado y los valores permitidos para ese tipo de spec.
 
 | Spec | Valores permitidos (casing exacto) |
 |------|------------------------------------|
@@ -23,16 +23,42 @@ Revisa especificaciones SDD (`feature.yaml`, `change.yaml`, `technical.yaml` y `
 - Aplica tambien a `change.dependencies.features[].status` (vocabulario de feature).
 - No corregir un estado "para que pase": la correccion debe reflejar el estado real. Si no esta claro cual es, preguntar a quien pide la revision.
 
+## Ejecutar el validador
+
+La skill trae su propio validador y sus schemas; funciona en cualquier proyecto y desde cualquier directorio de trabajo, sin depender de `scripts/` ni de `context/` del repo revisado.
+
+- Script: `<skill>/scripts/validate_specs.py`
+- Schemas: `<skill>/schemas/{feature,change,technical,task}.schema.yaml` (los encuentra solo)
+- `<skill>` es el directorio base de esta skill que informa el entorno al cargarla. En Gemini es `.gemini/skills/spec-reviewer` relativo al proyecto, es decir `python3 .gemini/skills/spec-reviewer/scripts/validate_specs.py <ruta-a-specs>`.
+
+```bash
+python3 <skill>/scripts/validate_specs.py <ruta-a-specs> [<ruta-a-specs> ...]
+```
+
+Ejemplos:
+
+```bash
+python3 <skill>/scripts/validate_specs.py features/                        # todo un repo de specs
+python3 <skill>/scripts/validate_specs.py features/mi-feature/changes/001  # un change con sus tasks
+python3 <skill>/scripts/validate_specs.py --schemas otro/dir features/     # schemas alternativos
+```
+
+Requiere `python3` y PyYAML. Si falta: `python3 -m pip install --user pyyaml`. Los schemas se buscan en este orden: `--schemas DIR`, variable `SDD_SCHEMAS_DIR`, `schemas/` de la skill y `context/sdd-specs/` (modo repo).
+
+### Interpretar la salida y los exit codes
+
+- Una linea por hallazgo: `ERROR <archivo> [campo]: <mensaje>` o `AVISO ...`, y al final `Specs validadas: N | errores: N | avisos: N` y `Resultado: OK|FALLO`.
+- Exit `0`: sin errores (puede haber avisos). Exit `1`: specs invalidas; hay al menos un `ERROR` y la revision es `RECHAZADA`. Exit `2`: error de entorno o uso (falta PyYAML, schemas no encontrados, argumentos); **no dice nada sobre las specs**: corregir el entorno y reintentar.
+- `Specs validadas: 0` significa que no se encontro ninguna spec en la ruta: revisar la ruta antes de dar un OK.
+
+### Regla de oro
+
+Si por alguna razon no se puede ejecutar el validador (sin Python, sin permisos para instalar PyYAML, exit 2 persistente), **aplicar a mano** el vocabulario cerrado de estados y las reglas de los schemas, y **avisar explicitamente en el informe** que la validacion automatica no se ejecuto y por que. Nunca dar un veredicto como si el validador hubiera pasado.
+
 ## Procedimiento
 
-1. **Identificar las specs** a revisar (directorio de la feature/change o archivos indicados). Leer `context/sdd-specs/status-vocabulary.md` y los `*.schema.yaml` correspondientes.
-2. **Ejecutar el validador** desde la raiz del repo (requiere PyYAML):
-
-   ```bash
-   bash scripts/validate-specs.sh <directorio-o-archivos>
-   ```
-
-   Si el repo revisado no contiene el script, usar el de este repo de agentes o aplicar a mano las reglas de esta skill y de los schemas, y decirlo en el informe. El validador verifica campos obligatorios, tipos, `max_length`, enums, estados por tipo con casing exacto, patron del nombre de archivo de las tasks y longitud del campo `task`.
+1. **Identificar las specs** a revisar (directorio de la feature/change o archivos indicados). Leer `references/status-vocabulary.md` y los `schemas/*.schema.yaml` de esta skill.
+2. **Ejecutar el validador empaquetado** (ver "Ejecutar el validador"). Verifica campos obligatorios, tipos, `max_length`, enums, estados por tipo con casing exacto, patron del nombre de archivo de las tasks y longitud del campo `task`.
 3. **Trasladar al informe** cada `ERROR` y `AVISO` del validador sin suavizarlos. Un `ERROR` bloquea la aprobacion.
 4. **Revision manual** de lo que el script no cubre (ver abajo).
 5. **Emitir el informe** con el formato de salida.
@@ -54,7 +80,7 @@ Revisa especificaciones SDD (`feature.yaml`, `change.yaml`, `technical.yaml` y `
 ## Revision de specs SDD
 
 Alcance: <rutas revisadas>
-Validador: <exit code, N specs, N errores, N avisos>
+Validador: <exit code, N specs, N errores, N avisos> | NO EJECUTADO (motivo; revision manual)
 
 ### Errores (bloquean)
 - <archivo> [campo]: valor `<valor>` no permitido. Permitidos: <lista>. Accion: <correccion>
