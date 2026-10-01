@@ -29,6 +29,7 @@ schema:
   title:
     tipo: string
     obligatorio: true
+    max_length: 100
     descripcion: Titulo descriptivo del cambio en lenguaje de negocio.
     reglas:
       - Debe describir el cambio de forma clara y concisa
@@ -40,7 +41,7 @@ schema:
   status:
     tipo: enum
     obligatorio: true
-    descripcion: Estado actual del cambio dentro del ciclo de vida.
+    descripcion: Estado actual del cambio dentro del ciclo de vida (lista cerrada, en minuscula con guion medio).
     valores_permitidos:
       - planned
       - in-progress
@@ -49,6 +50,11 @@ schema:
     reglas:
       - Al crear un change.yaml nuevo, siempre iniciar en planned
       - Transiciones validas: planned → in-progress → completed | cancelled
+      - Lista cerrada. Cualquier otro valor (PLANNED, in_progress, Completed, DONE, BLOCKED) es invalido;
+        no inventes estados ni cambies el casing
+      - Comparte el concepto de ciclo de vida con feature.yaml y las tasks, no los valores. Las tasks usan
+        otro vocabulario en MAYUSCULAS (PENDING, IN_PROGRESS, COMPLETED, BLOCKED)
+      - Vocabulario completo en context/sdd-specs/status-vocabulary.md
     ejemplo: planned
 
   type:
@@ -139,8 +145,15 @@ schema:
             tipo: string
             descripcion: Nombre de la feature en snake_case
           status:
-            tipo: string
-            descripcion: Estado requerido de la feature (ej. completed, in-progress)
+            tipo: enum
+            descripcion: Estado requerido de la feature, con el vocabulario de feature.yaml.
+            valores_permitidos:
+              - planned
+              - in-progress
+              - completed
+              - cancelled
+            reglas:
+              - Mismo vocabulario y casing que el status de feature.yaml (minuscula con guion medio)
       external:
         tipo: lista de strings
         obligatorio: false

@@ -12,6 +12,10 @@ Language-agnostic agents that work across all technologies and programming langu
 
 - **product.md**: Product Specification Agent that analyzes documents, images, and business context to generate standardized `feature.yaml` files. The generated specification serves as a Definition of Ready (DoR) for engineering teams, ensuring all product requirements are clear, complete, and actionable before implementation begins.
 
+## Available Skills
+
+- **spec-reviewer**: Reviews SDD specs (`feature.yaml`, `change.yaml`, `technical.yaml` and `tasks/*.yaml`). Runs `scripts/validate-specs.sh` and manually checks what the script cannot (change/task coherence, `depends_on`, verifiable `acceptance`). It rejects any `status` outside the closed vocabulary defined in `context/sdd-specs/status-vocabulary.md` and reports the value with the allowed ones.
+
 ## Usage
 
 General agents are technology-agnostic and can be used in any project:

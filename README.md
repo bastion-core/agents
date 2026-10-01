@@ -35,6 +35,8 @@ Agente enfocado en análisis, evaluación y recomendación de soluciones arquite
 - Planificación de proyectos
 - Documentación de arquitectura
 
+**Skill `spec-reviewer` (`[general/skills] spec-reviewer`):** revisa specs SDD (feature, change, technical y tasks) ejecutando `scripts/validate-specs.sh` y comprobando a mano la coherencia entre change y tasks. Rechaza cualquier `status` fuera de la lista cerrada de `context/sdd-specs/status-vocabulary.md`.
+
 ### Python Development Plugin
 
 Agentes y skills especializados para desarrollo Python backend.
@@ -465,8 +467,10 @@ claude-agents/
 │   ├── README.md                         # Documentación del sistema de plugins
 │   ├── general/                          # Agentes agnósticos de lenguaje
 │   │   ├── README.md
-│   │   └── agents/
-│   │       └── architect.md             # Agente de arquitectura
+│   │   ├── agents/
+│   │   │   └── architect.md             # Agente de arquitectura
+│   │   └── skills/
+│   │       └── spec-reviewer/           # Revisor de specs SDD
 │   ├── python-development/              # Ecosistema Python
 │   │   ├── README.md
 │   │   ├── agents/

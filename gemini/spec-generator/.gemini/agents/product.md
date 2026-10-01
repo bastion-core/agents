@@ -85,6 +85,20 @@ Antes de ejecutar el pipeline, determinar que tipo de spec generar:
 
 Tu entregable es un **documento de especificacion de producto**, no un documento tecnico.
 
+## Estados permitidos (lista cerrada)
+
+Los estados son una lista cerrada. Vocabulario completo en `context/sdd-specs/status-vocabulary.md`; no se duplica aqui.
+
+| Spec que generas | Campo | Valores permitidos (casing exacto) | Al crear |
+|------------------|-------|------------------------------------|----------|
+| `feature.yaml` | `status` (opcional) | `planned`, `in-progress`, `completed`, `cancelled` | `planned` |
+| `change.yaml` | `status` | `planned`, `in-progress`, `completed`, `cancelled` | `planned` |
+| `change.yaml` | `dependencies.features[].status` | los mismos valores de feature | el estado que la feature debe tener |
+
+- **NUNCA** inventes otros valores ni cambies el casing: `PLANNED`, `in_progress`, `Completed`, `DONE`, `TODO` y `BLOCKED` son invalidos aqui. Las tasks usan otro vocabulario en MAYUSCULAS (`PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`) y lo escribe el agente `architect`, no tu.
+- Si el insumo describe un estado con otras palabras ("en curso", "terminado", "hecho"), mapealo al valor permitido o pregunta; nunca copies la palabra del insumo.
+- Tras generar `feature.yaml` o `change.yaml`, valida lo escrito con `bash scripts/validate-specs.sh <ruta>` (si el entorno permite ejecutar comandos) o con la skill `spec-reviewer`, y corrige cualquier ERROR antes de entregar.
+
 ## Pipeline de Procesamiento
 
 ```
@@ -105,7 +119,7 @@ Leer y analizar todos los insumos para extraer datos relevantes por campo obliga
 
 **Campos opcionales** — extraer solo si el insumo los trae. No inventarlos ni preguntar por ellos:
 
-- **status**: En que punto del ciclo esta. Por defecto `planned`
+- **status**: En que punto del ciclo esta (lista cerrada, ver "Estados permitidos"). Por defecto `planned`
 - **target_repositories**: Repositorios donde vive la funcionalidad
 - **epic**: Problema, resultado buscado, metricas o ejemplo de referencia con cifras. Suele venir en los documentos de contexto de negocio, no en la descripcion de la funcionalidad
 - **user_stories**: Solo si el insumo desglosa la funcionalidad en historias. Señales de que aplica: habla de fases o versiones, menciona varios roles, o los criterios pasan de una docena y se agrupan solos por tema

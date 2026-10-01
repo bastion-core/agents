@@ -1,6 +1,6 @@
 # technical.yaml
 feature: gemini_initial_config_shell
-layer: script  # Shell script de automatizacion (no API, no agente)
+layer: infrastructure  # Shell script de automatizacion (no API, no agente); el enum no tiene "script"
 
 architecture:
   pattern: Sequential Pipeline Script (Validate-Execute-Verify)

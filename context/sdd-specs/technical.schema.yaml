@@ -2,6 +2,8 @@
 # Definicion formal de cada campo del archivo technical.yaml (especificacion tecnica SDD).
 # Este archivo describe el formato esperado para que el subagent architect genere specs validas.
 # Los campos se clasifican como OBLIGATORIOS o CONDICIONALES segun el tipo de funcionalidad.
+# Un technical.yaml NO tiene campo status (los status de api_contract son codigos HTTP). Los estados
+# de feature, change y task estan en context/sdd-specs/status-vocabulary.md.
 
 schema:
   # --- CAMPOS OBLIGATORIOS ---
