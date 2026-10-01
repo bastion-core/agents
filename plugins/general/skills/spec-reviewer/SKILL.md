@@ -1,7 +1,6 @@
 ---
 name: spec-reviewer
 description: "Revisa specs SDD (feature, change, technical, tasks) con el validador y a mano; rechaza estados fuera de la lista cerrada de status-vocabulary.md."
-allowed-tools: Read, Grep, Glob, Bash
 ---
 
 # Spec Reviewer Skill
