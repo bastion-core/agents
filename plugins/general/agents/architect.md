@@ -245,7 +245,7 @@ Despues de leer el technical.yaml con Read tool, validar que contenga el formato
 | Tipo | Campo/Seccion | Criterio | Estado posible |
 |------|--------------|----------|----------------|
 | Obligatorio | `feature` | snake_case valido | missing / invalid_format / valid |
-| Obligatorio | `layer` | enum[api, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
+| Obligatorio | `layer` | enum[api, frontend, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
 | Obligatorio | `architecture` | tiene `pattern` y `entry` | missing / incomplete / valid |
 | Obligatorio | `dependencies` | lista no vacia | missing / valid |
 | Condicional | `api_contract` | si la funcionalidad expone un endpoint HTTP: method, path, auth, request, response | missing / incomplete / valid |
@@ -691,7 +691,7 @@ Cuando el feature.yaml pasa la validacion y el analisis arquitectonico esta comp
 ```yaml
 # technical.yaml
 feature: [snake_case, debe coincidir con el feature.yaml de entrada]
-layer: [api | domain | infrastructure | agent | worker | scheduler]
+layer: [api | frontend | domain | infrastructure | agent | worker | scheduler]
 
 architecture:
   pattern: [patron arquitectonico identificado con descripcion breve]

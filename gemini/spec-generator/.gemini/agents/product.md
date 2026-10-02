@@ -319,7 +319,7 @@ Si hay datos opcionales (dependencies, risks), extraerlos tambien.
 | scope.out_of_scope | Al menos 1 elemento |
 | acceptance_criteria | Al menos 3 criterios verificables, especificos al cambio |
 | affected_repos | Al menos 1 repositorio |
-| metadata | created_by, created_at, target_date y priority presentes |
+| metadata | created_by, created_at y priority presentes |
 
 - Si TODOS completos → Continuar a Fase C4
 - Si ALGUNO faltante → Ejecutar MissingDataRequest
@@ -359,7 +359,6 @@ affected_repos:
 metadata:
   created_by: product_owner
   created_at: "[YYYY-MM-DD]"
-  target_date: "[YYYY-MM-DD]"
   priority: [low | medium | high | critical]
 ```
 

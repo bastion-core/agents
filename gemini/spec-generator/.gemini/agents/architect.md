@@ -305,7 +305,7 @@ Organizar la implementacion en fases logicas siguiendo el orden de dependencias:
 | Campo | Regla de redaccion |
 |-------|-|
 | feature | snake_case, identico al feature.yaml de origen |
-| layer | enum: api, domain, infrastructure, agent, worker, scheduler |
+| layer | enum: api, frontend, domain, infrastructure, agent, worker, scheduler |
 | architecture.pattern | Patron especifico al stack con descripcion breve |
 | architecture.entry | Punto de entrada (endpoint, evento, comando) |
 | architecture.use_case | Descripcion tecnica del flujo principal |
@@ -573,7 +573,7 @@ Despues de leer el technical.yaml con `read_file`, validar que contenga el forma
 | Tipo | Campo/Seccion | Criterio | Estado posible |
 |------|--------------|----------|----------------|
 | Obligatorio | `feature` | snake_case valido | missing / invalid_format / valid |
-| Obligatorio | `layer` | enum[api, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
+| Obligatorio | `layer` | enum[api, frontend, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
 | Obligatorio | `architecture` | tiene `pattern` y `entry` | missing / incomplete / valid |
 | Obligatorio | `dependencies` | lista no vacia | missing / valid |
 | Condicional | `api_contract` | si la funcionalidad expone un endpoint HTTP: method, path, auth, request, response | missing / incomplete / valid |
