@@ -23,6 +23,7 @@ schema:
     descripcion: Capa principal de la funcionalidad en la arquitectura.
     valores_permitidos:
       - api: funcionalidad que expone endpoints HTTP REST
+      - frontend: interfaz de usuario web o movil (componentes, rutas, estado del cliente)
       - domain: logica de negocio pura sin exposicion directa
       - infrastructure: servicios de infraestructura (storage, messaging, etc.)
       - agent: agentes de IA o automatizacion

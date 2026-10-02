@@ -208,10 +208,6 @@ schema:
         tipo: string (fecha)
         obligatorio: true
         descripcion: Fecha de creacion en formato ISO 8601 (YYYY-MM-DD)
-      target_date:
-        tipo: string (fecha)
-        obligatorio: true
-        descripcion: Fecha objetivo de entrega en formato ISO 8601 (YYYY-MM-DD)
       priority:
         tipo: enum
         obligatorio: true
@@ -224,7 +220,6 @@ schema:
     ejemplo:
       created_by: product_owner
       created_at: "2025-01-15"
-      target_date: "2025-02-15"
       priority: high
 
 # Reglas generales de redaccion:
