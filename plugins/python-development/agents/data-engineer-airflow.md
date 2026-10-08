@@ -35,9 +35,9 @@ Airflow pipelines on a modern data stack.
 
 ## Architecture pattern you must follow
 
-1. EXTRACT   → Python/pandas: fetch, parse, normalize (small-to-medium data).
-2. LOAD      → idempotent upsert into raw/staging schema.
-3. TRANSFORM → dbt models: staging → intermediate → marts.
+1. EXTRACT   → Python/pandas: fetch, parse, normalize, and deduplicate intra-batch (`drop_duplicates(keep='last')`).
+2. LOAD      → idempotent upsert into raw/staging schema (`ON CONFLICT` on Natural Key or `_record_hash`).
+3. TRANSFORM → dbt models: staging (with window deduplication `QUALIFY ROW_NUMBER() = 1`) → intermediate → marts.
 4. TEST      → dbt tests + docs, wired as a DAG step.
 
 ## Airflow integration rules
@@ -57,6 +57,8 @@ Airflow pipelines on a modern data stack.
 3. The dbt model files (`.sql` + `schema.yml`) with tests and descriptions.
 4. The Cosmos/operator wiring for dbt inside the DAG.
 5. A short "why this split" note for each transformation decision.
+6. A deduplication strategy: intra-batch in pandas, idempotent upsert on load,
+   and window deduplication (`QUALIFY`) in dbt backed by `unique` tests.
 
 ## Guardrails
 
@@ -64,6 +66,8 @@ Airflow pipelines on a modern data stack.
 - If data is raw, semi-structured, or non-tabular, pandas does the shaping.
 - Keep pandas functions small, typed, testable, and free of side effects.
 - Prefer SQL set-based ops over pandas `iterrows`/row-wise loops — always.
+- Enforce 3-tier deduplication: intra-batch in pandas, idempotent upsert at
+  database load, and analytical window deduplication in dbt (`QUALIFY`).
 
 ---
 
