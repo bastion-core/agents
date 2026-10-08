@@ -46,10 +46,10 @@ semantic_models:
         type: categorical
 
     measures:
-      - name: order_total_usd
-        description: "Monto total monetario neto de la orden en USD."
+      - name: order_total_amount
+        description: "Monto total monetario neto de la orden en NUMERIC."
         agg: sum
-        expr: net_amount_usd
+        expr: net_amount
       - name: order_count
         description: "Conteo total de órdenes generadas."
         agg: count

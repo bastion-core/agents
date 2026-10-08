@@ -56,7 +56,7 @@ execution_config = ExecutionConfig(
 
 ## 3. DAG Canónico Híbrido (TaskFlow + Cosmos)
 
-A continuación se presenta el patrón canónico para un pipeline completo de ingesta de borde, carga idempotente y transformación dbt:
+A continuación se presenta el patrón canónico para un pipeline completo de ingesta de borde, carga idempotente y transformación dbt. **Nótese la estricta higiene de XCom: las tareas nunca pasan DataFrames ni payloads crudos pesados entre sí, solo metadatos escalares**:
 
 ```python
 from datetime import datetime, timedelta
@@ -66,7 +66,7 @@ from cosmos.profiles import PostgresUserPasswordProfileMapping
 
 from pipelines.extractors.customer_api_extractor import extract_raw_customers
 from pipelines.transformers.clean_customers import clean_and_validate_customers
-from pipelines.loaders.postgres_customer_loader import bulk_load_staging_customers
+from pipelines.loaders.postgres_customer_loader import bulk_load_raw_customers
 from pipelines.audit.audit_manager import record_pipeline_metrics
 
 DEFAULT_ARGS = {
@@ -86,21 +86,24 @@ DEFAULT_ARGS = {
 def customer_pipeline():
 
     @task
-    def extract_edge_data() -> dict:
-        """Extrae datos crudos desde la API externa preservando JSON/payloads."""
-        return extract_raw_customers()
+    def ingest_edge_to_raw(logical_date: str) -> dict:
+        """
+        Extrae datos crudos desde la API externa, valida y limpia con pandas (Fail-Fast),
+        y ejecuta la carga masiva idempotente hacia raw.customers.
+        Retorna ÚNICAMENTE metadatos escalares (XCom hygiene).
+        """
+        raw_payload = extract_raw_customers()
+        cleaned_df = clean_and_validate_customers(raw_payload)
+        load_summary = bulk_load_raw_customers(cleaned_df, logical_date=logical_date)
 
-    @task
-    def transform_edge_data(raw_payload: dict) -> dict:
-        """Limpia y valida tipos, unicidad y UTC con pandas bajo Fail-Fast."""
-        return clean_and_validate_customers(raw_payload)
+        # Solo metadatos escalares ligeros a XCom (conteos, identificador de lote)
+        return {
+            "rows_loaded": load_summary.get("loaded_rows", len(cleaned_df)),
+            "batch_id": load_summary.get("batch_id", logical_date),
+            "target_table": "raw.customers",
+        }
 
-    @task
-    def load_staging(cleaned_data: dict) -> dict:
-        """Carga masiva idempotente a PostgreSQL usando COPY y temp table upsert."""
-        return bulk_load_staging_customers(cleaned_data)
-
-    # 4. Subgrafo de transformación dbt orquestado por Cosmos
+    # Subgrafo de transformación dbt in-warehouse orquestado por Cosmos
     dbt_transformations = DbtTaskGroup(
         group_id="dbt_customer_transformations",
         project_config=ProjectConfig(dbt_project_path="/opt/airflow/dbt_project"),
@@ -123,11 +126,9 @@ def customer_pipeline():
         record_pipeline_metrics(load_summary)
 
     # Definición de dependencias
-    raw = extract_edge_data()
-    cleaned = transform_edge_data(raw)
-    load_summary = load_staging(cleaned)
+    load_summary = ingest_edge_to_raw(logical_date="{{ ds }}")
 
-    # El DbtTaskGroup espera a que la carga de staging termine
+    # El DbtTaskGroup se ejecuta tras la carga en raw; luego finaliza la observabilidad
     load_summary >> dbt_transformations >> finalize_pipeline(load_summary)
 
 customer_pipeline()

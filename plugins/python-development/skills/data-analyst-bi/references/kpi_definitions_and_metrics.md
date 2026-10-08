@@ -80,6 +80,6 @@ FROM monthly_revenue;
 
 ## 3. Principio de Aditividad en Métricas
 
-- **Totalmente Aditivas**: Pueden sumarse a través de cualquier dimensión (ej: `sales_amount_cents`, `item_quantity`).
+- **Totalmente Aditivas**: Pueden sumarse a través de cualquier dimensión (ej: `sales_amount`, `item_quantity`).
 - **Semi-Aditivas**: Pueden sumarse a través de algunas dimensiones (como producto o cliente), pero NUNCA a través del tiempo (ej: `account_balance`, `inventory_stock_count` — requieren agregación puntual al cierre de periodo).
 - **No Aditivas**: Ratios, promedios y porcentajes (ej: `margin_pct`, `conversion_rate`). Nunca deben promediarse promedios; se deben recalcular los numeradores y denominadores agregados antes de dividir.

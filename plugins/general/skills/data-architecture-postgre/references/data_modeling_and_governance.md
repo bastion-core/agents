@@ -66,23 +66,25 @@ CREATE INDEX idx_dim_customers_lookup
 ON core.dim_customers(customer_nk, is_current);
 ```
 
-### 3.2 Tablas de Hechos (`fact_*`)
+### 3.2 Tablas de Hechos (`fct_*`)
 - Unir exclusivamente contra las claves subrogadas (`_sk`) de las dimensiones.
 - Granularidad atómica claramente documentada.
-- Particionar por fecha de ocurrencia del hecho (`fact_date`).
+- En el Data Warehouse (DWH), las claves subrogadas (`_sk`) son deterministas generadas con hash MD5 (`TEXT`), mientras que en transaccional OLTP se puede usar `BIGINT IDENTITY`.
+- Particionar por fecha de ocurrencia del hecho (`sale_timestamp` o `fct_date`).
+- Valores monetarios siempre en `NUMERIC(precision, scale)`.
 
 ```sql
-CREATE TABLE core.fact_sales (
-    sale_id BIGINT GENERATED ALWAYS AS IDENTITY,
+CREATE TABLE core.fct_sales (
+    sale_sk TEXT NOT NULL,             -- Generado con dbt_utils.generate_surrogate_key
     date_sk INTEGER NOT NULL,          -- FK a dim_date (formato YYYYMMDD)
-    customer_sk BIGINT NOT NULL,      -- FK a dim_customers
-    product_sk BIGINT NOT NULL,       -- FK a dim_products
+    customer_sk TEXT NOT NULL,         -- FK a dim_customers
+    product_sk TEXT NOT NULL,          -- FK a dim_products
     quantity INTEGER NOT NULL,
-    gross_amount_cents BIGINT NOT NULL,
-    discount_cents BIGINT NOT NULL,
-    net_amount_cents BIGINT NOT NULL,
+    gross_amount NUMERIC(18, 4) NOT NULL,
+    discount_amount NUMERIC(18, 4) NOT NULL,
+    net_amount NUMERIC(18, 4) NOT NULL,
     sale_timestamp TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (sale_id, sale_timestamp)
+    PRIMARY KEY (sale_sk, sale_timestamp)
 ) PARTITION BY RANGE (sale_timestamp);
 ```
 
@@ -99,8 +101,8 @@ COMMENT ON TABLE app.orders IS
 
 -- Documentación de Columnas
 COMMENT ON COLUMN app.orders.id IS 'Identificador único global de la orden (PK).';
-COMMENT ON COLUMN app.orders.status IS 'Estado del ciclo de vida de la orden: PENDING, PAID, SHIPPED, CANCELLED.';
-COMMENT ON COLUMN app.orders.amount_cents IS 'Monto total facturado expresado en centavos en la moneda local.';
+COMMENT ON COLUMN app.orders.order_status IS 'Estado del ciclo de vida de la orden: PENDING, PAID, SHIPPED, CANCELLED.';
+COMMENT ON COLUMN app.orders.total_amount IS 'Monto total facturado en NUMERIC(18, 4) en la moneda local.';
 ```
 
 ### 4.1 Clasificación y Etiquetado de PII (GDPR / Privacidad)

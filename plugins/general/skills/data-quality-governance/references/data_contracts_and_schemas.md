@@ -38,8 +38,10 @@ schema:
       type: text
       nullable: false
       allowed_values: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED']
-    - name: total_amount_cents
-      type: bigint
+    - name: total_amount
+      type: numeric
+      precision: 18
+      scale: 4
       nullable: false
       minimum: 0
     - name: ordered_at

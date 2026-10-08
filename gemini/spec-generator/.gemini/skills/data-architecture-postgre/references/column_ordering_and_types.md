@@ -79,24 +79,27 @@ La jerarquía lógica estándar de una tabla es:
 
 ## 3. Matriz de Selección de Tipos de Datos
 
-### 3.1 Primary Keys: UUIDv7 vs BIGINT Identity
+### 3.1 Primary Keys & Surrogate Keys: UUIDv7 vs BIGINT Identity vs dbt_utils Hash
 - **`BIGINT GENERATED ALWAYS AS IDENTITY`**:
-  - Preferido para tablas internas, dimensiones de DWH y sistemas con alto volumen de inserción secuencial.
+  - Preferido para tablas transaccionales OLTP internas con alto volumen de inserción secuencial.
   - Ocupa solo 8 bytes (vs 16 de UUID), índices B-Tree más pequeños y compactos.
 - **`UUIDv7` (o ULID)**:
-  - Preferido para APIs públicas, arquitecturas distribuidas y prevención de enumeración.
+  - Preferido para APIs públicas, arquitecturas distribuidas y prevención de enumeración en OLTP.
   - Al estar ordenado por timestamp en los bits iniciales, **evita la fragmentación de páginas del B-Tree** que causaba el UUIDv4 aleatorio.
+- **`TEXT` / MD5 determinista (`dbt_utils.generate_surrogate_key`)**:
+  - Obligatorio para claves subrogadas (`_sk`) en el Data Warehouse (DWH / `marts` / `core`).
+  - Garantiza unicidad e idempotencia determinista entre particiones históricas sin depender de secuencias de base de datos.
 - **Antipatrón**: Nunca usar `SERIAL` ni `BIGSERIAL` en PostgreSQL moderno. Usar la sintaxis estándar SQL: `BIGINT GENERATED ALWAYS AS IDENTITY`.
 
 ### 3.2 Cadenas de Texto: TEXT vs VARCHAR vs CHAR
 - **`TEXT`**: El tipo predeterminado recomendado. En PostgreSQL, `TEXT` y `VARCHAR` usan la misma estructura interna (`varlena`). No hay diferencia de rendimiento.
-- **`VARCHAR(N)`**: Usar únicamente cuando exista un límite de negocio estricto (ej: código postal ISO de 10 caracteres, hash SHA-256 de 64 caracteres).
+- **`VARCHAR(N)`**: Usar únicamente cuando exista un límite de negocio estricto (ej: código postal ISO de 10 caracteres, hash SHA-256 de 64 caracteres como `_record_hash VARCHAR(64)`).
 - **`CHAR(N)`**: **PROHIBIDO**. Rellena con espacios en blanco al final, desperdicia bytes y genera comportamientos inesperados en comparaciones de cadenas.
 
 ### 3.3 Valores Numéricos: NUMERIC vs DOUBLE PRECISION
 - **`NUMERIC(precision, scale)`**:
-  - Obligatorio para valores monetarios, precios, transacciones financieras e intereses.
-  - Almacena números decimales exactos sin errores de redondeo de punto flotante.
+  - Obligatorio para valores monetarios, precios, transacciones financieras e intereses (ej. `NUMERIC(18, 4)` o `NUMERIC(12, 2)`).
+  - Almacena números decimales exactos sin errores de redondeo de punto flotante. Prohibido usar floats o doubles para dinero.
 - **`DOUBLE PRECISION` / `REAL`**:
   - Usar exclusivamente para telemetría, coordenadas GPS, mediciones científicas o machine learning donde la velocidad de CPU supere la necesidad de precisión exacta al centavo.
 
@@ -107,5 +110,5 @@ La jerarquía lógica estándar de una tabla es:
 ### 3.5 Banderas y Estados: BOOLEAN y ENUMs
 - **`BOOLEAN`**: Usar siempre tipo nativo `BOOLEAN` (`TRUE`/`FALSE`). Prohibido usar `INTEGER` (0/1) o `CHAR(1)` ('Y'/'N').
 - **Estados / Enumeraciones**:
-  - Opción A (Recomendada para APIs ágiles): `TEXT` con restricción `CHECK (status IN ('PENDING', 'PAID', 'CANCELLED'))`. Permite agregar valores futuros sin bloqueos de tabla prolongados.
+  - Opción A (Recomendada para APIs ágiles): `TEXT` con restricción `CHECK (order_status IN ('PENDING', 'PAID', 'CANCELLED'))`. Permite agregar valores futuros sin bloqueos de tabla prolongados.
   - Opción B (Recomendada para dominios inmutables): `CREATE TYPE order_status AS ENUM (...)`. Ocupa 4 bytes internamente.

@@ -26,7 +26,7 @@ checks for core.orders:
       name: "Dominio Válido de order_status"
       valid values: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED']
 
-  - min(total_amount_cents) >= 0:
+  - min(total_amount) >= 0:
       name: "Monto No Negativo"
 
   # 4. Frescura y Flujo Continuo

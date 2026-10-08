@@ -71,10 +71,10 @@ class CleanCustomerDataTransformer(Step):
         # 3. Limpieza y Normalización de Textos
         df["customer_nk"] = df["customer_id"].astype(str).str.strip()
         df["email"] = df["email"].astype(str).str.strip().str.lower()
-        df["status"] = df["status"].astype(str).str.strip().str.upper()
+        df["customer_status"] = df["status"].astype(str).str.strip().str.upper()
 
         # Validación estricta de dominios de valores
-        invalid_statuses = set(df["status"]) - self.VALID_STATUSES
+        invalid_statuses = set(df["customer_status"]) - self.VALID_STATUSES
         if invalid_statuses:
             raise DataValidationError(f"Valores de status no permitidos detectados: {invalid_statuses}")
 
@@ -92,7 +92,8 @@ class CleanCustomerDataTransformer(Step):
             )
 
         # 5. Metadatos técnicos de auditoría para carga
-        df["_ingested_at"] = pd.to_datetime(context.logical_date, utc=True)
+        df["_ingested_at"] = pd.Timestamp.now(tz="UTC")
+        df["_logical_date"] = pd.to_datetime(context.logical_date, utc=True)
         df["_dag_id"] = context.dag_id or "unknown_dag"
         df["_run_id"] = context.run_id or "unknown_run"
 
@@ -107,5 +108,5 @@ class CleanCustomerDataTransformer(Step):
 ## 4. Handoff hacia la Capa de Carga y dbt
 
 Una vez que el DataFrame de Pandas ha sido limpiado, validado y enriquecido con metadatos de auditoría:
-1. El artefacto es consumido por un **Loader** que realiza una inserción/upsert masivo en la tabla de staging (`stg.*` o `raw.*`) en PostgreSQL.
+1. El artefacto es consumido por un **Loader** que realiza una inserción/upsert masivo en la tabla cruda (`raw.*`) en PostgreSQL.
 2. Tras la confirmación de la carga, el control del pipeline pasa inmediatamente a **dbt** (orquestado vía Astronomer Cosmos), quien asume todas las transformaciones posteriores dentro del warehouse.

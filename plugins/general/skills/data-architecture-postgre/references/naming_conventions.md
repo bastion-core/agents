@@ -24,7 +24,7 @@ Organizar los objetos en esquemas según el dominio o la capa arquitectónica:
 | `app` (o nombre de dominio) | Tablas operacionales OLTP de la aplicación | `app.users`, `billing.invoices` |
 | `raw` | Capa Bronze / Ingesta: datos crudos append-only | `raw.stripe_charges`, `raw.device_events` |
 | `stg` | Capa Silver / Staging: datos limpios y tipados | `stg.stg_stripe_charges`, `stg.stg_devices` |
-| `core` / `marts` | Capa Gold: modelos dimensionales (Kimball) | `core.dim_customers`, `core.fact_orders` |
+| `core` / `marts` | Capa Gold: modelos dimensionales (Kimball) | `core.dim_customers`, `core.fct_orders` |
 | `audit` | Registros de auditoría y Change Data Capture | `audit.entity_change_logs` |
 
 ---
@@ -41,7 +41,7 @@ Organizar los objetos en esquemas según el dominio o la capa arquitectónica:
 ### 3.2 Tablas OLAP / DWH
 - Usar prefijos explícitos de modelado dimensional:
   - Dimensiones: `dim_<entidad>` (ej: `dim_customers`, `dim_products`, `dim_date`).
-  - Hechos / Transacciones: `fact_<evento_negocio>` (ej: `fact_orders`, `fact_page_views`).
+  - Hechos / Transacciones: `fct_<evento_negocio>` (ej: `fct_orders`, `fct_page_views`).
   - Puentes: `bridge_<entidad1>_<entidad2>` (ej: `bridge_customer_groups`).
   - Agregaciones / Data Marts: `mart_<dominio>_<concepto>` (ej: `mart_finance_monthly_revenue`).
 
@@ -76,7 +76,7 @@ Organizar los objetos en esquemas según el dominio o la capa arquitectónica:
 
 ### 4.4 Unidades, Medidas y Dinero
 - Declarar siempre la unidad en el nombre de la columna para evitar ambigüedades:
-  - Dinero / Moneda: Guardar en centavos (enteros) o especificar divisa: `amount_cents`, `price_usd_cents`, `tax_cents`.
+  - Dinero / Moneda: Usar siempre tipo `NUMERIC(precision, scale)` con nombre descriptivo o especificando divisa: `total_amount`, `net_amount`, `amount_usd`, `tax_amount`. Prohibido usar float.
   - Tiempo: `timeout_seconds`, `retry_delay_ms`, `lock_duration_seconds`.
   - Peso / Distancia: `weight_kg`, `distance_meters`, `file_size_bytes`.
 

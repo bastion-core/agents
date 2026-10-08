@@ -31,14 +31,15 @@ Cada vez que se solicite diseñar o modificar una tabla o esquema, seguir este p
 ### Fase 1: Descubrimiento de Carga y Capa Arquitectónica
 1. Identificar la capa de destino:
    - **OLTP / Transaccional (`app`)**: Priorizar normalización 3NF, integridad referencial y baja latencia de escritura.
-   - **OLAP / Data Warehouse (`core` / `marts`)**: Priorizar modelos dimensionales Kimball (`dim_*`, `fact_*`), claves subrogadas sintéticas (`_sk`) e inmutabilidad.
+   - **OLAP / Data Warehouse (`core` / `marts`)**: Priorizar modelos dimensionales Kimball (`dim_*`, `fct_*`), claves subrogadas sintéticas (`_sk`) e inmutabilidad.
    - **Ingesta / Staging (`raw` / `stg`)**: Carga append-only, particionamiento temporal y limpieza.
 2. Estimar volumen esperado: si la tabla superará 1M de filas, la optimización de alineación física de columnas es obligatoria.
 
 ### Fase 2: Diseño Estructural y Selección de Tipos
-1. **Primary Key**:
-   - APIs públicas / microservicios: `UUIDv7` (o ULID) para prevenir enumeración sin fragmentar índices B-Tree.
-   - Tablas internas / DWH: `BIGINT GENERATED ALWAYS AS IDENTITY` para máxima densidad y velocidad.
+1. **Primary Key / Surrogate Key**:
+   - APIs públicas / microservicios OLTP: `UUIDv7` (o ULID) para prevenir enumeración sin fragmentar índices B-Tree.
+   - Tablas transaccionales OLTP internas: `BIGINT GENERATED ALWAYS AS IDENTITY`.
+   - Tablas analíticas DWH (`marts` / `core`): Clave subrogada sintética (`_sk`) en `TEXT` generada deterministamente con hash MD5 (`dbt_utils.generate_surrogate_key`).
 2. **Orden Físico de Columnas**:
    - Organizar las columnas de mayor a menor tamaño en memoria para eliminar bytes de padding de CPU:
      1. Fijos de 8 bytes (`BIGINT`, `TIMESTAMPTZ`, `UUID`).
@@ -47,10 +48,11 @@ Cada vez que se solicite diseñar o modificar una tabla o esquema, seguir este p
      4. Fijos de 1 byte (`BOOLEAN`).
      5. Variables (`TEXT`, `VARCHAR`, `NUMERIC`, `JSONB`).
 3. **Manejo Temporal**:
-   - Usar siempre `TIMESTAMPTZ` para instantes en el tiempo (UTC).
+   - Usar siempre `TIMESTAMPTZ` para instantes en el tiempo (UTC). `logical_date` en auditoría de pipelines es un identificador de intervalo en `VARCHAR(50)`.
    - Incluir `created_at` y `updated_at` (con trigger `trg_set_updated_at`).
 4. **Validaciones e Integridad**:
    - Agregar restricciones `CHECK` para rangos, estados permitidos y no negatividad.
+   - Evitar identificadores reservados genéricos como `status`; preferir `order_status`, `customer_status` o `payment_status`.
 
 ### Fase 3: Estrategia de Indexación
 1. **Obligatorio**: Indexar toda columna de Foreign Key para evitar escaneos secuenciales y bloqueos de tabla en eliminaciones del padre.
@@ -82,11 +84,11 @@ Cada vez que se solicite diseñar o modificar una tabla o esquema, seguir este p
 Antes de dar por finalizado un DDL, verificar que cumple:
 
 - [ ] Todos los identificadores están en `snake_case` minúsculas sin comillas dobles.
-- [ ] No se utilizan palabras reservadas de SQL/PostgreSQL sin contexto.
-- [ ] La clave primaria está definida explícitamente (`UUIDv7` o `BIGINT Identity`).
+- [ ] No se utilizan palabras reservadas de SQL/PostgreSQL sin contexto (ej. usar `order_status` o `customer_status`, nunca `status` a secas).
+- [ ] La clave primaria está definida explícitamente (`UUIDv7`, `BIGINT Identity` o `_sk` MD5 en DWH).
 - [ ] Todas las claves foráneas tienen su respectivo índice creado en la tabla hija.
 - [ ] Las columnas de fecha/hora usan `TIMESTAMPTZ` (nunca `TIMESTAMP` a secas).
-- [ ] Las columnas numéricas monetarias usan `NUMERIC` o centavos enteros en `BIGINT` (nunca float).
+- [ ] Las columnas numéricas monetarias usan `NUMERIC` con escala explícita (nunca float).
 - [ ] Se utilizó `JSONB` en lugar de `JSON`.
 - [ ] No existe `CHAR(n)` (se usó `TEXT` o `VARCHAR`).
 - [ ] Las columnas están ordenadas minimizando el padding de alineación de tupla.

@@ -51,13 +51,13 @@ WHERE deleted_at IS NULL;
 Permiten a PostgreSQL ejecutar **Index-Only Scans** (leyendo solo las páginas del índice sin tocar la tabla principal):
 
 ```sql
--- La clave del árbol B-Tree es user_id, mientras que total_amount y status van en el payload
+-- La clave del árbol B-Tree es user_id, mientras que total_amount y order_status van en el payload
 CREATE INDEX idx_orders_user_covering 
 ON orders (user_id) 
-INCLUDE (total_amount_cents, status);
+INCLUDE (total_amount, order_status);
 
 -- Consulta cubierta al 100%:
-SELECT total_amount_cents, status FROM orders WHERE user_id = 45;
+SELECT total_amount, order_status FROM orders WHERE user_id = 45;
 ```
 
 ---

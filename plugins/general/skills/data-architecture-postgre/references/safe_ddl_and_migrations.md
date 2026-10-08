@@ -117,11 +117,11 @@ SET statement_timeout = '30s';
 CREATE TABLE IF NOT EXISTS billing_invoices (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     organization_id BIGINT NOT NULL,
-    invoice_number TEXT NOT NULL,
-    amount_cents BIGINT NOT NULL,
-    is_settled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_settled BOOLEAN NOT NULL DEFAULT FALSE,
+    invoice_number TEXT NOT NULL,
+    total_amount NUMERIC(18, 4) NOT NULL
 );
 
 -- 2. FK con NOT VALID

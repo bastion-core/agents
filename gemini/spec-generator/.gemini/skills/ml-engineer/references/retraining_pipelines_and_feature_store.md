@@ -52,7 +52,13 @@ from airflow.decorators import dag, task
     start_date=datetime(2026, 1, 1),
     schedule="@weekly",
     catchup=False,
-    default_args={"retries": 2, "retry_delay": timedelta(minutes=5)},
+    default_args={
+        "owner": "ml-engineer",
+        "retries": 2,
+        "retry_delay": timedelta(minutes=5),
+    },
+    tags=["ml", "retraining", "credit_scoring"],
+    description="Automated weekly model retraining and champion evaluation pipeline.",
 )
 def credit_model_retraining():
     @task

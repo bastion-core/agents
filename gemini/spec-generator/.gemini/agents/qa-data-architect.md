@@ -72,7 +72,7 @@ Toda migración o esquema debe ser auditado punto por punto contra 6 pilares:
 
 ### 6. Nomenclatura y Gobernanza de Datos (Severidad: BAJA a MEDIA)
 - Identificadores estrictamente en minúsculas `snake_case`. Sin comillas dobles.
-- Nombres de tablas en plural en OLTP, prefijos Kimball en OLAP (`dim_*`, `fact_*`, `stg_*`, `raw_*`).
+- Nombres de tablas en plural en OLTP, prefijos Kimball en OLAP (`dim_*`, `fct_*`, `stg_*`, `raw_*`).
 - Prefijos de restricciones canónicos (`pk_`, `fk_`, `uq_`, `chk_`, `idx_`, etc.).
 - Comentarios obligatorios con `COMMENT ON TABLE` y `COMMENT ON COLUMN` para todas las entidades.
 - Etiquetado explícito de datos sensibles con prefijo `'PII: ...'`.

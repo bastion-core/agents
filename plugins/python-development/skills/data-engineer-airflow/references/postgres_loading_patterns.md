@@ -14,13 +14,13 @@ Para evitar el desperdicio de memoria y CPU padding por alineación a múltiplos
 4. **Fijos de 1 byte**: `BOOLEAN`, `CHAR(1)`.
 5. **Variables (Varlena)**: `TEXT`, `VARCHAR`, `NUMERIC`, `JSONB`, `BYTEA`.
 
-### Ejemplo Canónico de DDL en Staging
+### Ejemplo Canónico de DDL en Ingesta Raw
 ```sql
--- sql/stg/010_stg_customers.sql
+-- sql/raw/010_raw_customers.sql
 -- Owner: data-engineer-airflow
--- Purpose: Almacenar clientes curados y normalizados
+-- Purpose: Almacenar clientes crudos normalizados en el borde (landing zone)
 
-CREATE TABLE IF NOT EXISTS stg.customers (
+CREATE TABLE IF NOT EXISTS raw.customers (
     -- Fijos 8 bytes
     customer_sk         BIGINT GENERATED ALWAYS AS IDENTITY,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
@@ -36,17 +36,17 @@ CREATE TABLE IF NOT EXISTS stg.customers (
     -- Variables (Varlena)
     customer_nk         TEXT NOT NULL,
     email               TEXT NOT NULL,
-    status              VARCHAR(30) NOT NULL,
+    customer_status     VARCHAR(30) NOT NULL,
     _dag_id             VARCHAR(100) NOT NULL,
     _run_id             VARCHAR(100) NOT NULL,
-    _record_hash        CHAR(64) NOT NULL,
+    _record_hash        VARCHAR(64) NOT NULL,
 
-    CONSTRAINT pk_stg_customers PRIMARY KEY (customer_sk),
-    CONSTRAINT uq_stg_customers_nk UNIQUE (customer_nk)
+    CONSTRAINT pk_raw_customers PRIMARY KEY (customer_sk),
+    CONSTRAINT uq_raw_customers_nk UNIQUE (customer_nk)
 );
 
-CREATE INDEX IF NOT EXISTS idx_stg_customers_email ON stg.customers (email);
-CREATE INDEX IF NOT EXISTS idx_stg_customers_ingested ON stg.customers (_ingested_at DESC);
+CREATE INDEX IF NOT EXISTS idx_raw_customers_email ON raw.customers (email);
+CREATE INDEX IF NOT EXISTS idx_raw_customers_ingested ON raw.customers (_ingested_at DESC);
 ```
 
 ---
@@ -62,7 +62,7 @@ SET statement_timeout = '30s';
 
 ---
 
-## 3. Carga Masiva Idempotente (Bulk Staging + Upsert)
+## 3. Carga Masiva Idempotente (Bulk Raw + Upsert)
 
 En lugar de inserciones fila por fila (`INSERT INTO ... VALUES (...)`), se utiliza una tabla temporal no indexada cargada vía `COPY` o `execute_values`, seguida de un merge con `INSERT ... ON CONFLICT DO UPDATE`.
 
@@ -70,10 +70,10 @@ En lugar de inserciones fila por fila (`INSERT INTO ... VALUES (...)`), se utili
 
 | Capa | Clave de Conflicto (`ON CONFLICT (...)`) | Comportamiento |
 |---|---|---|
-| `raw.*` | `(record_hash)` | `DO NOTHING` (el payload idéntico ya existe) |
-| `stg.*` | Natural Key (`customer_nk`) | `DO UPDATE SET updated_at = clock_timestamp(), ...` |
-| `core.dim_*` | Business Key (`customer_id`) | SCD Tipo 1 (actualización in-place) o SCD Tipo 2 |
-| `core.fact_*` | `(dim_sk, date_sk, secondary_sk)` | `DO UPDATE` sobre métricas o `DO NOTHING` |
+| `raw.*` | `(customer_nk)` o `(_record_hash)` | `DO UPDATE SET updated_at = clock_timestamp(), ...` o `DO NOTHING` |
+| `stg.*` | N/A (Vistas construidas sobre `raw.*` vía dbt) | Lógica declarativa en dbt |
+| `core.dim_*` | Business Key (`customer_id`) | SCD Tipo 1 o SCD Tipo 2 gestionado en dbt |
+| `core.fct_*` | `(order_sk)` o grano transaccional | Materialización incremental en dbt (`merge`) |
 
 ### Implementación del Loader en Python
 ```python
@@ -84,7 +84,7 @@ from pipelines.core import Step, StepContext
 from pipelines.utils.db.database_manager import DatabaseManager
 
 class PostgresCustomersLoader(Step):
-    """Carga datos limpios a PostgreSQL de forma masiva e idempotente."""
+    """Carga datos limpios a PostgreSQL raw de forma masiva e idempotente."""
 
     def execute(self, context: StepContext) -> None:
         df: pd.DataFrame = context.get_artifact("cleaned_customers_df")
@@ -105,46 +105,46 @@ class PostgresCustomersLoader(Step):
             with raw_conn.cursor() as cur:
                 cur.execute("SET lock_timeout = '2s'; SET statement_timeout = '30s';")
 
-                # 1. Crear tabla unlogged temporal de staging
+                # 1. Crear tabla unlogged temporal de carga
                 cur.execute("""
-                    CREATE TEMP TABLE tmp_stg_customers (
+                    CREATE TEMP TABLE tmp_raw_customers (
                         customer_nk TEXT,
                         email TEXT,
-                        status VARCHAR(30),
+                        customer_status VARCHAR(30),
                         registration_date DATE,
                         _ingested_at TIMESTAMPTZ,
                         _dag_id VARCHAR(100),
                         _run_id VARCHAR(100),
-                        _record_hash CHAR(64)
+                        _record_hash VARCHAR(64)
                     ) ON COMMIT DROP;
                 """)
 
                 # 2. Bulk copy en memoria usando StringIO
                 csv_buffer = io.StringIO()
                 df[[
-                    "customer_nk", "email", "status", "registration_at",
-                    "_ingested_at", "_dag_id", "_run_id", "record_hash"
+                    "customer_nk", "email", "customer_status", "registration_date",
+                    "_ingested_at", "_dag_id", "_run_id", "_record_hash"
                 ]].to_csv(csv_buffer, index=False, header=False, sep="\t", na_rep="\\N")
                 csv_buffer.seek(0)
 
-                cur.copy_from(csv_buffer, "tmp_stg_customers", columns=(
-                    "customer_nk", "email", "status", "registration_date",
+                cur.copy_from(csv_buffer, "tmp_raw_customers", columns=(
+                    "customer_nk", "email", "customer_status", "registration_date",
                     "_ingested_at", "_dag_id", "_run_id", "_record_hash"
                 ))
 
-                # 3. Upsert atómico hacia la tabla destino
+                # 3. Upsert atómico hacia la tabla destino raw
                 upsert_query = """
-                    INSERT INTO stg.customers (
-                        customer_nk, email, status, registration_date,
+                    INSERT INTO raw.customers (
+                        customer_nk, email, customer_status, registration_date,
                         _ingested_at, _dag_id, _run_id, _record_hash
                     )
                     SELECT 
-                        customer_nk, email, status, registration_date,
+                        customer_nk, email, customer_status, registration_date,
                         _ingested_at, _dag_id, _run_id, _record_hash
-                    FROM tmp_stg_customers
+                    FROM tmp_raw_customers
                     ON CONFLICT (customer_nk) DO UPDATE SET
                         email = EXCLUDED.email,
-                        status = EXCLUDED.status,
+                        customer_status = EXCLUDED.customer_status,
                         registration_date = EXCLUDED.registration_date,
                         updated_at = clock_timestamp(),
                         _ingested_at = EXCLUDED._ingested_at,
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS audit.pipeline_runs (
     dag_id              VARCHAR(100) NOT NULL,
     run_id              VARCHAR(150) NOT NULL,
     logical_date        VARCHAR(50) NOT NULL,
-    status              VARCHAR(20) NOT NULL, -- 'SUCCESS', 'FAILED'
+    run_status          VARCHAR(20) NOT NULL, -- 'SUCCESS', 'FAILED'
     metrics             JSONB,
     error_message       TEXT,
 

@@ -61,7 +61,7 @@ Every database migration or schema specification must be audited against six non
 
 ### 6. Naming Conventions & Data Governance (Severity: LOW to MEDIUM)
 - **Identifiers**: Lowercase `snake_case` only. Strictly forbid double quotes (`"ColumnName"`).
-- **Table Names**: Plural in OLTP (`orders`, `customers`), Kimball dimensional prefixes in OLAP (`dim_*`, `fact_*` / `fct_*`, `stg_*`, `raw_*`).
+- **Table Names**: Plural in OLTP (`orders`, `customers`), Kimball dimensional prefixes in OLAP (`dim_*`, `fct_*`, `stg_*`, `raw_*`).
 - **Constraint Naming**: Standard suffixes mandatory (`pk_`, `fk_`, `uq_`, `chk_`, `excl_`, `idx_`, `udx_`, `gin_`, `brin_`).
 - **Self-Documentation**: Verify `COMMENT ON TABLE` and `COMMENT ON COLUMN` exist for all objects.
 - **PII Tagging**: Fields holding personally identifiable information must have comments starting with `'PII: ...'`.

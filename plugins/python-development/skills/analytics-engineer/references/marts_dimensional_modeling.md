@@ -62,19 +62,18 @@ final as (
         orders.ordered_at,
         orders._ingested_at,
         
-        -- Medidas Aditivas
-        orders.subtotal_amount_cents,
-        orders.discount_amount_cents,
-        orders.tax_amount_cents,
-        orders.net_amount_cents,
-        (orders.net_amount_cents / 100.0)::numeric(12, 2) as net_amount_usd
+        -- Medidas Aditivas (Valores Financieros NUMERIC)
+        orders.subtotal_amount,
+        orders.discount_amount,
+        orders.tax_amount,
+        orders.net_amount
         
     from orders
     left join customers on orders.customer_nk = customers.customer_nk
     left join stores on orders.store_nk = stores.store_nk
 )
 
-select * from final;
+select * from final
 ```
 
 ---

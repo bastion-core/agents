@@ -1,74 +1,65 @@
 # dbt Transformation Patterns: Staging, Intermediate & Marts (In-Warehouse)
 
-Este documento define los estándares de modelado y transformación de datos en el Data Warehouse (PostgreSQL, Snowflake, BigQuery, Redshift) utilizando **dbt**.
+Este documento define los estándares de modelado y transformación de datos en el Data Warehouse utilizando **dbt Core**. Aplica la regla estricta: **100% de las transformaciones in-warehouse pertenecen a dbt**.
 
 ---
 
-## 1. Principio Fundamental: dbt es Soberano In-Warehouse
+## 1. Capas Canónicas de Modelado
 
-- **Toda transformación posterior al aterrizaje de los datos en el warehouse pertenece a dbt**.
-- Ningún script de Python/pandas debe realizar joins, agregaciones, cálculo de KPIs, modelado dimensional ni deduplicación histórica una vez que los datos crudos o de staging fueron persistidos en la base de datos.
-- Las transformaciones en dbt aprovechan el poder de procesamiento del motor SQL de base de datos de manera declarativa, versionada, modular y comprobable.
+```
+[ raw.<source>_<entity> ]  (Tablas aterrizadas por Airflow / pandas en el borde)
+           │
+           ▼
+[ models/staging/ ]        (Vistas 1:1, limpieza, casteo, renombrado a snake_case)
+           │
+           ▼
+[ models/intermediate/ ]   (Vistas o Ephemeral: uniones multi-tabla y lógica compleja)
+           │
+           ▼
+[ models/marts/ ]          (Tablas o Incremental: modelos dimensionales Ralph Kimball)
+```
+
+### Reglas de Materialización por Capa
+| Capa | Materialización | Propósito | Nomenclatura |
+|---|---|---|---|
+| `staging` | `view` | Espejo tipado y normalizado de `raw`. Sin joins de negocio. | `stg_<fuente>_<entidad>.sql` |
+| `intermediate` | `view` o `ephemeral` | Uniones complejas, desnormalizaciones intermedias. | `int_<entidad>_<proceso>.sql` |
+| `marts` | `table` o `incremental` | Tablas de hechos (`fct_*`) y dimensiones (`dim_*`). | `fct_<evento>.sql` / `dim_<entidad>.sql` |
 
 ---
 
-## 2. Arquitectura de Capas de Modelado (Staging → Intermediate → Marts)
+## 2. Nomenclatura y Convenciones de Columnas
 
-```
-[Fuentes Raw / Staging Externas]
-               │
-               ▼  (models/staging/)
-        ┌──────────────┐
-        │  stg_*.sql   │  (Materialización: VIEW)
-        └──────┬───────┘
-               │
-               ▼  (models/intermediate/)
-        ┌──────────────┐
-        │  int_*.sql   │  (Materialización: VIEW o EPHEMERAL)
-        └──────┬───────┘
-               │
-               ▼  (models/marts/)
-        ┌──────────────┬──────────────┐
-        │  fct_*.sql   │  dim_*.sql   │  (Materialización: TABLE o INCREMENTAL)
-        └──────────────┴──────────────┘
-```
-
-### Capa 1: Staging (`models/staging/<source_name>/`)
-- **Propósito**: Limpieza inicial, renombrado de columnas a `snake_case`, casting explícito de tipos y extracción de atributos de payloads semi-estructurados (`JSONB`).
-- **Relación**: Espejo 1 a 1 contra las tablas o fuentes declaradas en `sources.yml`.
-- **Materialización**: Obligatoriamente `view` (para no duplicar almacenamiento y garantizar datos frescos).
-- **Reglas**:
-  - No realizar joins entre diferentes fuentes en esta capa.
-  - Proyectar explícitamente cada columna (prohibido `SELECT *`).
-  - Estandarizar nombres de timestamps con sufijo `_at` y fechas con sufijo `_date`.
-
-### Capa 2: Intermediate (`models/intermediate/<domain>/`)
-- **Propósito**: Encapsular lógica de negocio compleja, joins multi-tabla y desnormalizaciones intermedias antes de construir las métricas finales.
-- **Materialización**: `view` o `ephemeral`.
-- **Reglas**:
-  - No exponer directamente a usuarios finales o herramientas de BI.
-  - Nombrado: `int_<dominio>__<verbo_o_accion>.sql` (ej: `int_payments__grouped_by_customer.sql`).
-
-### Capa 3: Marts (`models/marts/<domain>/`)
-- **Propósito**: Modelos dimensionales estilo Kimball listos para consumo analítico, reportes y dashboards.
-- **Componentes**:
-  - **Hechos (`fct_<entidad/evento>.sql`)**: Eventos inmutables, transacciones y métricas acumulativas.
-  - **Dimensiones (`dim_<entidad>.sql`)**: Entidades con atributos descriptivos enriquecidos y claves sustitutas (`_sk`).
-- **Materialización**: `table` o `incremental`.
+- **Prefijo de Hechos**: Usar obligatoriamente **`fct_`** para hechos (`fct_orders`, `fct_payments`).
+- **Prefijo de Dimensiones**: Usar obligatoriamente **`dim_`** para dimensiones (`dim_customers`, `dim_products`).
+- **Surrogate Keys**: Claves subrogadas sintéticas con sufijo `_sk` generadas con `dbt_utils.generate_surrogate_key` (MD5 de texto determinista).
+- **Natural Keys**: Claves de negocio de los sistemas fuente con sufijo `_nk` (`customer_nk`, `order_nk`).
+- **Valores Financieros / Dinero**: Usar siempre tipo **`NUMERIC`** con escala explícita (ej. `NUMERIC(18, 4)`).
+- **Prohibición de Palabras Reservadas**: Prohibido usar `status` aislado; usar nombres contextuales (`order_status`, `customer_status`).
+- **Timestamps**: Siempre convertidos a `TIMESTAMPTZ` en UTC con sufijos `_at` (`ordered_at`, `_ingested_at`).
 
 ---
 
 ## 3. Estructura Canónica de Modelos SQL (Patrón CTE Modular)
 
-Todo modelo dbt debe estructurarse usando CTEs (Common Table Expressions) con el siguiente formato estricto:
+Todo modelo dbt debe estructurarse usando CTEs (Common Table Expressions) con el siguiente formato estricto (**sin punto y coma final en la sentencia select final**):
 
 ```sql
--- models/staging/stg_ecommerce__customers.sql
+-- models/staging/stg_ecommerce_customers.sql
 with 
 
--- 1. Import CTEs (solo refs o sources directos con proyección explícita)
+-- 1. Import CTEs (solo refs o sources directos con proyección explícita de campos)
 source_customers as (
-    select * from {{ source('ecommerce_raw', 'customers') }}
+    select
+        customer_nk,
+        email,
+        customer_status,
+        is_active,
+        registration_date,
+        _ingested_at,
+        updated_at,
+        _record_hash
+    from {{ source('ecommerce_raw', 'customers') }}
 ),
 
 -- 2. Logical / Transformation CTEs (renombrado, casting, normalización)
@@ -80,7 +71,7 @@ transformed as (
 
         -- Atributos
         trim(lower(email)) as email,
-        trim(upper(status)) as status,
+        trim(upper(customer_status)) as customer_status,
         is_active,
 
         -- Timestamps normalizados en UTC
@@ -96,7 +87,7 @@ final as (
     select
         customer_nk,
         email,
-        status,
+        customer_status,
         is_active,
         registration_date,
         _ingested_at,
@@ -105,8 +96,8 @@ final as (
     from transformed
 )
 
--- 4. Select Final
-select * from final;
+-- 4. Select Final (sin punto y coma final)
+select * from final
 ```
 
 ---
@@ -126,7 +117,15 @@ Para tablas de hechos de alto volumen, se utiliza materialización incremental c
 ) }}
 
 with orders as (
-    select * from {{ ref('stg_ecommerce__orders') }}
+    select
+        order_nk,
+        customer_nk,
+        order_status,
+        total_amount,
+        order_date,
+        _ingested_at,
+        created_at
+    from {{ ref('stg_ecommerce_orders') }}
     {% if is_incremental() %}
         -- Solo procesar registros más recientes que el valor máximo actual
         where _ingested_at >= (select coalesce(max(_ingested_at), '1970-01-01'::timestamptz) from {{ this }})
@@ -134,7 +133,10 @@ with orders as (
 ),
 
 customers as (
-    select * from {{ ref('dim_customers') }}
+    select
+        customer_sk,
+        customer_nk
+    from {{ ref('dim_customers') }}
 ),
 
 final as (
@@ -143,8 +145,8 @@ final as (
         {{ dbt_utils.generate_surrogate_key(['orders.order_nk']) }} as order_sk,
         customers.customer_sk,
         orders.order_nk,
-        orders.status,
-        orders.amount,
+        orders.order_status,
+        orders.total_amount,
         orders.order_date,
         orders._ingested_at,
         orders.created_at
@@ -152,7 +154,8 @@ final as (
     left join customers on orders.customer_nk = customers.customer_nk
 )
 
-select * from final;
+-- Select final (sin punto y coma)
+select * from final
 ```
 
 ---
@@ -177,7 +180,7 @@ sources:
           error_after: {count: 48, period: hour}
 
 models:
-  - name: stg_ecommerce__customers
+  - name: stg_ecommerce_customers
     description: "Clientes curados en staging con tipado consistente y normalización."
     columns:
       - name: customer_nk
@@ -189,7 +192,7 @@ models:
         description: "Correo electrónico sanitizado y en minúsculas."
         tests:
           - not_null
-      - name: status
+      - name: customer_status
         description: "Estado operativo del cliente."
         tests:
           - accepted_values:
@@ -211,7 +214,7 @@ Para validaciones que involucran múltiples columnas o lógica relacional comple
 -- Falla si existe alguna orden completada con importe negativo o nulo
 select
     order_sk,
-    amount
+    total_amount
 from {{ ref('fct_orders') }}
-where status = 'COMPLETED' and (amount <= 0 or amount is null);
+where order_status = 'COMPLETED' and (total_amount <= 0 or total_amount is null)
 ```
