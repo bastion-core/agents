@@ -32,6 +32,7 @@ Cuando el modelado dentro del almacén representa una parte sustancial del traba
    - Capa `intermediate` (`models/intermediate/`): Modelos efímeros o vistas que encapsulan lógica de negocio intermedia y joins multidimensionales.
    - Capa `marts` (`models/marts/`): Tablas de hechos (`fct_*`) y dimensiones conformadas (`dim_*`) con grano unívoco.
    - Claves subrogadas sintéticas (`_sk`) deterministas generadas mediante `dbt_utils.generate_surrogate_key`.
+   - **Deduplicación Analítica In-Warehouse**: En modelos de `staging` o `intermediate`, eliminar duplicados mediante funciones de ventana analítica (`QUALIFY ROW_NUMBER() OVER (PARTITION BY natural_key ORDER BY updated_at DESC, ingested_at DESC) = 1` o CTEs con `ROW_NUMBER()`) asegurando que los marts reciban registros únicos y el estado más reciente por grano.
    - Soporte para dimensiones de cambio lento (SCD Tipo 1 y SCD Tipo 2 mediante snapshots).
    - Materializaciones incrementales optimizadas con estrategia `merge`, `unique_key` y guardas `is_incremental()`.
 2. **dbt Semantic Layer & MetricFlow**:
@@ -58,6 +59,10 @@ Cuando el modelado dentro del almacén representa una parte sustancial del traba
 - **dbt es Dueño de TODA Transformación In-Warehouse**: Si los datos ya residen en la base de datos o warehouse, cualquier join, agregación o regla de negocio debe ejecutarse en SQL mediante dbt.
 - **Prohibición del Antipatrón de Extracción del Warehouse**: Jamás extraer tablas del warehouse hacia un DataFrame de pandas para transformar y re-insertar. Es un antipatrón crítico que debe resolverse dentro de dbt.
 - **Idempotencia y Determinismo**: Las tareas de carga deben usar staging temporal (`UNLOGGED ... ON COMMIT DROP`) con `INSERT ... ON CONFLICT (...) DO UPDATE` sobre Natural Keys (`_nk`) o hash determinista (`_record_hash`). Los filtros temporales deben usar macros de intervalo (`data_interval_start`, `data_interval_end`), jamás `datetime.now()`.
+- **Estrategia Integral de Deduplicación en el Pipeline**:
+  - *En el borde de extracción (pandas)*: Descartar registros idénticos o duplicados intra-lote usando `df.drop_duplicates(subset=[...], keep='last')` basándose en la clave natural del negocio y marca de tiempo antes de invocar la carga a base de datos.
+  - *En la ingesta a base de datos (PostgreSQL)*: Garantizar unicidad mediante staging temporal y cláusula `ON CONFLICT (...) DO UPDATE` sobre la Natural Key o `_record_hash`, evitando duplicar filas por reintentos de tareas o backfills.
+  - *En la transformación in-warehouse (dbt)*: Aplicar deduplicación explícita con ventana analítica (`QUALIFY ROW_NUMBER() OVER (PARTITION BY natural_key ORDER BY event_timestamp DESC) = 1`) en las capas de `staging` o `intermediate`, y configurar `unique_key` estricto en todas las materializaciones incrementales para asegurar grano unívoco en `fct_*` y `dim_*`.
 - **Cosmos para dbt en Airflow**: Orquestar modelos dbt preferentemente con Astronomer Cosmos (`DbtTaskGroup`) para reintentos y observabilidad a nivel de modelo individual.
 
 ---
@@ -81,3 +86,4 @@ Para cada requerimiento técnico, activa las directrices canónicas:
 3. **Modelos dbt (`.sql` + `schema.yml`)**: Staging, intermediate y marts con descripciones, tests y contratos.
 4. **Definiciones Semánticas y Exposures (si aplica)**: `semantic_models.yml`, `metrics.yml` y `exposures.yml`.
 5. **Configuración de Cosmos / Operador**: Conexión de dbt dentro del grafo del DAG.
+6. **Estrategia y Tests de Deduplicación**: Lógica explícita de deduplicación en pandas (`drop_duplicates`) y dbt (`QUALIFY`), respaldada por tests genéricos `unique` y `unique_combination_of_columns` en `schema.yml`.
