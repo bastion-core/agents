@@ -90,9 +90,13 @@ schema:
     tipo: string
     obligatorio: false
     max_length: 150
+    patron: "^[a-z0-9-]+:[a-z0-9-]+$"
+    formato: plugin:agent
     descripcion: Sub-agente responsable de ejecutar la tarea (formato plugin:agent).
     reglas:
-      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py)
+      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py), sin comillas
+        de mas ni espacios. El validador lo compara con la clave `patron` (minusculas, digitos y guiones a
+        cada lado de un unico `:`) y marca ERROR si no la cumple (ej. `backend-py` sin plugin)
       - Maximo 150 caracteres (persistido en columna varchar(150)/varchar(200) segun destino de sync)
       - Nunca escribir prosa, justificaciones o razonamiento en este campo
       - Si no existe un sub-agente dedicado en el catalogo para el stack de la tarea, omitir el campo
@@ -101,6 +105,26 @@ schema:
         manual mas cercana, va como un item de `patterns` (ej. "Sin agente dedicado para React+Vite+TS;
         usar nextjs-development:frontend-nextjs como referencia con ajuste manual")
     ejemplo: "python-development:backend-py"
+
+  assigned_skills:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Skills que el sub-agente debe cargar para ejecutar la tarea (formato plugin:skill).
+    reglas:
+      - Cada item es un slug `plugin:skill` (ej. python-development:backend-py-alembic); el validador lo
+        compara con la clave `patron` de `items` y marca ERROR si no la cumple (ej. `github-workflow` sin plugin)
+      - Maximo 150 caracteres por item
+      - Usarlo solo para skills que el sub-agente no declara en su frontmatter y que la tarea necesita
+        (ej. la skill de migraciones en una tarea de alembic); omitir el campo si no hace falta ninguna
+      - Nunca escribir prosa ni justificaciones en los items
+    items:
+      tipo: string
+      max_length: 150
+      patron: "^[a-z0-9-]+:[a-z0-9-]+$"
+      formato: plugin:skill
+    ejemplo:
+      - python-development:backend-py-alembic
+      - general:github-workflow
 
   scope:
     tipo: string (multilinea)

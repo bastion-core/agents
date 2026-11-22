@@ -626,7 +626,7 @@ Una vez que el technical.yaml pasa la validacion, solicitar al usuario los sub-a
 #### Reglas
 
 - El usuario debe proporcionar al menos un sub-agente
-- Los nombres deben seguir el formato `plugin-name:agent-name`
+- Los nombres deben seguir el formato `plugin-name:agent-name` (minusculas, digitos y guiones; ej. `python-development:backend-py`); nunca solo el nombre del agente
 - Si el usuario proporciona un nombre con formato invalido, preguntar nuevamente
 - No continuar a generacion de tareas hasta que la lista este confirmada
 
@@ -689,17 +689,36 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
 | `files_to_modify` | Lista de archivos existentes que esta tarea modifica |
 | `patterns` | Patrones y convenciones a seguir |
 | `depends_on` | Lista de task IDs que deben completarse antes |
-| `assigned_subagent` | Sub-agente responsable de ejecutar la tarea |
+| `assigned_subagent` | Sub-agente responsable de ejecutar la tarea (formato `plugin:agent`) |
+| `assigned_skills` | Skills que el sub-agente debe cargar para la tarea (lista de `plugin:skill`) |
 
 **Reglas de `assigned_subagent`:**
 
-- Debe ser un slug corto en formato `plugin:agent` (ej. `python-development:backend-py`), maximo 150 caracteres.
+- **Siempre** en formato `plugin:agent` (ej. `python-development:backend-py`), sin comillas y maximo 150 caracteres. Nunca solo el nombre del agente (`backend-py`): el validador de specs lo compara con la clave `patron` del schema (`^[a-z0-9-]+:[a-z0-9-]+$`) y marca ERROR.
+- Ids validos del marketplace:
+  - `python-development:backend-py`, `python-development:qa-backend-py`, `python-development:reviewer-backend-py`, `python-development:reviewer-library-py`, `python-development:reviewer-alembic-backend-py`, `python-development:reviewer-airflow-dags-py`
+  - `nextjs-development:frontend-nextjs`, `nextjs-development:reviewer-frontend-nextjs`, `nextjs-development:reviewer-fullstack-nextjs`, `nextjs-development:reviewer-security-nextjs`
+  - `flutter-development:mobile-flutter`, `flutter-development:reviewer-mobile-flutter`, `flutter-development:reviewer-flutter-app`
+  - `general:architect`, `general:product`
 - Nunca escribir prosa ni justificaciones en este campo — se persiste en una columna varchar con limite estricto.
 - Si el catalogo no tiene un sub-agente dedicado para el stack de la tarea, **omitir el campo** (no incluirlo en el YAML) en lugar de explicar el motivo ahi.
 - La justificacion de por que no hay sub-agente asignado (o que sub-agente usar como referencia manual mas cercana) va como un item de `patterns`, ej.:
   ```yaml
   patterns:
     - "Sin agente dedicado en el catalogo para React+Vite+TS; usar nextjs-development:frontend-nextjs como referencia con ajuste manual"
+  ```
+
+**Reglas de `assigned_skills` (opcional):**
+
+- Lista de skills que el sub-agente debe cargar para ejecutar la tarea, cada una en formato `plugin:skill` (ej. `python-development:backend-py-alembic`), sin comillas y maximo 150 caracteres por item. Un item sin plugin (`github-workflow`) es ERROR del validador; el correcto es `general:github-workflow`.
+- Usarlo solo cuando la tarea necesita una skill que el sub-agente **no** declara en su frontmatter (`skills:`), por ejemplo `python-development:backend-py-alembic` en una tarea de migracion asignada a `python-development:backend-py`.
+- Omitir el campo cuando el sub-agente ya trae las skills que necesita o la tarea no requiere ninguna; no escribir listas vacias ni prosa en los items. Todos los agentes ya declaran `github-workflow`, asi que `general:github-workflow` no se asigna.
+- Skills disponibles: `python-development:backend-py`, `python-development:backend-py-alembic`, `python-development:backend-py-celery`, `python-development:backend-py-library`, `python-development:migrations-creator-py`, `python-development:qa-backend-py`, `python-development:qa-airflow-dags-py`, `general:github-workflow`, `general:spec-reviewer`.
+- Ejemplo:
+  ```yaml
+  assigned_subagent: python-development:backend-py
+  assigned_skills:
+    - python-development:backend-py-alembic
   ```
 
 **Reglas de nombre de archivo y de `task`:**
@@ -734,7 +753,9 @@ task: create_trip_endpoint
 level: L3
 parent: technical.yaml
 status: PENDING
-assigned_subagent: "python-development:backend-py"
+assigned_subagent: python-development:backend-py
+assigned_skills:
+  - python-development:qa-backend-py
 
 scope: |
   Implementar POST /api/v1/trips en FastAPI.

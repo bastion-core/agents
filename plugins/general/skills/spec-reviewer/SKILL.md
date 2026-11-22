@@ -71,7 +71,7 @@ Si por alguna razon no se puede ejecutar el validador (sin Python, sin permisos 
 - **`acceptance` verificable**: minimo 2 criterios por task, cada uno comprobable con un test o inspeccion objetiva (sin "funciona bien", "es rapido"). Los criterios del change/feature no mencionan tecnologias.
 - **Nombres**: `task` en snake_case y coincidente con el archivo sin contador; archivo `NN-accion-componente.yaml` (NN de 2 digitos, maximo 50 caracteres sin extension, maximo 99 tasks por change). El `task` tiene guia de 47 caracteres; el validador avisa de 48 a 100 y falla por encima de 100.
 - **Campos fuera de schema**: no hay campos inventados en tasks (`feature`, `title`, `assigned_to`, `repo`, `implementation_steps`, `blocked_reason`, etc.); el motivo de un bloqueo va en `scope`.
-- **`assigned_subagent`**: slug `plugin:agent`, sin prosa.
+- **`assigned_subagent`** y **`assigned_skills`**: slugs `plugin:agent` y `plugin:skill` (patron `^[a-z0-9-]+:[a-z0-9-]+$` del schema, que el validador aplica), sin prosa; `assigned_skills` solo para skills que el sub-agente no declara en su frontmatter.
 - **Idioma**: contenido descriptivo en espanol y claves en ingles.
 
 ## Formato de salida

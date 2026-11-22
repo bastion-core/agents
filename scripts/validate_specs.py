@@ -2,8 +2,10 @@
 """Validador de especificaciones SDD (feature, change, technical y tasks).
 
 Carga el schema de cada tipo (ver "Resolucion de schemas") y valida las specs
-contra el: campos obligatorios, tipos, max_length y enums (valores_permitidos), ademas de
-las reglas propias de las tasks (nombre de archivo y longitud del campo `task`).
+contra el: campos obligatorios, tipos, max_length, enums (valores_permitidos) y la clave
+`patron` (regex que un string, o cada item de una lista via `items`, debe cumplir; `formato`
+es el nombre legible del formato esperado), ademas de las reglas propias de las tasks (nombre
+de archivo y longitud del campo `task`).
 
 Los estados (`status`) son una lista cerrada por tipo; ver
 context/sdd-specs/status-vocabulary.md. Solo depende de PyYAML.
@@ -171,6 +173,12 @@ def is_required(field_schema: dict[str, Any]) -> bool:
     return isinstance(value, str) and value.strip().lower().startswith("true")
 
 
+def scalar_item_schema(field_schema: dict[str, Any]) -> dict[str, Any] | None:
+    """Schema de los items escalares de una lista (clave `items`), si la lista lo declara."""
+    items = field_schema.get("items")
+    return items if isinstance(items, dict) else None
+
+
 def item_schema(field_schema: dict[str, Any]) -> dict[str, Any] | None:
     for key in ("campos_por_item", "campos_por_endpoint"):
         if isinstance(field_schema.get(key), dict):
@@ -212,6 +220,11 @@ def check_field(
                     out.append(Finding(ERROR, file, f"{path}[{i}]", f"se esperaba un objeto y se encontro {_tname(item)}", structural=True))
                     continue
                 check_mapping(item, sub, file, f"{path}[{i}]", out)
+            return
+        scalar = scalar_item_schema(schema)
+        if scalar:
+            for i, item in enumerate(value):
+                check_field(item, scalar, file, f"{path}[{i}]", out)
         return
 
     if kind == "dict":
@@ -255,6 +268,19 @@ def check_field(
         if path == "task":
             return  # la longitud de `task` tiene reglas propias (aviso/error)
         out.append(Finding(ERROR, file, path, f"longitud {len(value)} supera el maximo de {max_length}: {value!r}", structural=True))
+
+    check_pattern(value, schema, file, path, out)
+
+
+def check_pattern(value: str, schema: dict[str, Any], file: str, path: str, out: list[Finding]) -> None:
+    """Aplica la clave `patron` del schema (regex completa) a un valor string."""
+    pattern = schema.get("patron")
+    if not isinstance(pattern, str) or not pattern:
+        return
+    if re.fullmatch(pattern, value):
+        return
+    formato = schema.get("formato") or pattern
+    out.append(Finding(ERROR, file, path, f"{value!r} no cumple el formato {formato} (patron {pattern})"))
 
 
 def check_mapping(
