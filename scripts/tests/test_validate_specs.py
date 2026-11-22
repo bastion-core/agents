@@ -224,6 +224,69 @@ class TaskFilenameTests(SpecTestCase):
         self.assertTrue(self.warnings(findings, "depends_on"))
 
 
+class PatternTests(SpecTestCase):
+    def validate_task(self, **overrides):
+        return self.run_validator("t/tasks/01-create-x.yaml", self.task(task="create_x", **overrides), "task")
+
+    def test_schema_declares_patterns(self):
+        task_schema = self.schemas["task"]
+        self.assertEqual(task_schema["assigned_subagent"]["patron"], "^[a-z0-9-]+:[a-z0-9-]+$")
+        self.assertEqual(task_schema["assigned_skills"]["items"]["patron"], "^[a-z0-9-]+:[a-z0-9-]+$")
+
+    def test_valid_subagent_and_skills(self):
+        findings = self.validate_task(
+            assigned_subagent="python-development:backend-py",
+            assigned_skills=["general:github-workflow", "python-development:backend-py-alembic"],
+        )
+        self.assertEqual(self.errors(findings), [])
+        self.assertEqual(self.warnings(findings), [])
+
+    def test_subagent_without_plugin_is_error(self):
+        errors = self.errors(self.validate_task(assigned_subagent="backend-py"), "assigned_subagent")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("'backend-py' no cumple el formato plugin:agent", errors[0].message)
+
+    def test_invalid_subagent_values(self):
+        for value in ("Python-Development:backend-py", "python-development:backend-py ", "a:b:c", "a :b", ":b", "a:"):
+            with self.subTest(value=value):
+                self.assertEqual(len(self.errors(self.validate_task(assigned_subagent=value), "assigned_subagent")), 1)
+
+    def test_skill_without_plugin_is_error(self):
+        findings = self.validate_task(assigned_skills=["general:github-workflow", "github-workflow"])
+        errors = self.errors(findings)
+        self.assertEqual([e.field for e in errors], ["assigned_skills[1]"])
+        self.assertIn("'github-workflow' no cumple el formato plugin:skill", errors[0].message)
+
+    def test_skill_item_max_length(self):
+        long_skill = "p:" + "s" * 149
+        errors = self.errors(self.validate_task(assigned_skills=[long_skill]), "assigned_skills[0]")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("supera el maximo de 150", errors[0].message)
+
+    def test_skills_must_be_list(self):
+        self.assertTrue(self.errors(self.validate_task(assigned_skills="general:github-workflow"), "assigned_skills"))
+
+    def test_task_without_subagent_or_skills_passes(self):
+        data = self.task(task="create_x")
+        data.pop("assigned_subagent", None)
+        data.pop("assigned_skills", None)
+        findings = self.run_validator("t/tasks/01-create-x.yaml", data, "task")
+        self.assertEqual(self.errors(findings), [])
+
+    def test_null_skills_passes(self):
+        self.assertEqual(self.errors(self.validate_task(assigned_skills=None)), [])
+
+    def test_pattern_is_read_from_schema(self):
+        schema = {"tipo": "string", "patron": "^x+$", "formato": "solo x"}
+        out = []
+        vs.check_field("xy", schema, "f.yaml", "campo", out)
+        self.assertEqual(len(out), 1)
+        self.assertIn("'xy' no cumple el formato solo x", out[0].message)
+        out = []
+        vs.check_field(["xx", "y"], {"tipo": "lista de strings", "items": schema}, "f.yaml", "lista", out)
+        self.assertEqual([f.field for f in out], ["lista[1]"])
+
+
 class StructureTests(SpecTestCase):
     def test_examples_pass_without_errors(self):
         for spec_type in vs.SPEC_TYPES:

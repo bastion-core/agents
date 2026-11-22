@@ -16,7 +16,9 @@ scope: |
   La tabla debe incluir todas las constraints de integridad y los indices optimizados
   para las consultas de historial.
 
-assigned_subagent: "python-development:backend-py"
+assigned_subagent: python-development:backend-py
+assigned_skills:
+  - python-development:backend-py-alembic
 
 files_to_create:
   - alembic/versions/xxxx_create_inventory_movements_table.py
