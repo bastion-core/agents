@@ -7,6 +7,20 @@ model: sonnet
 color: blue
 skills:
 - github-workflow
+routing:
+  stacks:
+  - python
+  - sqlalchemy
+  - pydantic
+  path_globs:
+  - "**/*.py"
+  - "**/pyproject.toml"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:backend-py-library"
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 # Backend Python Library Code Reviewer Agent
 

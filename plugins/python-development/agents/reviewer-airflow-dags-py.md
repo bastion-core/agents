@@ -12,6 +12,21 @@ context:
 - context/airflow-python-dags/dev_patterns.md
 - context/airflow-python-dags/state_management.md
 - context/airflow-python-dags/testing.md
+routing:
+  stacks:
+  - python
+  - airflow
+  - sql
+  path_globs:
+  - "**/dags/**/*.py"
+  - "**/scripts/**/*.py"
+  - "**/*.sql"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:qa-airflow-dags-py"
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 # Airflow DAGs Code Reviewer Agent
 
