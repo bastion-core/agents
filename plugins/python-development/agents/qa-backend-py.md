@@ -6,6 +6,18 @@ model: inherit
 color: green
 skills:
 - github-workflow
+routing:
+  stacks:
+  - python
+  - pytest
+  path_globs:
+  - "**/tests/**/*.py"
+  - "**/conftest.py"
+  task_kinds:
+  - tests
+  pairs_with_skills:
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 # QA Backend Python Agent
 

@@ -7,6 +7,18 @@ model: inherit
 color: green
 skills:
 - github-workflow
+routing:
+  stacks:
+  - sdd
+  - yaml
+  path_globs:
+  - "**/features/**/feature.yaml"
+  - "**/features/**/change.yaml"
+  task_kinds:
+  - docs
+  pairs_with_skills:
+  - "general:spec-reviewer"
+  - "general:github-workflow"
 ---
 # Product Specification Agent
 

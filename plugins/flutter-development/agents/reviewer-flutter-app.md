@@ -7,6 +7,20 @@ model: sonnet
 color: purple
 skills:
 - github-workflow
+routing:
+  stacks:
+  - flutter
+  - dart
+  - bloc
+  path_globs:
+  - "**/lib/**/*.dart"
+  - "**/test/**/*.dart"
+  - "!**/*.g.dart"
+  - "!**/*.freezed.dart"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 # Flutter Code Review Agent
 

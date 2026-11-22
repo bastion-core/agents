@@ -625,6 +625,7 @@ Your agent prompt here...
 - `description`: Descripción breve (1 línea)
 - `model`: Modelo a usar (`inherit`, `sonnet`, `opus`, `haiku`)
 - `color`: Color para la UI (`blue`, `green`, `yellow`, `red`, `purple`, `cyan`)
+- `routing` (opcional): stacks, rutas, tipos de tarea y skills con los que la plataforma SDD recomienda el agente. Ver [Bloque routing en el frontmatter](./docs/ROUTING_METADATA.md)
 
 ### Agregar un Nuevo Agente a un Plugin Existente
 

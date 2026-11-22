@@ -7,6 +7,20 @@ model: inherit
 color: yellow
 skills:
 - github-workflow
+routing:
+  stacks:
+  - sdd
+  - yaml
+  - markdown
+  path_globs:
+  - "**/features/**/technical.yaml"
+  - "**/features/**/technical-proposal.md"
+  - "**/features/**/tasks/*.yaml"
+  task_kinds:
+  - docs
+  pairs_with_skills:
+  - "general:spec-reviewer"
+  - "general:github-workflow"
 ---
 # Software Architect Agent
 

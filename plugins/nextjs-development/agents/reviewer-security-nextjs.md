@@ -7,6 +7,20 @@ model: fable
 color: red
 skills:
 - github-workflow
+routing:
+  stacks:
+  - nextjs
+  - typescript
+  - prisma
+  path_globs:
+  - "**/app/api/**/*.ts"
+  - "**/middleware.ts"
+  - "**/src/core/**/*.ts"
+  - "**/prisma/**"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 
 # Fullstack Next.js Security Reviewer Agent

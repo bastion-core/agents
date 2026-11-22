@@ -6,6 +6,22 @@ model: inherit
 color: blue
 skills:
 - github-workflow
+routing:
+  stacks:
+  - flutter
+  - dart
+  - bloc
+  - freezed
+  path_globs:
+  - "**/lib/**/*.dart"
+  - "**/test/**/*.dart"
+  - "!**/*.g.dart"
+  - "!**/*.freezed.dart"
+  task_kinds:
+  - implementation
+  - tests
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 # Flutter Mobile Development Agent
 
