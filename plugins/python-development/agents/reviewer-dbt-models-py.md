@@ -9,6 +9,24 @@ skills:
 - data-engineer-airflow
 - data-architecture-postgre
 - data-quality-governance
+routing:
+  stacks:
+  - sql
+  - dbt
+  - postgresql
+  path_globs:
+  - "**/dbt/**/*.sql"
+  - "**/dbt/**/*.yml"
+  - "**/dbt/**/*.yaml"
+  - "**/dbt/**/*.csv"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:analytics-engineer"
+  - "python-development:data-engineer-airflow"
+  - "general:data-architecture-postgre"
+  - "general:data-quality-governance"
+  - "general:github-workflow"
 ---
 
 # dbt Models Code Reviewer Agent
