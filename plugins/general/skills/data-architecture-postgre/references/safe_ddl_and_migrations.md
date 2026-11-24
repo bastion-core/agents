@@ -2,6 +2,8 @@
 
 Este documento contiene los protocolos de seguridad obligatorios para ejecutar cambios de esquema (DDL) en bases de datos PostgreSQL de producción sin provocar caídas de servicio, bloqueos en cola (lock queues) ni degradación del rendimiento.
 
+> **Alcance**: estos guardarraíles (`lock_timeout`, `CONCURRENTLY`, FKs `NOT VALID`) aplican a DDL escrito a mano (esquemas `raw`, `audit`, `app`, Alembic). NO aplican a tablas gestionadas por dbt (`stg`/`int`/gold): dbt las crea/reemplaza vía `materialized`; allí se auditan el diseño renderizado (orden de columnas del select final, `contract`, `post_hook` de índices, BRIN, `persist_docs`).
+
 ---
 
 ## 1. La Anatomía del Bloqueo en PostgreSQL

@@ -14,6 +14,10 @@ Este documento establece las directrices arquitectónicas para diseñar e implem
    - **Tablas de Hechos (`fct_*`)**: Almacenan eventos de negocio cuantitativos. Contienen claves foráneas hacia dimensiones conformadas y medidas aditivas/semi-aditivas.
    - **Dimensiones Conformadas (`dim_*`)**: Almacenan el contexto de las entidades de negocio. Contienen atributos descriptivos para filtrado, agrupación y segmentación.
 
+4. **Convención de capa Gold**: el esquema gold puede llamarse `marts` o `core` y los hechos usar `fct_` o `fact_`; las dimensiones siempre `dim_`. Declarar la convención en `dbt_project.yml` y mantenerla consistente dentro del proyecto (alineado con `data-architecture-postgre/references/naming_conventions.md`).
+5. **DDL a mano vs dbt**: los guardarraíles de DDL (`lock_timeout`, `CONCURRENTLY`) aplican a DDL escrito a mano, no a tablas gestionadas por dbt; en dbt los índices se crean con `post_hook` y el orden de columnas se fija en el select final + contract.
+6. **Deduplicación en Postgres**: usar CTE con `row_number() over (...) = 1` en un filtro posterior; `QUALIFY` no existe en PostgreSQL.
+
 ---
 
 ## 2. Patrón Canónico de Tabla de Hechos (`fct_orders.sql`)

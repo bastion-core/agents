@@ -24,7 +24,7 @@ Organizar los objetos en esquemas según el dominio o la capa arquitectónica:
 | `app` (o nombre de dominio) | Tablas operacionales OLTP de la aplicación | `app.users`, `billing.invoices` |
 | `raw` | Capa Bronze / Ingesta: datos crudos append-only | `raw.stripe_charges`, `raw.device_events` |
 | `stg` | Capa Silver / Staging: datos limpios y tipados | `stg.stg_stripe_charges`, `stg.stg_devices` |
-| `core` / `marts` | Capa Gold: modelos dimensionales (Kimball) | `core.dim_customers`, `core.fct_orders` |
+| `core` / `marts` | Capa Gold: modelos dimensionales (Kimball). Cada proyecto usa uno solo de los dos nombres, de forma consistente (el skill `analytics-engineer` lo llama `marts`) | `core.dim_customers`, `core.fct_orders` |
 | `audit` | Registros de auditoría y Change Data Capture | `audit.entity_change_logs` |
 
 ---
@@ -41,7 +41,7 @@ Organizar los objetos en esquemas según el dominio o la capa arquitectónica:
 ### 3.2 Tablas OLAP / DWH
 - Usar prefijos explícitos de modelado dimensional:
   - Dimensiones: `dim_<entidad>` (ej: `dim_customers`, `dim_products`, `dim_date`).
-  - Hechos / Transacciones: `fct_<evento_negocio>` (ej: `fct_orders`, `fct_page_views`).
+  - Hechos / Transacciones: `fct_<evento_negocio>` o `fact_<evento_negocio>` (ej: `fct_orders`, `fct_page_views`). Elegir UN prefijo por proyecto y declararlo en `dbt_project.yml`/README; mezclar `fct_` y `fact_` en un mismo proyecto es inconsistencia, la elección en sí no lo es.
   - Puentes: `bridge_<entidad1>_<entidad2>` (ej: `bridge_customer_groups`).
   - Agregaciones / Data Marts: `mart_<dominio>_<concepto>` (ej: `mart_finance_monthly_revenue`).
 

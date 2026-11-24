@@ -62,6 +62,7 @@ Cada vez que se solicite diseñar o modificar una tabla o esquema, seguir este p
 5. **Presupuesto**: No superar 3 a 5 índices por tabla en OLTP.
 
 ### Fase 4: Generación de DDL Seguro (Zero-Downtime)
+Aplica a DDL escrito a mano (`raw`, `audit`, `app`, Alembic). Las tablas gestionadas por dbt NO usan estos guardarraíles: se revisa el diseño renderizado (select final, `contract`, `post_hook` de índices, `persist_docs`).
 1. Encabezar el script con guardarraíles:
    ```sql
    SET lock_timeout = '2s';

@@ -138,7 +138,7 @@ customer_pipeline()
 
 ## 4. Alternativa Fallback: BashOperator / KubernetesPodOperator
 
-Si el entorno no cuenta con `astronomer-cosmos` instalado o se requiere un runner desacoplado en Kubernetes:
+Solo si el entorno no cuenta con `astronomer-cosmos` o se requiere un runner desacoplado en Kubernetes (documentar el motivo en el PR/docstring; el reviewer lo marca MUST FIX si no hay justificación). Un único `DbtBuildLocalOperator` de Cosmos por gate (`dbt build --select tag:...`, `retries=0`) es aceptable si hay decisión documentada (ADR/auditoría):
 
 ```python
 from airflow.operators.bash import BashOperator

@@ -131,7 +131,8 @@ def test_dag_tags_and_owners(dag_bag):
     for dag_id, dag in dag_bag.dags.items():
         assert dag.default_args.get("owner") is not None, f"DAG {dag_id} no tiene 'owner' configurado."
         assert len(dag.tags) > 0, f"DAG {dag_id} debe tener al menos un tag para categorización."
-        assert dag.catchup is False, f"DAG {dag_id} debe tener catchup=False a menos que se justifique."
+        if dag.catchup:  # backfill acotado: exige max_active_runs y cargas idempotentes
+            assert dag.max_active_runs <= 3, f"DAG {dag_id} con catchup=True requiere max_active_runs acotado."
 ```
 
 ---

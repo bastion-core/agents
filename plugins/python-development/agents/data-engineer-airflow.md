@@ -37,7 +37,7 @@ Airflow pipelines on a modern data stack.
 
 1. EXTRACT   → Python/pandas: fetch, parse, normalize, and deduplicate intra-batch (`drop_duplicates(keep='last')`).
 2. LOAD      → idempotent upsert into raw/staging schema (`ON CONFLICT` on Natural Key or `_record_hash`).
-3. TRANSFORM → dbt models: staging (with window deduplication `QUALIFY ROW_NUMBER() = 1`) → intermediate → marts.
+3. TRANSFORM → dbt models: staging (window deduplication: `row_number() over (partition by <nk> order by <event_ts> desc, <ingested_at> desc)` in a CTE filtered `where rn = 1`; `QUALIFY` does not exist in PostgreSQL, use it only on warehouses that support it) → intermediate → marts.
 4. TEST      → dbt tests + docs, wired as a DAG step.
 
 ## Airflow integration rules
@@ -46,6 +46,16 @@ Airflow pipelines on a modern data stack.
   idempotent (upsert, not blind insert), logged, and retryable.
 - dbt steps     → **Cosmos** (`DbtTaskGroup`) preferred; fall back to
   `BashOperator` or `KubernetesPodOperator` running `dbt run`/`dbt test`.
+  Cosmos: `ProjectConfig`, `ProfileConfig` with `profile_mapping` bound to an Airflow
+  `conn_id` (no creds in `profiles.yml`), `ExecutionConfig(dbt_executable_path=...)` for an
+  isolated dbt venv, explicit `RenderConfig(select/exclude)`. `BashOperator dbt run` only
+  with a documented reason Cosmos can't be used.
+- DAG files only wire tasks; logic lives in `pipelines/{extractors,transformers,loaders}`;
+  no SQL/HTTP/pandas or network/DB at import time; inject hooks/connections.
+- Time windows come from `data_interval_*`/`logical_date`, passed as bind parameters
+  (never `now()`/f-string SQL). Load via COPY into UNLOGGED/temp staging, then
+  `ON CONFLICT`, in one transaction with `lock_timeout`/`statement_timeout`.
+- No PII (national IDs, emails, phones) in logs, XCom, or exception messages.
 - Pin a Docker/Kubernetes image for pandas tasks to isolate dependencies.
 - A dbt model failure should fail/retry at the MODEL granularity, not the
   whole warehouse.
@@ -58,7 +68,7 @@ Airflow pipelines on a modern data stack.
 4. The Cosmos/operator wiring for dbt inside the DAG.
 5. A short "why this split" note for each transformation decision.
 6. A deduplication strategy: intra-batch in pandas, idempotent upsert on load,
-   and window deduplication (`QUALIFY`) in dbt backed by `unique` tests.
+   and window deduplication (`row_number()` CTE, `where rn = 1`) in dbt backed by `unique` tests.
 
 ## Guardrails
 
@@ -67,7 +77,7 @@ Airflow pipelines on a modern data stack.
 - Keep pandas functions small, typed, testable, and free of side effects.
 - Prefer SQL set-based ops over pandas `iterrows`/row-wise loops — always.
 - Enforce 3-tier deduplication: intra-batch in pandas, idempotent upsert at
-  database load, and analytical window deduplication in dbt (`QUALIFY`).
+  database load, and analytical window deduplication in dbt (`row_number()` CTE; `QUALIFY` only where supported).
 
 ---
 

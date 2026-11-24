@@ -64,7 +64,7 @@ SET statement_timeout = '30s';
 
 ## 3. Carga Masiva Idempotente (Bulk Raw + Upsert)
 
-En lugar de inserciones fila por fila (`INSERT INTO ... VALUES (...)`), se utiliza una tabla temporal no indexada cargada vía `COPY` o `execute_values`, seguida de un merge con `INSERT ... ON CONFLICT DO UPDATE`.
+En lugar de inserciones fila por fila (`INSERT INTO ... VALUES (...)`), se utiliza una tabla temporal no indexada cargada vía `COPY` (`copy_expert`/`copy_from` con `StringIO`; `execute_values`/`executemany` solo para lotes pequeños), seguida de un merge con `INSERT ... ON CONFLICT DO UPDATE`.
 
 ### Targets de Conflicto por Capa
 
