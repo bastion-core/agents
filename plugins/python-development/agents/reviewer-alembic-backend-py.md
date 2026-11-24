@@ -10,6 +10,23 @@ skills:
 - backend-py-alembic
 - backend-py
 - qa-backend-py
+routing:
+  stacks:
+  - python
+  - alembic
+  - sqlalchemy
+  - postgresql
+  path_globs:
+  - "**/alembic/versions/**/*.py"
+  - "**/alembic/env.py"
+  - "**/alembic.ini"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:backend-py-alembic"
+  - "python-development:backend-py"
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 # Alembic Migration Job Code Reviewer Agent
 

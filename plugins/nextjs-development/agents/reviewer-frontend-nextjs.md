@@ -7,6 +7,21 @@ model: sonnet
 color: orange
 skills:
 - github-workflow
+routing:
+  stacks:
+  - nextjs
+  - react
+  - typescript
+  - zustand
+  path_globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "!**/app/api/**"
+  - "!**/prisma/**"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 # Frontend Next.js Code Reviewer Agent
 

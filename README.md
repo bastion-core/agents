@@ -35,6 +35,8 @@ Agente enfocado en análisis, evaluación y recomendación de soluciones arquite
 - Planificación de proyectos
 - Documentación de arquitectura
 
+**Skill `spec-reviewer` (`[general/skills] spec-reviewer`):** revisa specs SDD (feature, change, technical y tasks) ejecutando `scripts/validate-specs.sh` y comprobando a mano la coherencia entre change y tasks. Rechaza cualquier `status` fuera de la lista cerrada de `context/sdd-specs/status-vocabulary.md`.
+
 ### Python Development Plugin
 
 Agentes y skills especializados para desarrollo Python backend.
@@ -473,7 +475,8 @@ claude-agents/
 │   │   └── skills/
 │   │       ├── data-architecture-postgre/ # Skill de PostgreSQL seguro y optimizado
 │   │       ├── data-quality-governance/ # Skill de contratos de datos, Soda/GX y PII
-│   │       └── github-workflow/         # Skill de flujo de GitHub
+│   │       ├── github-workflow/         # Skill de flujo de GitHub
+│   │       └── spec-reviewer/           # Revisor de specs SDD
 │   ├── python-development/              # Ecosistema Python
 │   │   ├── README.md
 │   │   ├── agents/
@@ -638,6 +641,7 @@ Your agent prompt here...
 - `description`: Descripción breve (1 línea)
 - `model`: Modelo a usar (`inherit`, `sonnet`, `opus`, `haiku`)
 - `color`: Color para la UI (`blue`, `green`, `yellow`, `red`, `purple`, `cyan`)
+- `routing` (opcional): stacks, rutas, tipos de tarea y skills con los que la plataforma SDD recomienda el agente. Ver [Bloque routing en el frontmatter](./docs/ROUTING_METADATA.md)
 
 ### Agregar un Nuevo Agente a un Plugin Existente
 

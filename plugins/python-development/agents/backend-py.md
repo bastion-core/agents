@@ -6,6 +6,24 @@ model: inherit
 color: green
 skills:
 - github-workflow
+routing:
+  stacks:
+  - python
+  - fastapi
+  - sqlalchemy
+  - pydantic
+  path_globs:
+  - "**/*.py"
+  - "!**/tests/**"
+  task_kinds:
+  - implementation
+  - migration
+  pairs_with_skills:
+  - "python-development:backend-py"
+  - "python-development:backend-py-alembic"
+  - "python-development:backend-py-celery"
+  - "python-development:backend-py-library"
+  - "general:github-workflow"
 ---
 # Backend Python Development Agent
 

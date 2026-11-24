@@ -314,6 +314,58 @@ while IFS= read -r -d '' agent_file; do
         print_warn "Found $long_lines line(s) longer than 500 characters"
     fi
 
+    # Test 13: Bloque 'routing' opcional (docs/ROUTING_METADATA.md). Sin el
+    # bloque el archivo sigue siendo valido; con el bloque se valida su forma.
+    if sed -n '/^---$/,/^---$/p' "$agent_file" | grep -q "^routing:"; then
+        if python3 -c "import yaml" >/dev/null 2>&1; then
+            routing_report=$(python3 - "$agent_file" <<'PYEOF'
+import re, sys, yaml
+
+text = open(sys.argv[1], encoding="utf-8").read()
+parts = text.split("\n---\n", 1)
+try:
+    front = yaml.safe_load(parts[0].removeprefix("---\n"))
+except yaml.YAMLError as exc:
+    print(f"FAIL|frontmatter is not valid YAML: {exc}")
+    sys.exit(0)
+
+routing = front.get("routing")
+keys = {"stacks", "path_globs", "task_kinds", "pairs_with_skills"}
+kinds = {"implementation", "tests", "review", "migration", "docs"}
+errors = []
+if not isinstance(routing, dict):
+    errors.append("routing must be a mapping")
+else:
+    for key in sorted(set(routing) - keys):
+        errors.append(f"unknown routing key '{key}'")
+    for key in sorted(keys & set(routing)):
+        value = routing[key]
+        if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
+            errors.append(f"routing.{key} must be a list of non-empty strings")
+    for kind in routing.get("task_kinds") or []:
+        if isinstance(kind, str) and kind not in kinds:
+            errors.append(f"routing.task_kinds has invalid value '{kind}'")
+    for skill in routing.get("pairs_with_skills") or []:
+        if isinstance(skill, str) and not re.fullmatch(r"[a-z0-9-]+:[a-z0-9-]+", skill):
+            errors.append(f"routing.pairs_with_skills '{skill}' must be plugin:skill")
+for error in errors:
+    print(f"FAIL|{error}")
+if not errors:
+    print("PASS|routing block has a valid shape")
+PYEOF
+            )
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                case "$line" in
+                    PASS\|*) print_pass "${line#PASS|}" ;;
+                    FAIL\|*) print_fail "${line#FAIL|}" ;;
+                esac
+            done <<< "$routing_report"
+        else
+            print_warn "pyyaml not available, skipping routing block check"
+        fi
+    fi
+
     echo ""
 done < <(find "$PLUGINS_DIR" -type f \( -path "$PLUGINS_DIR/*/agents/*.md" -o -path "$PLUGINS_DIR/*/skills/*/SKILL.md" \) ! -name "README.md" -print0 | sort -z)
 

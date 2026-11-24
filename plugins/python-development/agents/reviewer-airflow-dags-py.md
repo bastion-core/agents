@@ -1,6 +1,6 @@
 ---
 name: reviewer-airflow-dags-py
-description: Code reviewer for Apache Airflow DAGs in Python, aligned with Modern Data Stack: TaskFlow, edge-pandas, in-warehouse dbt, Cosmos orchestration, and dbt schema tests.
+description: "Code reviewer for Apache Airflow DAGs in Python, aligned with Modern Data Stack: TaskFlow, edge-pandas, in-warehouse dbt, Cosmos orchestration, and dbt schema tests."
 model: sonnet
 color: blue
 skills:
@@ -12,6 +12,24 @@ context:
 - context/airflow-python-dags/architecture.md
 - context/airflow-python-dags/dev_patterns.md
 - context/airflow-python-dags/state_management.md
+routing:
+  stacks:
+  - python
+  - airflow
+  - sql
+  path_globs:
+  - "**/dags/**/*.py"
+  - "**/scripts/**/*.py"
+  - "**/tests/**/*.py"
+  - "**/sql/**/*.sql"
+  - "!**/dbt/**"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:data-engineer-airflow"
+  - "general:data-architecture-postgre"
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 
 # Airflow DAGs & Data Pipelines Code Reviewer Agent

@@ -7,6 +7,20 @@ model: sonnet
 color: blue
 skills:
 - github-workflow
+routing:
+  stacks:
+  - nextjs
+  - react
+  - typescript
+  - prisma
+  path_globs:
+  - "**/src/**/*.ts"
+  - "**/src/**/*.tsx"
+  - "**/prisma/**"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 
 # Fullstack Next.js Code Reviewer Agent (Hexagonal + Prisma)
