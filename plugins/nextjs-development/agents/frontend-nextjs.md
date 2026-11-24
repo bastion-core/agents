@@ -7,6 +7,22 @@ model: inherit
 color: cyan
 skills:
 - github-workflow
+routing:
+  stacks:
+  - nextjs
+  - react
+  - typescript
+  - zustand
+  path_globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "!**/app/api/**"
+  - "!**/prisma/**"
+  task_kinds:
+  - implementation
+  - tests
+  pairs_with_skills:
+  - "general:github-workflow"
 ---
 # Frontend Next.js Development Agent
 

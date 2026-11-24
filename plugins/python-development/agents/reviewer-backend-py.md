@@ -7,6 +7,21 @@ model: sonnet
 color: purple
 skills:
 - github-workflow
+routing:
+  stacks:
+  - python
+  - fastapi
+  - sqlalchemy
+  - pydantic
+  path_globs:
+  - "**/*.py"
+  - "!**/alembic/versions/**"
+  task_kinds:
+  - review
+  pairs_with_skills:
+  - "python-development:backend-py"
+  - "python-development:qa-backend-py"
+  - "general:github-workflow"
 ---
 # Backend Python Code Reviewer Agent
 

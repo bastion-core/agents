@@ -12,9 +12,10 @@ schema:
     reglas:
       - Usar snake_case (ej. create_user_endpoint, implement_auth_service)
       - Debe ser corto, descriptivo y unico dentro de la funcionalidad
-      - Maximo 47 caracteres. El limite duro de la plataforma es 50 (se persiste como task_code en una
-        columna varchar(50); si se supera, la sincronizacion del registry falla), y 47 deja espacio para
-        el prefijo `NN-` del nombre de archivo
+      - Maximo 47 caracteres como guia estricta (deja espacio para el prefijo `NN-` del nombre de archivo).
+        El limite duro de la plataforma es 100 (se persiste como task_code; sdd-flow-ai v28 lo amplia a
+        100 y si se supera la sincronizacion del registry falla). El validador marca AVISO entre 48 y 100
+        caracteres y ERROR por encima de 100
       - Coincide con el nombre del archivo en kebab-case, sin el contador. El archivo se nombra
         `{NN}-{action}-{component}.yaml` con NN de dos digitos (01-99) y, sin la extension, maximo 50 caracteres
       - Un change no debe superar 99 tareas; si lo hiciera, crear otra version de cambios
@@ -49,12 +50,26 @@ schema:
   status:
     tipo: string (enum)
     obligatorio: true
-    descripcion: Estado actual de la tarea.
+    descripcion: Estado actual de la tarea (lista cerrada, en MAYUSCULAS con guion bajo).
     valores_permitidos:
       - PENDING
       - IN_PROGRESS
       - COMPLETED
       - BLOCKED
+    reglas:
+      - Lista cerrada de exactamente 4 valores. Cualquier otro valor (DONE, TODO, PLANNED, CANCELLED,
+        IN-PROGRESS, Completed, minusculas) es invalido; no inventes estados ni cambies el casing
+      - Las tasks usan MAYUSCULAS; feature.yaml y change.yaml usan minuscula con guion (planned,
+        in-progress). Comparten el concepto de ciclo de vida, no los valores
+      - Al crear una task, siempre iniciar en PENDING. IN_PROGRESS, BLOCKED y COMPLETED solo los fija
+        quien ejecuta la tarea, nunca el agente que la genera
+      - "Transiciones validas: PENDING -> IN_PROGRESS | BLOCKED; IN_PROGRESS -> COMPLETED | BLOCKED |
+        PENDING; BLOCKED -> PENDING | IN_PROGRESS; COMPLETED es terminal"
+      - BLOCKED significa que la tarea no puede avanzar por una dependencia externa a ella. El motivo se
+        documenta en `scope` o en las notas de la task; no existe un campo adicional para ello
+      - Una task depende de otras del mismo change con `depends_on`; eso no la hace BLOCKED
+      - No existe CANCELLED para tasks
+      - Vocabulario completo, transiciones y ejemplos invalidos en context/sdd-specs/status-vocabulary.md
     ejemplo: PENDING
 
   phase:
@@ -75,9 +90,13 @@ schema:
     tipo: string
     obligatorio: false
     max_length: 150
+    patron: "^[a-z0-9-]+:[a-z0-9-]+$"
+    formato: plugin:agent
     descripcion: Sub-agente responsable de ejecutar la tarea (formato plugin:agent).
     reglas:
-      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py)
+      - Debe ser un slug corto en formato `plugin:agent` (ej. python-development:backend-py), sin comillas
+        de mas ni espacios. El validador lo compara con la clave `patron` (minusculas, digitos y guiones a
+        cada lado de un unico `:`) y marca ERROR si no la cumple (ej. `backend-py` sin plugin)
       - Maximo 150 caracteres (persistido en columna varchar(150)/varchar(200) segun destino de sync)
       - Nunca escribir prosa, justificaciones o razonamiento en este campo
       - Si no existe un sub-agente dedicado en el catalogo para el stack de la tarea, omitir el campo
@@ -86,6 +105,26 @@ schema:
         manual mas cercana, va como un item de `patterns` (ej. "Sin agente dedicado para React+Vite+TS;
         usar nextjs-development:frontend-nextjs como referencia con ajuste manual")
     ejemplo: "python-development:backend-py"
+
+  assigned_skills:
+    tipo: lista de strings
+    obligatorio: false
+    descripcion: Skills que el sub-agente debe cargar para ejecutar la tarea (formato plugin:skill).
+    reglas:
+      - Cada item es un slug `plugin:skill` (ej. python-development:backend-py-alembic); el validador lo
+        compara con la clave `patron` de `items` y marca ERROR si no la cumple (ej. `github-workflow` sin plugin)
+      - Maximo 150 caracteres por item
+      - Usarlo solo para skills que el sub-agente no declara en su frontmatter y que la tarea necesita
+        (ej. la skill de migraciones en una tarea de alembic); omitir el campo si no hace falta ninguna
+      - Nunca escribir prosa ni justificaciones en los items
+    items:
+      tipo: string
+      max_length: 150
+      patron: "^[a-z0-9-]+:[a-z0-9-]+$"
+      formato: plugin:skill
+    ejemplo:
+      - python-development:backend-py-alembic
+      - general:github-workflow
 
   scope:
     tipo: string (multilinea)

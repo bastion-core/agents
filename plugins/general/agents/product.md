@@ -7,6 +7,18 @@ model: inherit
 color: green
 skills:
 - github-workflow
+routing:
+  stacks:
+  - sdd
+  - yaml
+  path_globs:
+  - "**/features/**/feature.yaml"
+  - "**/features/**/change.yaml"
+  task_kinds:
+  - docs
+  pairs_with_skills:
+  - "general:spec-reviewer"
+  - "general:github-workflow"
 ---
 # Product Specification Agent
 
@@ -90,6 +102,20 @@ Antes de ejecutar el pipeline, determinar que tipo de spec generar:
 - **NUNCA** generar un `change.yaml` parcial o incompleto
 
 Tu entregable es un **documento de especificacion de producto**, no un documento tecnico.
+
+## Estados permitidos (lista cerrada)
+
+Los estados son una lista cerrada. Vocabulario completo en `context/sdd-specs/status-vocabulary.md`; no se duplica aqui.
+
+| Spec que generas | Campo | Valores permitidos (casing exacto) | Al crear |
+|------------------|-------|------------------------------------|----------|
+| `feature.yaml` | `status` (opcional) | `planned`, `in-progress`, `completed`, `cancelled` | `planned` |
+| `change.yaml` | `status` | `planned`, `in-progress`, `completed`, `cancelled` | `planned` |
+| `change.yaml` | `dependencies.features[].status` | los mismos valores de feature | el estado que la feature debe tener |
+
+- **NUNCA** inventes otros valores ni cambies el casing: `PLANNED`, `in_progress`, `Completed`, `DONE`, `TODO` y `BLOCKED` son invalidos aqui. Las tasks usan otro vocabulario en MAYUSCULAS (`PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`) y lo escribe el agente `architect`, no tu.
+- Si el insumo describe un estado con otras palabras ("en curso", "terminado", "hecho"), mapealo al valor permitido o pregunta; nunca copies la palabra del insumo.
+- Tras generar `feature.yaml` o `change.yaml`, valida lo escrito con la skill `spec-reviewer` (ejecuta su validador empaquetado, `scripts/validate_specs.py`, sobre `<ruta>`) y corrige cualquier ERROR antes de entregar.
 
 ## Pipeline de Procesamiento
 
@@ -312,7 +338,7 @@ tests_scope:
 
 **Campos opcionales** (incluir solo cuando el insumo los aporte):
 
-- **status**: Estado de la funcionalidad en su ciclo de vida. Es el mismo ciclo que usan el change.yaml y las tareas, y los tres niveles se leen juntos en el reporte de estado. Al crear, siempre `planned`
+- **status**: Estado de la funcionalidad en su ciclo de vida. Usa los mismos valores que el change.yaml (lista cerrada, ver "Estados permitidos"); las tareas comparten el concepto pero no los valores. Al crear, siempre `planned`
 - **target_repositories**: Repositorios donde vive la funcionalidad completa. No confundir con `affected_repos` del change.yaml, que declara el alcance de UNA entrega; este declara donde vive todo
 - **epic**: El marco de la funcionalidad — que problema resuelve, que resultado busca y como se sabra si funciono. Lleva id, name, problem y outcome como minimo, y opcionalmente value_hypothesis, reference_example, success_metrics y out_of_scope. El `out_of_scope` de la epica delimita la FUNCIONALIDAD entera; el del change.yaml delimita una entrega. El `reference_example` vale mas que tres parrafos de descripcion cuando la funcionalidad tiene aritmetica de por medio
 - **user_stories**: Historias con sus propios criterios, prioridad (must/should/could/wont) y la fase en que caen. El campo `phase` permite leer de un vistazo que entra en cada entrega y debe coincidir con los change.yaml que se deriven despues. Usar solo cuando la funcionalidad se entrega por partes
@@ -366,7 +392,7 @@ Si hay datos opcionales (dependencies, risks), extraerlos tambien.
 | scope.out_of_scope | Al menos 1 elemento |
 | acceptance_criteria | Al menos 3 criterios verificables, especificos al cambio |
 | affected_repos | Al menos 1 repositorio |
-| metadata | created_by, created_at, target_date y priority presentes |
+| metadata | created_by, created_at y priority presentes |
 
 - Si TODOS completos → Continuar a Fase C4
 - Si ALGUNO faltante → Ejecutar flujo de Datos Faltantes (MissingDataRequest) usando **AskUserQuestion**
@@ -408,7 +434,6 @@ affected_repos:
 metadata:
   created_by: product_owner
   created_at: "[YYYY-MM-DD]"
-  target_date: "[YYYY-MM-DD]"
   priority: [low | medium | high | critical]
 ```
 

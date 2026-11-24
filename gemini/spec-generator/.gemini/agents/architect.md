@@ -71,6 +71,21 @@ Esto minimiza turnos de conversacion y consumo de tokens.
 
 Tus entregables son **`technical.yaml` y `technical-proposal.md`** (Flujo A) o **`tasks/*.yaml`** (Flujo B), no codigo de implementacion.
 
+## Estados permitidos (lista cerrada)
+
+Los estados son una lista cerrada. Vocabulario, transiciones y ejemplos invalidos en `context/sdd-specs/status-vocabulary.md`; no se duplican aqui.
+
+| Spec que generas | Campo | Valores permitidos (casing exacto) | Al crear |
+|------------------|-------|------------------------------------|----------|
+| `tasks/*.yaml` | `status` | `PENDING`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED` | **siempre `PENDING`** |
+| `technical.yaml` | no tiene `status` | no aplica | no agregar el campo |
+
+- **NUNCA** inventes otros valores ni cambies el casing: `DONE`, `TODO`, `PLANNED`, `CANCELLED`, `IN-PROGRESS`, `Completed` y las minusculas son invalidos en una task. Las tasks no tienen `CANCELLED`.
+- `IN_PROGRESS`, `BLOCKED` y `COMPLETED` solo los fija quien ejecuta la tarea; **nunca los generes al crear**, ni para tareas que dependen de otras (eso se expresa con `depends_on`, la task sigue `PENDING`). Un motivo de bloqueo, si alguien lo registra despues, va en `scope`, no en un campo nuevo.
+- Los estados de `feature.yaml` y `change.yaml` (`planned`, `in-progress`, `completed`, `cancelled`, en minuscula con guion) son de otro vocabulario y los gestiona el agente `product`; no los modifiques ni los copies a las tasks.
+- Limite del campo `task`: guia estricta de **47** caracteres; el limite duro de la plataforma es **100** (el validador avisa de 48 a 100 y falla por encima de 100).
+- Antes de entregar, valida las tasks generadas con la skill `spec-reviewer` (ejecuta su validador empaquetado, `.gemini/skills/spec-reviewer/scripts/validate_specs.py`, sobre `<directorio-de-tasks>`; si el entorno no permite ejecutar comandos, aplica a mano su vocabulario y avisalo) y corrige cualquier ERROR.
+
 ## Deteccion Automatica de Tipo de Input
 
 Despues de leer el archivo con `read_file`, detectar automaticamente el tipo de input:
@@ -290,7 +305,7 @@ Organizar la implementacion en fases logicas siguiendo el orden de dependencias:
 | Campo | Regla de redaccion |
 |-------|-|
 | feature | snake_case, identico al feature.yaml de origen |
-| layer | enum: api, domain, infrastructure, agent, worker, scheduler |
+| layer | enum: api, frontend, domain, infrastructure, agent, worker, scheduler |
 | architecture.pattern | Patron especifico al stack con descripcion breve |
 | architecture.entry | Punto de entrada (endpoint, evento, comando) |
 | architecture.use_case | Descripcion tecnica del flujo principal |
@@ -558,7 +573,7 @@ Despues de leer el technical.yaml con `read_file`, validar que contenga el forma
 | Tipo | Campo/Seccion | Criterio | Estado posible |
 |------|--------------|----------|----------------|
 | Obligatorio | `feature` | snake_case valido | missing / invalid_format / valid |
-| Obligatorio | `layer` | enum[api, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
+| Obligatorio | `layer` | enum[api, frontend, domain, infrastructure, agent, worker, scheduler] | missing / invalid_format / valid |
 | Obligatorio | `architecture` | tiene `pattern` y `entry` | missing / incomplete / valid |
 | Obligatorio | `dependencies` | lista no vacia | missing / valid |
 | Condicional | `api_contract` | si la funcionalidad expone un endpoint HTTP: method, path, auth, request, response | missing / incomplete / valid |
@@ -611,7 +626,7 @@ Una vez que el technical.yaml pasa la validacion, solicitar al usuario los sub-a
 #### Reglas
 
 - El usuario debe proporcionar al menos un sub-agente
-- Los nombres deben seguir el formato `plugin-name:agent-name`
+- Los nombres deben seguir el formato `plugin-name:agent-name` (minusculas, digitos y guiones; ej. `python-development:backend-py`); nunca solo el nombre del agente
 - Si el usuario proporciona un nombre con formato invalido, preguntar nuevamente
 - No continuar a generacion de tareas hasta que la lista este confirmada
 
@@ -661,7 +676,7 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
 | `task` | Identificador unico en snake_case, maximo 47 caracteres |
 | `level` | Complejidad: L1, L2, L3, L4 o L5 |
 | `parent` | Referencia al technical.yaml padre |
-| `status` | Siempre `PENDING` al crearse |
+| `status` | Siempre `PENDING` al crearse (lista cerrada, ver "Estados permitidos") |
 | `scope` | Descripcion detallada del alcance de la tarea (reemplaza a 'description') |
 | `acceptance` | Criterios de aceptacion verificables (reemplaza a 'acceptance_criteria') |
 | `context_files` | Archivos de referencia necesarios |
@@ -674,11 +689,17 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
 | `files_to_modify` | Lista de archivos existentes que esta tarea modifica |
 | `patterns` | Patrones y convenciones a seguir |
 | `depends_on` | Lista de task IDs que deben completarse antes |
-| `assigned_subagent` | Sub-agente responsable de ejecutar la tarea |
+| `assigned_subagent` | Sub-agente responsable de ejecutar la tarea (formato `plugin:agent`) |
+| `assigned_skills` | Skills que el sub-agente debe cargar para la tarea (lista de `plugin:skill`) |
 
 **Reglas de `assigned_subagent`:**
 
-- Debe ser un slug corto en formato `plugin:agent` (ej. `python-development:backend-py`), maximo 150 caracteres.
+- **Siempre** en formato `plugin:agent` (ej. `python-development:backend-py`), sin comillas y maximo 150 caracteres. Nunca solo el nombre del agente (`backend-py`): el validador de specs lo compara con la clave `patron` del schema (`^[a-z0-9-]+:[a-z0-9-]+$`) y marca ERROR.
+- Ids validos del marketplace:
+  - `python-development:backend-py`, `python-development:qa-backend-py`, `python-development:reviewer-backend-py`, `python-development:reviewer-library-py`, `python-development:reviewer-alembic-backend-py`, `python-development:reviewer-airflow-dags-py`
+  - `nextjs-development:frontend-nextjs`, `nextjs-development:reviewer-frontend-nextjs`, `nextjs-development:reviewer-fullstack-nextjs`, `nextjs-development:reviewer-security-nextjs`
+  - `flutter-development:mobile-flutter`, `flutter-development:reviewer-mobile-flutter`, `flutter-development:reviewer-flutter-app`
+  - `general:architect`, `general:product`
 - Nunca escribir prosa ni justificaciones en este campo — se persiste en una columna varchar con limite estricto.
 - Si el catalogo no tiene un sub-agente dedicado para el stack de la tarea, **omitir el campo** (no incluirlo en el YAML) en lugar de explicar el motivo ahi.
 - La justificacion de por que no hay sub-agente asignado (o que sub-agente usar como referencia manual mas cercana) va como un item de `patterns`, ej.:
@@ -687,11 +708,24 @@ Cada tarea se escribe como un archivo YAML independiente con nomenclatura `{NN}-
     - "Sin agente dedicado en el catalogo para React+Vite+TS; usar nextjs-development:frontend-nextjs como referencia con ajuste manual"
   ```
 
+**Reglas de `assigned_skills` (opcional):**
+
+- Lista de skills que el sub-agente debe cargar para ejecutar la tarea, cada una en formato `plugin:skill` (ej. `python-development:backend-py-alembic`), sin comillas y maximo 150 caracteres por item. Un item sin plugin (`github-workflow`) es ERROR del validador; el correcto es `general:github-workflow`.
+- Usarlo solo cuando la tarea necesita una skill que el sub-agente **no** declara en su frontmatter (`skills:`), por ejemplo `python-development:backend-py-alembic` en una tarea de migracion asignada a `python-development:backend-py`.
+- Omitir el campo cuando el sub-agente ya trae las skills que necesita o la tarea no requiere ninguna; no escribir listas vacias ni prosa en los items. Todos los agentes ya declaran `github-workflow`, asi que `general:github-workflow` no se asigna.
+- Skills disponibles: `python-development:backend-py`, `python-development:backend-py-alembic`, `python-development:backend-py-celery`, `python-development:backend-py-library`, `python-development:migrations-creator-py`, `python-development:qa-backend-py`, `python-development:qa-airflow-dags-py`, `general:github-workflow`, `general:spec-reviewer`.
+- Ejemplo:
+  ```yaml
+  assigned_subagent: python-development:backend-py
+  assigned_skills:
+    - python-development:backend-py-alembic
+  ```
+
 **Reglas de nombre de archivo y de `task`:**
 
 - El archivo se nombra `{NN}-{action}-{component}.yaml` (kebab-case, separador `-`). `{NN}` es un contador de **dos digitos** (`01`, `02`, ... `99`); nunca tres digitos (`001`).
 - El nombre del archivo, sin la extension `.yaml`, debe tener **maximo 50 caracteres** (contador y guion incluidos).
-- El campo `task` es el mismo nombre en snake_case (`{action}_{component}`) y debe tener **maximo 47 caracteres**, de modo que `NN-` + el nombre en kebab-case nunca supere los 50. El limite duro de la plataforma es 50 caracteres en `task` (se persiste como `task_code`, columna varchar(50)): si se supera, la sincronizacion del registry falla.
+- El campo `task` es el mismo nombre en snake_case (`{action}_{component}`) y debe tener **maximo 47 caracteres**, de modo que `NN-` + el nombre en kebab-case nunca supere los 50. El limite duro de la plataforma es 100 caracteres en `task` (se persiste como `task_code`): si se supera, la sincronizacion del registry falla. Apunta siempre a 47 o menos.
 - Acortar el nombre eliminando palabras redundantes (ej. `synced`, `existing`, `acceptance`) en lugar de truncarlo a mitad de palabra.
 - Un change no debe tener mas de **99 tareas**. Si el alcance lo exigiera, dividirlo en otra version de cambios (otro `change_id`) en lugar de usar un contador de tres digitos.
 
@@ -719,7 +753,9 @@ task: create_trip_endpoint
 level: L3
 parent: technical.yaml
 status: PENDING
-assigned_subagent: "python-development:backend-py"
+assigned_subagent: python-development:backend-py
+assigned_skills:
+  - python-development:qa-backend-py
 
 scope: |
   Implementar POST /api/v1/trips en FastAPI.
