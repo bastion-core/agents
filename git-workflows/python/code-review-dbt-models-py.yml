@@ -1,0 +1,80 @@
+name: dbt Code Review
+
+# Trigger on PRs touching the dbt project. The script filters files internally
+# (see --file-pattern, applied to repo-relative paths from `git diff --name-only`)
+# and exits early with an out-of-scope comment when no reviewable files are found.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'dbt/**'
+
+# Prevent multiple runs for the same PR (distinct from the Airflow review job)
+concurrency:
+  group: code-review-dbt-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  code-review:
+    name: AI dbt Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout agents marketplace
+        uses: actions/checkout@v4
+        with:
+          repository: bastion-core/agents
+          ssh-key: ${{ secrets.AGENTS_GITHUB_TOKEN }}
+          path: .agents-marketplace
+          sparse-checkout: |
+            plugins/python-development/agents/reviewer-dbt-models-py.md
+            scripts/code-review.sh
+
+      - name: Run code review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        # NOTE: --max-files is a HARD FAIL in code-review.sh (exit 1 with
+        # "exceeding the maximum") when changed files matching --file-pattern
+        # exceed the limit; it does not truncate. Split large dbt PRs.
+        run: |
+          chmod +x .agents-marketplace/scripts/code-review.sh
+          .agents-marketplace/scripts/code-review.sh \
+            --agent .agents-marketplace/plugins/python-development/agents/reviewer-dbt-models-py.md \
+            --file-pattern '^dbt/.*\.(sql|ya?ml|csv|md)$' \
+            --scope-label 'dbt / SQL / YAML' \
+            --arch-threshold 7 \
+            --quality-threshold 7 \
+            --test-threshold 8 \
+            --max-files 80
+
+      - name: Upload Review Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-review-dbt-${{ github.event.pull_request.number }}
+          path: |
+            claude_review.md
+            review_context.json
+            changed_files.txt
+            diffs/
+          retention-days: 30

@@ -488,6 +488,7 @@ claude-agents/
 │   │   │   ├── reviewer-backend-py.md  # Agente de code review
 │   │   │   ├── reviewer-library-py.md  # Agente de review de librerías
 │   │   │   ├── reviewer-airflow-dags-py.md      # Agente de review de DAGs Airflow
+│   │   │   ├── reviewer-dbt-models-py.md        # Agente de review de proyectos dbt (PostgreSQL)
 │   │   │   └── reviewer-alembic-backend-py.md   # Agente de review de jobs Alembic
 │   │   └── skills/                     # Un directorio por skill, cada uno con SKILL.md
 │   │       ├── analytics-engineer/     # Skill de dbt Semantic Layer, métricas y marts

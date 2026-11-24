@@ -14,6 +14,7 @@ on:
       - 'sql/**'
       - 'requirements.txt'
       - 'pyproject.toml'
+    # dbt/** is reviewed by code-review-dbt-models-py.yml (reviewer-dbt-models-py)
 
 # Prevent multiple runs for the same PR
 concurrency:
@@ -67,9 +68,9 @@ jobs:
             --arch-threshold 7 \
             --quality-threshold 7 \
             --test-threshold 8 \
-            --file-pattern '\.(py|sql)$|requirements\.txt$|pyproject\.toml$' \
+            --file-pattern '^(dags|scripts|tests|sql|alembic)/.*\.(py|sql)$|^requirements\.txt$|^pyproject\.toml$' \
             --scope-label 'Airflow / Python / SQL' \
-            --max-files 50
+            --max-files 80
 
       - name: Upload Review Artifacts
         if: always()

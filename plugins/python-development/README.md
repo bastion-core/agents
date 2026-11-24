@@ -101,6 +101,9 @@ Specialized code reviewer for Python library development with focus on API desig
 - Ensuring documentation quality
 - Checking package structure
 
+#### reviewer-dbt-models-py.md
+Code reviewer for dbt projects on PostgreSQL (models, YAML, macros, seeds, snapshots, tests). Enforces layering (`stg_` -> `int_` -> gold), Kimball grain/surrogate keys, incremental safety, physical design (indexes, NUMERIC, UTC), contracts, freshness, PII handling and `exposures.yml` accuracy. Uses the `analytics-engineer`, `data-engineer-airflow`, `data-architecture-postgre` and `data-quality-governance` skills. CI template: `git-workflows/python/code-review-dbt-models-py.yml`.
+
 #### reviewer-alembic-backend-py.md
 Code reviewer for Alembic migration job projects (`db-migrator`-style repositories). Applies a different quality bar per directory: strict chain/DDL validation for `alembic/versions/`, pragmatic security-first criteria for `scripts/`, and full Clean Architecture + unit test requirements for `src/`. Uses the `backend-py-alembic`, `backend-py` and `qa-backend-py` skills.
 
