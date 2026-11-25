@@ -29,3 +29,6 @@ sandbox/
 # Python
 __pycache__/
 *.pyc
+
+# Documentation files
+docs/
