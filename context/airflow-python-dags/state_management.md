@@ -1,26 +1,29 @@
 # State Management - Airflow DAGs
 
-Este documento describe cómo se gestiona el estado y el flujo de información entre tareas en los pipelines de Airflow.
+Este documento describe cómo se gestiona el estado y el flujo de información entre Steps, tareas y corridas.
 
-## XComs (Cross-Communication)
+## StepContext (dentro de una corrida)
 
-Se utilizan para pasar pequeñas cantidades de datos entre tareas.
+El estado de una corrida del pipeline vive en el `StepContext`, en memoria, dentro de la misma tarea de Airflow:
 
-- **Cuándo usar**: Para pasar metadatos, IDs de carga, o resultados de validaciones.
-- **Limitaciones**: NO usar para pasar grandes volúmenes de datos (ej. DataFrames completos o archivos pesados). En su lugar, guardar el archivo en almacenamiento persistente (S3/GCS) y pasar la ruta por XCom.
-- **TaskFlow API**: El valor retornado por una función decorada con `@task` se guarda automáticamente en XCom.
+- `logical_date`: fecha que representa el DAG run (`{{ ds }}`).
+- `params`: parámetros de entrada (ventana `window_start` / `window_end`, lookback, etc.).
+- `artifacts`: outputs de cada Step, indexados por nombre del Step. Aquí sí pueden viajar DataFrames.
+- `metrics`: contadores enteros (filas extraídas, transformadas, cargadas). Un Step que retorna `int` registra la métrica automáticamente.
+
+## XComs (entre tareas)
+
+- Solo metadatos pequeños: `result.metrics`, IDs de lote, rutas de archivos.
+- Nunca DataFrames ni datasets. Si dos tareas necesitan compartir datos voluminosos, se persisten en almacenamiento (S3/GCS o una tabla `stg`) y se pasa la referencia.
+- En TaskFlow API el valor retornado por `@task` se guarda en XCom automáticamente; por eso el `@task` del DAG retorna solo `result.metrics`.
 
 ## Variables de Airflow
 
-Utilizadas para configuraciones globales que cambian poco frecuentemente.
-
-- **Uso**: Rutas base de APIs, flags de activación de funcionalidades, límites de reintentos globales.
-- **Acceso**: Preferir el acceso vía `Variable.get("key", deserialize_json=True)`.
+- Configuración global que cambia poco: rutas base de APIs, flags de activación.
+- Acceso con `Variable.get("key", deserialize_json=True)` dentro de la tarea, no a nivel de módulo (evita consultas a la base de metadatos en cada parseo).
 
 ## Persistencia en Base de Datos
 
-Para el estado persistente a largo plazo o resultados finales que consumen otros sistemas (como Dashboards), se utilizan tablas dedicadas gestionadas por **Alembic**.
-
-- **Tablas de Auditoría**: Se utilizan para registrar qué lotes de datos han sido procesados (`pairing_audit_table`).
-- **Registros de Métricas**: Las métricas calculadas se guardan en tablas de `unified_kpi` o registros específicos (`metric_registry`).
-- **Punto de Verdad**: El estado de los KPIs siempre debe residir en la base de datos, no en los metadatos de Airflow.
+- **Punto de verdad**: los resultados (KPIs, métricas, dimensiones) residen en el DWH (`core`, `unified_kpi`, `metric_registry`), no en los metadatos de Airflow.
+- **Auditoría de corridas**: las tablas internas de auditoría se gestionan con Alembic. Si un pipeline registra sus métricas de corrida, usa esas tablas existentes en vez de crear tablas paralelas.
+- **Columnas de auditoría por fila**: `created_at` / `updated_at` (`TIMESTAMPTZ`) y `source_file` cuando la fuente es un archivo.

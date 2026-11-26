@@ -438,6 +438,95 @@ class TestSqlMigrations:
         assert re.search(r"^-- Purpose:\s+\S+", content, re.MULTILINE)
 ```
 
+### Sub-categoría 2.8: Tests de confiabilidad
+
+Validan las "Reglas de Confiabilidad" de `context/airflow-python-dags/dev_patterns.md`. Son obligatorios para Steps **nuevos** o modificados; no se exige agregarlos retroactivamente a Steps existentes que no se tocan.
+
+| Step | Test obligatorio | Qué asserta |
+|---|---|---|
+| Loader a `stg`/`core` | `test_should_be_idempotent_when_executed_twice` | Dos ejecuciones con el mismo input dejan el mismo número de filas y los mismos valores |
+| Transformer | `test_should_raise_when_required_column_is_missing` | Input sin una columna obligatoria lanza excepción |
+| Transformer con timestamps | `test_should_return_utc_timestamps_when_input_has_naive_dates` | Las columnas de fecha de salida tienen `tz == UTC` |
+| Extractor incremental | `test_should_filter_by_window_params_when_executed` | La query usa `ctx.params["window_start"]` / `["window_end"]` y no la hora actual |
+
+```python
+# tests/scripts/python/pipelines/loaders/drivers/test_execute_from_drivers.py
+import pandas as pd
+import pytest
+from sqlalchemy import create_engine, text
+
+from pipelines.core import StepContext
+from pipelines.loaders import drivers as drivers_module
+from pipelines.loaders.drivers import DriversLoader
+
+
+@pytest.fixture
+def sqlite_engine(monkeypatch):
+    engine = create_engine("sqlite://")
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TABLE drivers (driver_nk TEXT PRIMARY KEY, name TEXT NOT NULL)"
+        ))
+    monkeypatch.setattr(drivers_module.db_manager, "get_engine", lambda _name: engine)
+    return engine
+
+
+class TestExecuteFromDrivers:
+    def test_should_be_idempotent_when_executed_twice(self, sqlite_engine):
+        # Arrange
+        df = pd.DataFrame({"driver_nk": ["d1", "d2"], "name": ["Ana", "Luis"]})
+        loader = DriversLoader(name="load_drivers", inputs=["clean_drivers"])
+
+        # Act
+        for _ in range(2):
+            ctx = StepContext(logical_date="2026-01-01")
+            ctx.set_artifact("clean_drivers", df)
+            loader.execute(ctx)
+
+        # Assert
+        with sqlite_engine.connect() as conn:
+            rows = conn.execute(text("SELECT COUNT(*) FROM drivers")).scalar_one()
+        assert rows == 2
+```
+
+```python
+# tests/scripts/python/pipelines/transformations/drivers/test_execute_from_drivers.py
+import pandas as pd
+import pytest
+
+from pipelines.core import StepContext
+from pipelines.transformations.drivers import DriversTransformer
+
+
+class TestExecuteFromDrivers:
+    def test_should_raise_when_required_column_is_missing(self):
+        # Arrange
+        ctx = StepContext(logical_date="2026-01-01")
+        ctx.set_artifact("extract_drivers", pd.DataFrame({"driver_nk": ["d1"]}))
+        transformer = DriversTransformer(name="clean_drivers", inputs=["extract_drivers"])
+
+        # Act / Assert
+        with pytest.raises(ValueError, match="registered_at"):
+            transformer.execute(ctx)
+
+    def test_should_return_utc_timestamps_when_input_has_naive_dates(self):
+        # Arrange
+        ctx = StepContext(logical_date="2026-01-01")
+        ctx.set_artifact(
+            "extract_drivers",
+            pd.DataFrame({"driver_nk": ["d1"], "registered_at": ["2026-01-01 10:00:00"]}),
+        )
+        transformer = DriversTransformer(name="clean_drivers", inputs=["extract_drivers"])
+
+        # Act
+        result = transformer.execute(ctx)
+
+        # Assert
+        assert str(result["registered_at"].dt.tz) == "UTC"
+```
+
+> `StepContext` solo acepta `run_id`, `logical_date` (string), `params`, `artifacts` y `metrics`. La ventana de tiempo viaja en `params`, no como atributos propios del contexto.
+
 ## Bootstrap del entorno de tests (`tests/conftest.py`)
 
 El scaffold ya provee fixtures clave en `tests/conftest.py`:
@@ -613,6 +702,7 @@ python -c "from airflow.models import DagBag; bag = DagBag(dag_folder='dags/', i
 - [ ] `test_init_from_<file>.py` para el constructor.
 - [ ] `test_execute_from_<file>.py` con `StepContext.set_artifact(...)` para los inputs upstream.
 - [ ] Mockear `db_manager` o `get_db` si el Step toca DB.
+- [ ] Tests de confiabilidad según el tipo de Step (Sub-categoría 2.8): idempotencia en Loaders, Fail-Fast y UTC en Transformers, ventana desde `ctx.params` en Extractors incrementales.
 - [ ] Cobertura ≥ 90%.
 
 ### PR que agrega una query en `scripts/python/pipelines/queries/<tabla>.py`
