@@ -341,6 +341,7 @@ Activar la skill **`qa-airflow-dags-py`** y validar:
 - Patrón **AAA** explícito en cada test.
 - Naming: clase `Test{FunctionName}From{ClassName}`, función `test_should_{behavior}_when_{condition}`.
 - Aislamiento: **no** se permiten conexiones reales a Postgres / BigQuery / APIs en tests unitarios. Mockeá engines (ver `tests/conftest.py` del scaffold: `mocked_engine_factories`).
+- Excepción: los tests de integración marcados con `pytestmark = pytest.mark.postgres` que usan el fixture `pg_db` **sí** se conectan a Postgres real (el de `docker-compose.test.yml` o el service container del CI). Son válidos y no deben reportarse como violación de aislamiento, siempre que usen `pg_db` (schema temporal por test) y no una URL fija. Son el lugar correcto para probar lo que SQLite no reproduce: `ON CONFLICT` sobre constraints reales, `TIMESTAMPTZ`, `SET LOCAL lock_timeout`.
 - Cobertura ≥ 90% en `transformation` y `extraction`. 100% de DAGs deben pasar DagBag test.
 - Activar **`qa-backend-py`** para fixtures, mocking, AAA.
 

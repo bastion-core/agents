@@ -8,6 +8,7 @@ Resumen del estándar de pruebas. El detalle completo (ejemplos, fixtures, check
 |---|---|---|
 | Unitarias | Todo `scripts/python/pipelines/` (core, Steps, queries, utils, config) | Sin Airflow ni base de datos real: mocks o SQLite in-memory |
 | Integración | Todo `dags/` (callables del DAG, `_bootstrap.py`) | `pytest.importorskip("airflow")`, `xcom_pull` y contexto mockeados |
+| Integración con Postgres | Loaders, Extractors y runner de migraciones que dependen del motor | Marker `postgres` + fixture `pg_db`: Postgres real del compose o del CI, schema temporal por test |
 
 ## Estructura Espejo
 
@@ -37,6 +38,17 @@ Además de la cobertura funcional, los Steps nuevos deben probar:
 - **Fail-Fast** del Transformer: input sin una columna obligatoria lanza excepción.
 - **UTC**: los timestamps de salida tienen zona horaria UTC.
 - **Ventana determinista**: el Extractor usa `ctx.params["window_start"]` / `["window_end"]` y no la hora actual.
+
+## Tests de Integración contra Postgres
+
+Lo que SQLite no reproduce (`ON CONFLICT` sobre constraints reales, `TIMESTAMPTZ`, `SET LOCAL lock_timeout`) se prueba contra Postgres:
+
+- Archivo en el mismo mirror con sufijo `_integration`: `test_execute_integration_from_postgres.py`.
+- `pytestmark = pytest.mark.postgres` y el fixture `pg_db` (`db_name`, `schema`, `engine`), que crea y borra un schema `it_<hex>` por test.
+- Corren cuando existe `PIPELINES_TEST_DATABASE_URL`: `make test` la define para el Postgres del compose y el CI levanta un Postgres 15. Sin ella se marcan `skipped`.
+- No hardcodear nombres que cada org puede cambiar; leerlos del módulo (p. ej. `_TRACKING_TABLE_PG`).
+
+Detalle y ejemplo completo en la skill `qa-airflow-dags-py` (Sub-categoría 2.9).
 
 ## Cobertura Mínima
 
