@@ -438,6 +438,149 @@ class TestSqlMigrations:
         assert re.search(r"^-- Purpose:\s+\S+", content, re.MULTILINE)
 ```
 
+### Sub-categoría 2.8: Tests de confiabilidad
+
+Validan las "Reglas de Confiabilidad" de `context/airflow-python-dags/dev_patterns.md`. Son obligatorios para Steps **nuevos** o modificados; no se exige agregarlos retroactivamente a Steps existentes que no se tocan.
+
+| Step | Test obligatorio | Qué asserta |
+|---|---|---|
+| Loader a `stg`/`core` | `test_should_be_idempotent_when_executed_twice` | Dos ejecuciones con el mismo input dejan el mismo número de filas y los mismos valores |
+| Transformer | `test_should_raise_when_required_column_is_missing` | Input sin una columna obligatoria lanza excepción |
+| Transformer con timestamps | `test_should_return_utc_timestamps_when_input_has_naive_dates` | Las columnas de fecha de salida tienen `tz == UTC` |
+| Extractor incremental | `test_should_filter_by_window_params_when_executed` | La query usa `ctx.params["window_start"]` / `["window_end"]` y no la hora actual |
+
+```python
+# tests/scripts/python/pipelines/loaders/drivers/test_execute_from_drivers.py
+import pandas as pd
+import pytest
+from sqlalchemy import create_engine, text
+
+from pipelines.core import StepContext
+from pipelines.loaders import drivers as drivers_module
+from pipelines.loaders.drivers import DriversLoader
+
+
+@pytest.fixture
+def sqlite_engine(monkeypatch):
+    engine = create_engine("sqlite://")
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TABLE drivers (driver_nk TEXT PRIMARY KEY, name TEXT NOT NULL)"
+        ))
+    monkeypatch.setattr(drivers_module.db_manager, "get_engine", lambda _name: engine)
+    return engine
+
+
+class TestExecuteFromDrivers:
+    def test_should_be_idempotent_when_executed_twice(self, sqlite_engine):
+        # Arrange
+        df = pd.DataFrame({"driver_nk": ["d1", "d2"], "name": ["Ana", "Luis"]})
+        loader = DriversLoader(name="load_drivers", inputs=["clean_drivers"])
+
+        # Act
+        for _ in range(2):
+            ctx = StepContext(logical_date="2026-01-01")
+            ctx.set_artifact("clean_drivers", df)
+            loader.execute(ctx)
+
+        # Assert
+        with sqlite_engine.connect() as conn:
+            rows = conn.execute(text("SELECT COUNT(*) FROM drivers")).scalar_one()
+        assert rows == 2
+```
+
+```python
+# tests/scripts/python/pipelines/transformations/drivers/test_execute_from_drivers.py
+import pandas as pd
+import pytest
+
+from pipelines.core import StepContext
+from pipelines.transformations.drivers import DriversTransformer
+
+
+class TestExecuteFromDrivers:
+    def test_should_raise_when_required_column_is_missing(self):
+        # Arrange
+        ctx = StepContext(logical_date="2026-01-01")
+        ctx.set_artifact("extract_drivers", pd.DataFrame({"driver_nk": ["d1"]}))
+        transformer = DriversTransformer(name="clean_drivers", inputs=["extract_drivers"])
+
+        # Act / Assert
+        with pytest.raises(ValueError, match="registered_at"):
+            transformer.execute(ctx)
+
+    def test_should_return_utc_timestamps_when_input_has_naive_dates(self):
+        # Arrange
+        ctx = StepContext(logical_date="2026-01-01")
+        ctx.set_artifact(
+            "extract_drivers",
+            pd.DataFrame({"driver_nk": ["d1"], "registered_at": ["2026-01-01 10:00:00"]}),
+        )
+        transformer = DriversTransformer(name="clean_drivers", inputs=["extract_drivers"])
+
+        # Act
+        result = transformer.execute(ctx)
+
+        # Assert
+        assert str(result["registered_at"].dt.tz) == "UTC"
+```
+
+> `StepContext` solo acepta `run_id`, `logical_date` (string), `params`, `artifacts` y `metrics`. La ventana de tiempo viaja en `params`, no como atributos propios del contexto.
+
+### Sub-categoría 2.9: Tests de integración contra Postgres
+
+SQLite in-memory cubre la lógica, pero no reproduce el motor: `ON CONFLICT` sobre constraints reales, `TIMESTAMPTZ` con ventanas tz-aware, `SET LOCAL lock_timeout` o el comportamiento bajo bloqueos. Para eso se usan tests marcados con `postgres` y el fixture `pg_db` de `tests/conftest.py`.
+
+- **Cuándo corren**: solo si existe `PIPELINES_TEST_DATABASE_URL`. `make test` la define apuntando al servicio `postgres` de `docker-compose.test.yml`, y el job `python-tests` del CI levanta un Postgres 15 como service container. Sin la variable, se marcan `skipped`; si está definida y Postgres no responde, fallan.
+- **Aislamiento**: `pg_db` registra la base en `db_manager` y crea un schema `it_<hex>` por test que se borra al terminar. Nunca escribir sobre `raw`/`stg`/`core` reales ni usar una URL fija en el test.
+- **Ubicación y nombre**: mismo mirror que los unitarios, con sufijo `_integration`: `tests/scripts/python/pipelines/loaders/postgres/test_execute_integration_from_postgres.py`, clase `TestExecuteUpsertIntegrationFromPostgres`.
+- **Qué probar aquí**: Loaders con `upsert`/`delete_insert` sobre la tabla real, Extractors que filtran por ventana sobre `TIMESTAMPTZ`, y el runner de migraciones bajo bloqueo. Lo demás sigue siendo unitario.
+- **Nombres del entorno**: no hardcodear nombres que cada org puede cambiar (por ejemplo la tabla de tracking de migraciones); leerlos del módulo (`_TRACKING_TABLE_PG`).
+
+```python
+# tests/scripts/python/pipelines/loaders/postgres/test_execute_integration_from_postgres.py
+import pandas as pd
+import pytest
+from pipelines.core import StepContext
+from pipelines.loaders.postgres import PostgresLoader
+from sqlalchemy import text
+
+pytestmark = pytest.mark.postgres
+
+
+@pytest.fixture
+def drivers_table(pg_db):
+    with pg_db.engine.begin() as conn:
+        conn.execute(text(f"CREATE TABLE {pg_db.schema}.drivers (driver_nk TEXT PRIMARY KEY, name TEXT NOT NULL)"))
+    return pg_db
+
+
+class TestExecuteUpsertIntegrationFromPostgres:
+    def test_should_not_duplicate_rows_when_executed_twice(self, drivers_table):
+        # Arrange
+        loader = PostgresLoader(
+            name="load_drivers",
+            inputs=["upstream"],
+            db_name=drivers_table.db_name,
+            schema=drivers_table.schema,
+            table="drivers",
+            mode="upsert",
+            conflict_columns=["driver_nk"],
+        )
+        ctx = StepContext(logical_date="2026-01-01")
+        ctx.set_artifact("upstream", pd.DataFrame({"driver_nk": ["d1"], "name": ["Ana"]}))
+
+        # Act
+        loader.execute(ctx)
+        loader.execute(ctx)
+
+        # Assert
+        with drivers_table.engine.connect() as conn:
+            assert conn.execute(text(f"SELECT count(*) FROM {drivers_table.schema}.drivers")).scalar() == 1
+```
+
+Correr solo estos tests: `pytest -m postgres` (con la variable definida).
+
 ## Bootstrap del entorno de tests (`tests/conftest.py`)
 
 El scaffold ya provee fixtures clave en `tests/conftest.py`:
@@ -478,7 +621,7 @@ def mocked_engine_factories():
         yield create_engine_mock, sessionmaker_mock
 ```
 
-Adicionalmente, el `conftest.py` mantiene el path de `scripts/python` en `sys.path` y publica el banner global de cobertura via `pytest_terminal_summary`.
+Adicionalmente, el `conftest.py` mantiene el path de `scripts/python` en `sys.path`, publica el banner global de cobertura via `pytest_terminal_summary` y expone el fixture `pg_db` para los tests de integración contra Postgres (ver Sub-categoría 2.9).
 
 ## Configuración de pytest y cobertura
 
@@ -489,6 +632,9 @@ Adicionalmente, el `conftest.py` mantiene el path de `scripts/python` en `sys.pa
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "--cov=pipelines --cov=dags --cov-report=term --cov-report=html:coverage/html"
+markers = [
+    "postgres: integration test against a real Postgres (needs PIPELINES_TEST_DATABASE_URL)",
+]
 ```
 
 **La cobertura cubre AMBOS paquetes**: `pipelines` (código de scripts/python/) y `dags` (código de DAGs). El banner `GLOBAL COVERAGE: XX.XX%` se imprime al final de la corrida.
@@ -568,7 +714,7 @@ Ejemplos:
 
 | Área | Mínimo |
 |---|---|
-| **Aislamiento `scripts/`** | Sin conexiones reales a Postgres / BigQuery / S3 / APIs. Usar `mocked_engine_factories` o SQLite in-memory. |
+| **Aislamiento `scripts/`** | Sin conexiones reales a Postgres / BigQuery / S3 / APIs. Usar `mocked_engine_factories` o SQLite in-memory. Única excepción: tests con marker `postgres` sobre el fixture `pg_db` (Sub-categoría 2.9). |
 | **Aislamiento `dags/`** | Mockear `xcom_pull`, `dag_run`, `task_instance`. `pytest.importorskip("airflow")` para tolerar ausencia de Airflow. |
 | **Cobertura `pipelines/extractors`, `pipelines/loaders`, `pipelines/transformations`** | ≥ 90% |
 | **Cobertura `pipelines/queries`** | ≥ 90% |
@@ -613,6 +759,7 @@ python -c "from airflow.models import DagBag; bag = DagBag(dag_folder='dags/', i
 - [ ] `test_init_from_<file>.py` para el constructor.
 - [ ] `test_execute_from_<file>.py` con `StepContext.set_artifact(...)` para los inputs upstream.
 - [ ] Mockear `db_manager` o `get_db` si el Step toca DB.
+- [ ] Tests de confiabilidad según el tipo de Step (Sub-categoría 2.8): idempotencia en Loaders, Fail-Fast y UTC en Transformers, ventana desde `ctx.params` en Extractors incrementales.
 - [ ] Cobertura ≥ 90%.
 
 ### PR que agrega una query en `scripts/python/pipelines/queries/<tabla>.py`

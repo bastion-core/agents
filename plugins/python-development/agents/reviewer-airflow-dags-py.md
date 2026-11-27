@@ -78,6 +78,7 @@ You analyze Pull Requests across four critical dimensions:
 - Convención de artefactos: `Step.execute(ctx)` retorna su artefacto; `inputs = ["nombre_step_previo"]` está declarado correctamente.
 - Cumplimiento de reglas CI (snake_case ID, owner ≠ `airflow`, tags, `catchup=False`, description, ruff).
 - Integración con `sql/` (DDL data lake) y/o Alembic (tablas internas de app).
+- **Confiabilidad** (ver Step 2.5): idempotencia de la carga, ventanas de tiempo deterministas, validación Fail-Fast en el borde, UTC, XCom solo con metadatos, reintentos y `execution_timeout`.
 
 ### 2. Steps, Queries Module & DWH Conventions (Weight: 30%)
 - **Steps específicos del dominio** correctamente ubicados:
@@ -108,8 +109,8 @@ You analyze Pull Requests across four critical dimensions:
 ### 4. Testing & Pipeline Integrity (Weight: 20%)
 - **CRITICAL**: Invocá la skill **`qa-airflow-dags-py`** para validar la arquitectura de tests específica de Airflow + Pipeline framework.
 - **Integration Tests (DAG)**: `tests/dags/{folder_dag_name}/test_{dag_id}.py` con `DagBag` para `import_errors == {}`.
-- **Unit Tests (lógica por capa)**: `tests/scripts/python/{folder_dag_name}/{layer}/{file_name}/test_{function_name}_from_{class_name}.py`.
-  * Layers: `extraction`, `transformation`, `load`, `orchestration`, `common`.
+- **Unit Tests (mirror del árbol de fuentes)**: `scripts/python/pipelines/<ruta>/<archivo>.py` → `tests/scripts/python/pipelines/<ruta>/<archivo>/test_{function_name}_from_{archivo}.py`.
+- **Tests de confiabilidad** en Steps nuevos: idempotencia del Loader, Fail-Fast del Transformer, timestamps UTC y ventana tomada de `ctx.params`.
 - **Pipeline / Step tests**: Steps puros (Transformers, Loaders mockeables) deben testearse sin Airflow ni DB usando `StepContext` con `set_artifact`.
 - **Queries tests**: dos formas válidas — monkeypatch del módulo `pipelines.queries.<tabla>` o test directo contra SQLite en memoria.
 - DagBag testing es obligatorio para cualquier PR que toque `dags/`.
@@ -213,6 +214,33 @@ Solo reportá como **Must Fix** issues que pasen los 5 chequeos. En caso de duda
 
 ---
 
+### Step 2.5: Reliability Review
+
+**Validar contra la sección "Reglas de Confiabilidad" de `context/airflow-python-dags/dev_patterns.md`**:
+
+#### Idempotencia (Must Fix si se viola en código nuevo)
+- ✅ **GOOD**: el Loader escribe con `INSERT ... ON CONFLICT (<clave de la capa>) DO UPDATE | DO NOTHING`, y la clave coincide con la constraint del `.sql`.
+- ✅ **GOOD**: `append` precedido por `DELETE` de la ventana `[window_start, window_end)` en la misma transacción.
+- ❌ **BAD**: `PostgresLoader(mode="append")` o `INSERT` simple sobre una tabla de `stg`/`core` sin clave de conflicto ni borrado de la ventana. Re-ejecutar el DAG run duplica filas.
+- ❌ **BAD**: `mode="replace"` sobre tablas con historia (borra datos de otras ventanas y recrea la tabla sin las constraints del `.sql`).
+
+#### Ventanas de tiempo deterministas (Must Fix)
+- ✅ **GOOD**: el DAG pasa `{{ data_interval_start }}` / `{{ data_interval_end }}` (o `{{ ds }}`) y el Extractor filtra con `>= :window_start AND < :window_end` leyendo `ctx.params`.
+- ❌ **BAD**: `datetime.now()`, `date.today()` o `CURRENT_TIMESTAMP` como límite de datos en extractores o queries. (Se permiten para columnas de auditoría.)
+
+#### Validación en el borde (Should Fix)
+- Transformer valida columnas obligatorias del input y lanza una excepción explícita si faltan.
+- Timestamps convertidos a UTC (`pd.to_datetime(..., utc=True)`); columnas `TIMESTAMPTZ` en el `.sql`.
+- Deduplicación sobre la clave natural antes de cargar.
+
+#### Estado y operación
+- **Must Fix**: DataFrames o listas voluminosas retornadas por un `@task` (terminan en XCom). El `@task` del DAG retorna solo `result.metrics`.
+- **Should Fix**: tareas con I/O externo sin `retries` o sin `on_failure_callback`.
+- **Consider**: `execution_timeout` en DAGs que alimentan dashboards con horario; `retry_exponential_backoff=True` para APIs con rate limit.
+- **Consider**: joins o agregaciones sobre datos que ya están en el DWH, hechos en pandas tras extraerlos. Sugerir SQL set-based si el volumen es relevante; no bloquear.
+
+---
+
 ### Step 3: Steps, Queries & DWH Conventions Review
 
 #### Steps
@@ -303,8 +331,8 @@ Activar la skill **`qa-airflow-dags-py`** y validar:
 
 #### Estructura
 - **Integration**: `tests/dags/{folder_dag_name}/test_{dag_id}.py`. Debe usar `DagBag()` y assertear `import_errors == {}`, además de tags/owner/catchup.
-- **Unit**: `tests/scripts/python/{folder_dag_name}/{layer}/{file_name}/test_{function_name}_from_{class_name}.py`.
-  * Layers válidos: `extraction`, `transformation`, `load`, `orchestration`, `common`.
+- **Unit**: mirror del árbol de fuentes, `tests/scripts/python/pipelines/<ruta>/<archivo>/test_{function_name}_from_{archivo}.py` (ver skill `qa-airflow-dags-py`).
+- **Confiabilidad**: Loaders nuevos con test de idempotencia (dos ejecuciones, mismas filas); Transformers nuevos con test Fail-Fast y de UTC.
 - Tests de Steps puros: instanciar el Step, preparar `StepContext` con `ctx.set_artifact("<upstream>", df)`, ejecutar `step.execute(ctx)`, assertear el output.
 - Tests del Pipeline end-to-end con Steps fake (subclase `Step` que retorna data fija).
 - Tests de Queries: monkeypatch del módulo (`monkeypatch.setattr(dim_driver, "get_uber_id_map", lambda s: {...})`) o SQLite in-memory.
@@ -313,6 +341,7 @@ Activar la skill **`qa-airflow-dags-py`** y validar:
 - Patrón **AAA** explícito en cada test.
 - Naming: clase `Test{FunctionName}From{ClassName}`, función `test_should_{behavior}_when_{condition}`.
 - Aislamiento: **no** se permiten conexiones reales a Postgres / BigQuery / APIs en tests unitarios. Mockeá engines (ver `tests/conftest.py` del scaffold: `mocked_engine_factories`).
+- Excepción: los tests de integración marcados con `pytestmark = pytest.mark.postgres` que usan el fixture `pg_db` **sí** se conectan a Postgres real (el de `docker-compose.test.yml` o el service container del CI). Son válidos y no deben reportarse como violación de aislamiento, siempre que usen `pg_db` (schema temporal por test) y no una URL fija. Son el lugar correcto para probar lo que SQLite no reproduce: `ON CONFLICT` sobre constraints reales, `TIMESTAMPTZ`, `SET LOCAL lock_timeout`.
 - Cobertura ≥ 90% en `transformation` y `extraction`. 100% de DAGs deben pasar DagBag test.
 - Activar **`qa-backend-py`** para fixtures, mocking, AAA.
 
@@ -385,7 +414,7 @@ Cambios revisados: <breve descripción>. Sin hallazgos accionables. Las invarian
 ```
 
 **Criterios de decisión**:
-- **REQUEST_CHANGES** si: edición de un `.sql` ya aplicado (no eliminación — ver Step 4), lógica de negocio en el DAG, credenciales hardcodeadas, columnas inventadas no presentes en `sql/`, ausencia de DagBag test para un DAG nuevo, violación de `catchup=False` o owner = `airflow`, Alembic tocando `raw/stg/core`.
+- **REQUEST_CHANGES** si: edición de un `.sql` ya aplicado (no eliminación — ver Step 4), lógica de negocio en el DAG, credenciales hardcodeadas, columnas inventadas no presentes en `sql/`, ausencia de DagBag test para un DAG nuevo, violación de `catchup=False` o owner = `airflow`, Alembic tocando `raw/stg/core`, carga no idempotente a `stg`/`core`, ventana de datos basada en la hora actual, DataFrames en XCom.
 - **COMMENT** si: hay mejoras significativas opcionales pero el cambio es funcional y respeta las invariantes.
 - **APPROVE** si: todas las dimensiones cumplen, tests presentes (cuando aplica), naming correcto, sin anti-patterns nuevos. **No agregar "advisory notes" si no hay riesgo verificable** — eso confunde la señal del review.
 
